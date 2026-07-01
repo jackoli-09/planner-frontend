@@ -2276,50 +2276,7 @@ async function runAiAnalysis() {
 // ════════════════════════════════════════════════════════════════
 // FATSECRET — поиск и лог питания
 // ════════════════════════════════════════════════════════════════
-async function searchFood() {
-  const q = document.getElementById('food-search-input').value.trim();
-  if (!q) return;
-  const resultsEl = document.getElementById('food-search-results');
-  resultsEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Поиск…</div>';
-  try {
-    const data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
-    const items = data.results || [];
-    if (!items.length) { resultsEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Ничего не найдено</div>'; return; }
-    resultsEl.innerHTML = items.map((f,i) => `
-      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:13px;font-weight:600">${f.food_name}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin:2px 0">${f.calories ? f.calories+'ккал · Б:'+f.protein+'г · Ж:'+f.fat+'г · У:'+f.carbs+'г' : ''}</div>
-        <button onclick="addFoodLog(${i})" data-food='${JSON.stringify(f).replace(/'/g,"&#39;")}' 
-          style="margin-top:4px;padding:4px 10px;background:var(--neon-soft);border:1px solid var(--neon);color:var(--neon);border-radius:8px;font-size:11px;cursor:pointer">
-          + Добавить
-        </button>
-      </div>`).join('');
-    // Сохраняем результаты в window для доступа из addFoodLog
-    window._foodResults = items;
-  } catch(e) {
-    resultsEl.innerHTML = '<div style="color:var(--red);font-size:12px">Ошибка поиска</div>';
-  }
-}
 
-async function addFoodLog(idx) {
-  const f = window._foodResults[idx];
-  if (!f) return;
-  const today = todayStr();
-  const entry = {
-    date: today,
-    meal_type: 'день',
-    food_id: f.food_id || 'manual',
-    food_name: f.food_name,
-    serving_desc: f.serving_desc || '',
-    calories: f.calories || 0,
-    protein: f.protein || 0,
-    fat: f.fat || 0,
-    carbs: f.carbs || 0,
-    amount: 1
-  };
-  await apiCall('POST', '/api/food/log', entry);
-  loadFoodLog();
-}
 
 async function loadFoodLog() {
   const today = todayStr();
