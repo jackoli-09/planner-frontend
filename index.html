@@ -720,44 +720,42 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   <div class="screen" id="s-ai">
     <div class="page-header">
       <div class="ph-title">ИИ-агент</div>
-      <div class="ph-sub">Скоро — анализ и рекомендации</div>
+      <div class="ph-sub">Анализ прогресса и плато</div>
     </div>
 
     <div class="card card-glow">
-      <div class="ai-hero">
-        <div class="ai-icon-big">🤖</div>
-        <div class="ai-title">Раздел в разработке</div>
-        <div class="ai-desc">Здесь появится ИИ-агент, который будет анализировать твои данные и давать персональные рекомендации</div>
+      <div class="card-inner">
+        <button class="btn-primary" onclick="runAiAnalysis()" id="ai-btn" style="width:100%;margin:0">
+          🤖 Запустить анализ
+        </button>
+        <div id="ai-loading" style="display:none;text-align:center;padding:20px;color:var(--text-sub);font-size:13px">
+          ⏳ Анализирую твои данные…
+        </div>
       </div>
     </div>
 
-    <div class="section-label">Что будет уметь</div>
-    <div class="card">
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">📊</div>
-        <div class="ai-feature-text">Анализ плато в силовых — подскажет когда менять программу</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">🍽</div>
-        <div class="ai-feature-text">Рекомендации по калориям на основе цели (набор/сушка)</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">💊</div>
-        <div class="ai-feature-text">Напоминания о пропущенных добавках и взаимодействиях</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">📈</div>
-        <div class="ai-feature-text">Прогноз 1RM и предложения по программе на след. месяц</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">💬</div>
-        <div class="ai-feature-text">Чат с ИИ по твоим данным — задавай вопросы напрямую</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
+    <div id="ai-result" style="display:none">
+      <div class="section-label">Итог</div>
+      <div class="card"><div class="card-inner" id="ai-summary" style="font-size:13.5px;line-height:1.6;color:var(--text)"></div></div>
+
+      <div class="section-label">🏆 Достижения</div>
+      <div class="card"><div class="card-inner" id="ai-achievements"></div></div>
+
+      <div class="section-label">📈 Прогресс по упражнениям</div>
+      <div class="card"><div class="card-inner" id="ai-progress"></div></div>
+
+      <div class="section-label">⚠️ Плато</div>
+      <div class="card"><div class="card-inner" id="ai-plateau"></div></div>
+
+      <div class="section-label">📋 Рекомендация на неделю</div>
+      <div class="card"><div class="card-inner" id="ai-weekly" style="font-size:13.5px;line-height:1.6;color:var(--text)"></div></div>
+
+      <div class="section-label">💤 Восстановление</div>
+      <div class="card"><div class="card-inner" id="ai-recovery" style="font-size:13px;color:var(--text-sub);line-height:1.6"></div></div>
+    </div>
+
+    <div id="ai-error" style="display:none" class="card">
+      <div class="card-inner" style="color:var(--red);font-size:13px" id="ai-error-msg"></div>
     </div>
 
     <div class="section-label">Данные и синхронизация</div>
@@ -768,11 +766,26 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
           <div style="font-size:12px;color:var(--text-sub)" id="sync-status">Проверка подключения…</div>
         </div>
         <div style="font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:12px">
-          Данные привязаны к твоему Telegram-аккаунту и хранятся на сервере. Дополнительно можешь сохранить копию вручную.
+          Данные привязаны к твоему Telegram-аккаунту и хранятся на сервере.
         </div>
         <button class="btn-ghost" onclick="exportData()" style="margin:0">⬇️ Скачать резервную копию (JSON)</button>
       </div>
     </div>
+
+    <div class="section-label">🍎 Питание (FatSecret)</div>
+    <div class="card"><div class="card-inner">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="food-search-input" class="input-field" placeholder="Поиск еды…" style="flex:1;margin:0" onkeydown="if(event.key==='Enter')searchFood()">
+        <button class="btn-primary" onclick="searchFood()" style="margin:0;padding:0 14px">🔍</button>
+      </div>
+      <div id="food-search-results"></div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Сегодня съедено:</div>
+        <div id="food-log-today"></div>
+        <div id="food-totals" style="font-size:12px;color:var(--neon);margin-top:8px"></div>
+      </div>
+    </div></div>
+
     <div style="height:8px"></div>
   </div>
 
@@ -1228,7 +1241,11 @@ function renderExercises() {
     const chips = sets.map(s => {
       const orm = calc1rm(s.weight, s.reps);
       const isPR = isPRFor(ex, orm);
-      return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</div>`;
+      const idx = state.workouts.indexOf(s);
+      return `<div class="set-chip${isPR?' pr':''}" style="display:flex;align-items:center;gap:6px">
+        <span>${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</span>
+        <span onclick="deleteSet(${idx})" style="color:var(--red);opacity:0.7;cursor:pointer;font-size:15px;line-height:1;padding:0 2px">×</span>
+      </div>`;
     }).join('');
     const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
     const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
@@ -1285,6 +1302,19 @@ function saveSet() {
   if (apiAvailable) apiCall('POST', '/api/workouts', entry);
   closeModal('modal-set');
   renderExercises();
+}
+
+async function deleteSet(idx) {
+  const w = state.workouts[idx];
+  if (!w) return;
+  // Удаляем на сервере если есть id
+  if (w.id && apiAvailable) {
+    await apiCall('DELETE', '/api/workouts/' + w.id);
+  }
+  state.workouts.splice(idx, 1);
+  saveStateLocal();
+  renderExercises();
+  renderHome();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1769,6 +1799,126 @@ function renderReport() {
     document.getElementById('rep-avg-cal').textContent = '— ккал';
   }
   document.getElementById('rep-cal-count').textContent = monthCals.length;
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// ИИ АНАЛИЗ
+// ════════════════════════════════════════════════════════════════
+async function runAiAnalysis() {
+  document.getElementById('ai-btn').disabled = true;
+  document.getElementById('ai-loading').style.display = 'block';
+  document.getElementById('ai-result').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+
+  try {
+    const data = await apiCall('GET', '/api/ai/analysis');
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-result').style.display = 'block';
+
+    document.getElementById('ai-summary').textContent = data.summary || '—';
+    document.getElementById('ai-weekly').textContent = data.weekly_recommendation || '—';
+    document.getElementById('ai-recovery').textContent = data.recovery_note || '—';
+
+    document.getElementById('ai-achievements').innerHTML = (data.top_achievements || [])
+      .map(a => `<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--neon)">✦</span><span style="font-size:13px">${a}</span></div>`).join('');
+
+    document.getElementById('ai-progress').innerHTML = (data.progress || [])
+      .map(p => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12.5px">${p.exercise}</div>
+        <div style="font-size:12px;color:var(--green)">+${p.growth_percent}% · ${p.current_1rm} кг</div>
+      </div>`).join('');
+
+    const plateauHTML = (data.plateau || []);
+    document.getElementById('ai-plateau').innerHTML = plateauHTML.length
+      ? plateauHTML.map(p => `<div style="margin-bottom:10px;padding:10px;background:var(--red-soft);border-radius:10px">
+          <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:4px">${p.exercise} — ${p.sessions_stuck} сессий без роста</div>
+          <div style="font-size:12px;color:var(--text-sub)">${p.recommendation}</div>
+        </div>`).join('')
+      : '<div style="color:var(--green);font-size:13px">Плато не обнаружено 🎉</div>';
+
+  } catch(e) {
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-error').style.display = 'block';
+    document.getElementById('ai-error-msg').textContent = 'Ошибка: ' + e.message;
+  }
+  document.getElementById('ai-btn').disabled = false;
+}
+
+// ════════════════════════════════════════════════════════════════
+// FATSECRET — поиск и лог питания
+// ════════════════════════════════════════════════════════════════
+async function searchFood() {
+  const q = document.getElementById('food-search-input').value.trim();
+  if (!q) return;
+  const resultsEl = document.getElementById('food-search-results');
+  resultsEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Поиск…</div>';
+  try {
+    const data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
+    const items = data.results || [];
+    if (!items.length) { resultsEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Ничего не найдено</div>'; return; }
+    resultsEl.innerHTML = items.map((f,i) => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:600">${f.food_name}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:2px 0">${f.calories ? f.calories+'ккал · Б:'+f.protein+'г · Ж:'+f.fat+'г · У:'+f.carbs+'г' : ''}</div>
+        <button onclick="addFoodLog(${i})" data-food='${JSON.stringify(f).replace(/'/g,"&#39;")}' 
+          style="margin-top:4px;padding:4px 10px;background:var(--neon-soft);border:1px solid var(--neon);color:var(--neon);border-radius:8px;font-size:11px;cursor:pointer">
+          + Добавить
+        </button>
+      </div>`).join('');
+    // Сохраняем результаты в window для доступа из addFoodLog
+    window._foodResults = items;
+  } catch(e) {
+    resultsEl.innerHTML = '<div style="color:var(--red);font-size:12px">Ошибка поиска</div>';
+  }
+}
+
+async function addFoodLog(idx) {
+  const f = window._foodResults[idx];
+  if (!f) return;
+  const today = todayStr();
+  const entry = {
+    date: today,
+    meal_type: 'день',
+    food_id: f.food_id || 'manual',
+    food_name: f.food_name,
+    serving_desc: f.serving_desc || '',
+    calories: f.calories || 0,
+    protein: f.protein || 0,
+    fat: f.fat || 0,
+    carbs: f.carbs || 0,
+    amount: 1
+  };
+  await apiCall('POST', '/api/food/log', entry);
+  loadFoodLog();
+}
+
+async function loadFoodLog() {
+  const today = todayStr();
+  try {
+    const data = await apiCall('GET', '/api/food/log?log_date=' + today);
+    const el = document.getElementById('food-log-today');
+    const totEl = document.getElementById('food-totals');
+    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Пусто</div>'; totEl.textContent = ''; return; }
+    el.innerHTML = data.map(e => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:12.5px">${e.food_name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${e.calories} ккал</div>
+        </div>
+        <span onclick="deleteFoodLog(${e.id})" style="color:var(--red);cursor:pointer;font-size:16px;opacity:0.7">×</span>
+      </div>`).join('');
+    const totalCal = data.reduce((a,e) => a + (parseFloat(e.calories)||0), 0);
+    const totalP = data.reduce((a,e) => a + (parseFloat(e.protein)||0), 0);
+    const totalF = data.reduce((a,e) => a + (parseFloat(e.fat)||0), 0);
+    const totalC = data.reduce((a,e) => a + (parseFloat(e.carbs)||0), 0);
+    totEl.textContent = `Итого: ${Math.round(totalCal)} ккал · Б: ${totalP.toFixed(1)}г · Ж: ${totalF.toFixed(1)}г · У: ${totalC.toFixed(1)}г`;
+  } catch(e) {}
+}
+
+async function deleteFoodLog(id) {
+  await apiCall('DELETE', '/api/food/log/' + id);
+  loadFoodLog();
 }
 
 // ════════════════════════════════════════════════════════════════
