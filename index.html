@@ -1262,13 +1262,13 @@ function exportData() {
 // ════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
-const SCREENS = ['home','workout','charts','body','tasks','supps','report','ai'];
+const SCREENS = ['home','workout','charts','body','tasks','supps','report','food','ai'];
 function go(name) {
   SCREENS.forEach(s => {
     const scr = document.getElementById('s-'+s);
     if (scr) scr.classList.toggle('active', s===name);
   });
-  ['home','workout','tasks','supps','report','ai'].forEach(s => {
+  ['home','workout','tasks','supps','report','food','ai'].forEach(s => {
     const nv = document.getElementById('nav-'+s);
     if (nv) nv.classList.toggle('active', s===name || (s==='workout' && (name==='charts')) );
   });
@@ -1279,6 +1279,7 @@ function go(name) {
   if (name === 'tasks') renderTasks();
   if (name === 'supps') renderSupps();
   if (name === 'report') renderReport();
+  if (name === 'food') renderFoodScreen();
 }
 
 // ════════════════════════════════════════════════════════════════
