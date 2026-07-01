@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Мой планировщик</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; font-family: 'Montserrat', -apple-system, Arial, sans-serif; }
+
+:root {
+  --bg: #0a0a12;
+  --bg-deep: #050508;
+  --card: #14141f;
+  --card2: #1a1a28;
+  --border: #2a2a3d;
+  --border-light: #34344a;
+  --text: #f0f0f5;
+  --text-sub: #8888a0;
+  --text-muted: #5c5c70;
+  --neon: #b026ff;
+  --neon2: #d946ef;
+  --neon-glow: rgba(176, 38, 255, 0.45);
+  --neon-soft: rgba(176, 38, 255, 0.12);
+  --neon-soft2: rgba(176, 38, 255, 0.06);
+  --green: #00e5a0;
+  --green-soft: rgba(0, 229, 160, 0.12);
+  --orange: #ff9d3d;
+  --orange-soft: rgba(255, 157, 61, 0.12);
+  --red: #ff4d6a;
+  --red-soft: rgba(255, 77, 106, 0.12);
+  --blue: #4dabff;
+  --blue-soft: rgba(77, 171, 255, 0.12);
+}
+
+body { background: var(--bg); color: var(--text); }
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.screen { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 70px; }
+.screen.active { display: block; }
+.screen::-webkit-scrollbar { display: none; }
+
+/* ── Bottom nav ── */
+.bottom-nav {
+  height: 60px;
+  background: var(--bg-deep);
+  border-top: 1px solid var(--border);
+  display: flex;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; cursor: pointer; padding: 6px 0;
+  color: var(--text-muted); transition: color .15s;
+  position: relative;
+}
+.nav-item.active { color: var(--neon2); }
+.nav-item.active::before {
+  content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+  width: 28px; height: 2px; background: var(--neon2);
+  box-shadow: 0 0 8px var(--neon-glow);
+}
+.nav-icon { font-size: 20px; line-height: 1; }
+.nav-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.2px; }
+
+/* ── Headers ── */
+.page-header {
+  padding: 20px 16px 22px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, #1a0a2e 0%, #0a0a12 100%);
+  border-bottom: 1px solid var(--border);
+}
+.page-header::after {
+  content: '';
+  position: absolute; top: -40%; right: -20%;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, var(--neon-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+.ph-title { font-size: 21px; font-weight: 700; margin-bottom: 3px; position: relative; }
+.ph-sub { font-size: 12px; color: var(--text-sub); position: relative; }
+
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+  color: var(--text-muted); text-transform: uppercase;
+  padding: 16px 16px 8px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin: 0 12px 10px;
+  overflow: hidden;
+}
+.card-inner { padding: 14px; }
+.card-glow {
+  border-color: var(--neon-soft);
+  box-shadow: 0 0 24px rgba(176, 38, 255, 0.08);
+}
+
+.btn-primary {
+  display: block; width: calc(100% - 24px); margin: 0 12px;
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  color: #fff; border: none;
+  border-radius: 14px; padding: 14px; font-size: 14px;
+  font-weight: 700; cursor: pointer; text-align: center;
+  font-family: inherit;
+  box-shadow: 0 4px 20px var(--neon-glow);
+}
+.btn-primary:active { opacity: .88; transform: scale(0.99); }
+
+.btn-ghost {
+  display: block; width: 100%; padding: 13px;
+  background: var(--card2); border: 1px solid var(--border-light);
+  border-radius: 12px; font-size: 13px; color: var(--text-sub);
+  cursor: pointer; font-family: inherit; font-weight: 600;
+}
+
+/* ── HOME ── */
+.home-greeting { font-size: 13px; color: var(--text-sub); position: relative; }
+.home-name { font-size: 23px; font-weight: 800; margin: 2px 0 4px; position: relative; }
+.home-date { font-size: 12px; color: var(--text-sub); position: relative; }
+
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 12px 0; }
+.kpi-card {
+  background: var(--card); border-radius: 16px; padding: 14px;
+  border: 1px solid var(--border);
+}
+.kpi-label { font-size: 10.5px; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.kpi-val { font-size: 21px; font-weight: 800; }
+.kpi-sub { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+.kpi-neon { color: var(--neon2); text-shadow: 0 0 16px var(--neon-glow); }
+.kpi-green { color: var(--green); }
+.kpi-orange { color: var(--orange); }
+.kpi-blue { color: var(--blue); }
+
+.quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 12px 16px; }
+.quick-card {
+  background: var(--card); border-radius: 16px; padding: 16px 12px;
+  border: 1px solid var(--border); cursor: pointer;
+}
+.quick-card:active { background: var(--card2); border-color: var(--neon-soft); }
+.quick-icon { font-size: 24px; margin-bottom: 7px; filter: drop-shadow(0 0 6px var(--neon-soft)); }
+.quick-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.quick-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── WORKOUT ── */
+.muscle-tabs {
+  display: flex; gap: 7px; padding: 10px 12px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.muscle-tabs::-webkit-scrollbar { display: none; }
+.mtab {
+  white-space: nowrap; font-size: 11px; font-weight: 700;
+  padding: 7px 13px; border-radius: 20px; cursor: pointer;
+  border: 1.5px solid var(--border-light); background: var(--card); color: var(--text-sub);
+  transition: all .15s; font-family: inherit;
+}
+.mtab.active {
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 0 16px var(--neon-glow);
+}
+
+.ex-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 9px; }
+.ex-sets { display: flex; gap: 6px; flex-wrap: wrap; }
+.set-chip {
+  font-size: 11px; padding: 5px 10px; border-radius: 9px;
+  background: var(--neon-soft); color: var(--neon2); font-weight: 600;
+}
+.set-chip.pr { background: var(--orange-soft); color: var(--orange); }
+.ex-stats { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+.ex-stats strong { color: var(--neon2); }
+
+.add-ex-card {
+  border: 1.5px dashed var(--neon) !important;
+  background: var(--neon-soft2) !important;
+  cursor: pointer; text-align: center; padding: 14px;
+  font-size: 13px; font-weight: 700; color: var(--neon2);
+}
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.65); z-index: 200;
+  align-items: flex-end;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--card); border-radius: 22px 22px 0 0;
+  width: 100%; padding: 20px 16px 40px;
+  border-top: 1px solid var(--neon-soft);
+  max-height: 85vh; overflow-y: auto;
+}
+.modal-title { font-size: 17px; font-weight: 800; margin-bottom: 18px; }
+.modal-row { margin-bottom: 14px; }
+.modal-label { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; font-weight: 600; }
+.modal-input {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--border-light);
+  border-radius: 12px; font-size: 15px; outline: none;
+  font-family: inherit; background: var(--card2); color: var(--text);
+}
+.modal-input:focus { border-color: var(--neon); box-shadow: 0 0 0 3px var(--neon-soft); }
+.modal-input::placeholder { color: var(--text-muted); }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.modal-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.modal-close-btn {
+  display: block; width: 100%; padding: 14px;
+  background: transparent; border: none; border-radius: 12px;
+  font-size: 13px; color: var(--text-muted); cursor: pointer;
+  font-family: inherit; margin-top: 4px; font-weight: 600;
+}
+.modal-hint {
+  background: var(--neon-soft2); border-radius: 12px; padding: 10px 12px;
+  font-size: 12px; color: var(--neon2); margin-bottom: 14px;
+}
+.modal-hint strong { color: var(--neon2); }
+
+select.modal-input { appearance: none; -webkit-appearance: none; }
+
+/* ── CHARTS ── */
+.chart-canvas-wrap { position: relative; height: 160px; padding: 0 4px 4px; }
+.pr-row { display: flex; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.pr-row:last-child { border-bottom: none; }
+.pr-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+.pr-ex { font-size: 12px; color: var(--text-sub); flex: 1; }
+.pr-avg { font-size: 11px; color: var(--text-muted); margin-right: 10px; }
+.pr-max { font-size: 15px; font-weight: 800; min-width: 50px; text-align: right; }
+.stat-row { display: flex; justify-content: space-around; padding: 14px 0 4px; }
+.stat-item { text-align: center; }
+.stat-num { font-size: 21px; font-weight: 800; }
+.stat-lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── TASKS ── */
+.task-counters { display: flex; gap: 16px; margin-top: 12px; position: relative; }
+.tc-item { text-align: center; }
+.tc-num { font-size: 22px; font-weight: 800; }
+.tc-lbl { font-size: 9.5px; color: var(--text-sub); }
+
+.task-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  cursor: pointer; padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.task-item:last-child { border-bottom: none; }
+.task-cb {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border-light); flex-shrink: 0; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; transition: all .15s;
+}
+.task-cb.done { background: var(--green); border-color: var(--green); color: #04261c; }
+.task-body { flex: 1; }
+.task-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+.task-text.done { text-decoration: line-through; color: var(--text-muted); }
+.task-meta { display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+.prio { font-size: 10px; padding: 2px 7px; border-radius: 6px; font-weight: 700; }
+.prio-h { background: var(--red-soft); color: var(--red); }
+.prio-m { background: var(--orange-soft); color: var(--orange); }
+.prio-l { background: var(--green-soft); color: var(--green); }
+.task-dl { font-size: 10px; color: var(--text-muted); }
+.task-cat { font-size: 10px; color: var(--text-sub); }
+
+.fab-btn {
+  position: fixed; bottom: 76px; right: 16px;
+  width: 54px; height: 54px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  color: #fff; border: none;
+  font-size: 26px; cursor: pointer; z-index: 99;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 24px var(--neon-glow);
+}
+
+/* ── SUPPLEMENTS ── */
+.day-strip {
+  display: flex; gap: 6px; padding: 10px 12px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.day-strip::-webkit-scrollbar { display: none; }
+.day-chip {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 42px; padding: 7px 4px; border-radius: 12px;
+  cursor: pointer; border: 1px solid transparent;
+}
+.day-chip.today {
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  box-shadow: 0 0 14px var(--neon-glow);
+}
+.dc-name { font-size: 10px; color: var(--text-muted); }
+.dc-num { font-size: 15px; font-weight: 700; color: var(--text); }
+.day-chip.today .dc-name, .day-chip.today .dc-num { color: #fff; }
+
+.supp-item { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.supp-item:last-child { border-bottom: none; }
+.supp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.supp-emoji { font-size: 22px; }
+.supp-info { flex: 1; }
+.supp-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.supp-dose { font-size: 11px; color: var(--text-muted); }
+.supp-pct {
+  font-size: 12px; font-weight: 700; color: var(--neon2);
+  background: var(--neon-soft); padding: 3px 9px; border-radius: 8px;
+}
+.supp-del {
+  font-size: 16px; color: var(--text-muted); cursor: pointer; padding: 4px;
+}
+.time-chips { display: flex; gap: 7px; }
+.time-chip {
+  font-size: 11px; padding: 5px 11px; border-radius: 9px;
+  border: 1.5px solid var(--border-light); background: var(--card2); color: var(--text-sub);
+  font-weight: 600; cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.time-chip.on {
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  color: #fff; border-color: transparent;
+}
+
+.prog-bar-wrap { height: 7px; background: var(--card2); border-radius: 4px; margin: 8px 0 4px; overflow: hidden; }
+.prog-bar { height: 100%; border-radius: 4px; transition: width .3s; }
+.prog-bar.green { background: var(--green); box-shadow: 0 0 8px rgba(0,229,160,0.5); }
+.prog-bar.neon { background: linear-gradient(90deg, var(--neon), var(--neon2)); box-shadow: 0 0 8px var(--neon-glow); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+
+/* ── BODY TRACKER ── */
+.body-tabs { display: flex; gap: 7px; padding: 10px 12px; }
+.btab {
+  flex: 1; text-align: center; font-size: 12px; font-weight: 700;
+  padding: 9px; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--border-light); background: var(--card); color: var(--text-sub);
+  font-family: inherit;
+}
+.btab.active {
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  color: #fff; border-color: transparent; box-shadow: 0 0 16px var(--neon-glow);
+}
+.body-entry-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.body-entry-row:last-child { border-bottom: none; }
+.be-date { font-size: 11px; color: var(--text-muted); }
+.be-val { font-size: 14px; font-weight: 700; color: var(--text); }
+.be-delta { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px; }
+.be-delta.up { color: var(--red); background: var(--red-soft); }
+.be-delta.down { color: var(--green); background: var(--green-soft); }
+
+.fatsecret-note {
+  background: var(--blue-soft); border: 1px solid rgba(77,171,255,0.25);
+  border-radius: 12px; padding: 12px 14px; font-size: 11.5px; color: var(--blue);
+  line-height: 1.5; margin: 0 12px 10px;
+}
+
+/* ── REPORT (monthly) ── */
+.report-month-switch {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; gap: 12px;
+}
+.month-arrow {
+  width: 34px; height: 34px; border-radius: 10px; background: var(--card2);
+  border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; color: var(--text-sub); flex-shrink: 0;
+}
+.month-label { font-size: 15px; font-weight: 700; text-align: center; flex: 1; }
+
+.report-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 12px 4px; }
+.rs-card { background: var(--card); border-radius: 16px; padding: 14px; border: 1px solid var(--border); }
+.rs-label { font-size: 10.5px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
+.rs-val { font-size: 20px; font-weight: 800; }
+
+.report-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.report-row:last-child { border-bottom: none; }
+.rr-label { font-size: 12.5px; color: var(--text-sub); }
+.rr-val { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.rr-val.neon { color: var(--neon2); }
+.rr-val.green { color: var(--green); }
+
+/* ── AI AGENT placeholder ── */
+.ai-hero {
+  text-align: center; padding: 32px 24px;
+}
+.ai-icon-big {
+  width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 16px;
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 32px;
+  box-shadow: 0 0 36px var(--neon-glow);
+}
+.ai-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+.ai-desc { font-size: 13px; color: var(--text-sub); line-height: 1.6; max-width: 280px; margin: 0 auto; }
+.ai-feature-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.ai-feature-row:last-child { border-bottom: none; }
+.ai-feature-icon { font-size: 20px; opacity: 0.5; }
+.ai-feature-text { font-size: 12.5px; color: var(--text-sub); }
+.ai-badge-soon {
+  font-size: 10px; font-weight: 700; color: var(--neon2);
+  background: var(--neon-soft); padding: 3px 9px; border-radius: 8px;
+  margin-left: auto;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══════════════════════════════════ HOME ═══════════════════════════════ -->
+  <div class="screen active" id="s-home">
+    <div class="page-header">
+      <div class="home-greeting">Привет,</div>
+      <div class="home-name" id="user-name">Вадим 👋</div>
+      <div class="home-date" id="home-date"></div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Жим лёжа 1RM</div>
+        <div class="kpi-val kpi-neon" id="kpi-bench">—</div>
+        <div class="kpi-sub" id="kpi-bench-sub">нет данных</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Задач выполнено</div>
+        <div class="kpi-val kpi-green" id="kpi-tasks">0/0</div>
+        <div class="kpi-sub" id="kpi-tasks-sub">0%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Становая 1RM</div>
+        <div class="kpi-val kpi-orange" id="kpi-dead">—</div>
+        <div class="kpi-sub" id="kpi-dead-sub">нет данных</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Вес тела</div>
+        <div class="kpi-val kpi-blue" id="kpi-weight">—</div>
+        <div class="kpi-sub" id="kpi-weight-sub">нет данных</div>
+      </div>
+    </div>
+
+    <div class="section-label">Быстрый доступ</div>
+    <div class="quick-grid">
+      <div class="quick-card" onclick="go('workout')">
+        <div class="quick-icon">🏋️</div>
+        <div class="quick-title">Тренировка</div>
+        <div class="quick-meta">Добавить подход</div>
+      </div>
+      <div class="quick-card" onclick="go('charts')">
+        <div class="quick-icon">📈</div>
+        <div class="quick-title">Прогресс</div>
+        <div class="quick-meta">Графики и PR</div>
+      </div>
+      <div class="quick-card" onclick="go('body')">
+        <div class="quick-icon">⚖️</div>
+        <div class="quick-title">Вес и ккал</div>
+        <div class="quick-meta">Дневник тела</div>
+      </div>
+      <div class="quick-card" onclick="go('tasks')">
+        <div class="quick-icon">✅</div>
+        <div class="quick-title">Задачи</div>
+        <div class="quick-meta" id="q-tasks">0 активных</div>
+      </div>
+      <div class="quick-card" onclick="go('supps')">
+        <div class="quick-icon">💊</div>
+        <div class="quick-title">Добавки</div>
+        <div class="quick-meta">Отметить приём</div>
+      </div>
+      <div class="quick-card" onclick="go('report')">
+        <div class="quick-icon">🗓</div>
+        <div class="quick-title">Отчёт</div>
+        <div class="quick-meta">Итоги месяца</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ WORKOUT ═══════════════════════════════ -->
+  <div class="screen" id="s-workout">
+    <div class="page-header">
+      <div class="ph-title">Силовой дневник</div>
+      <div class="ph-sub" id="wo-date-label"></div>
+    </div>
+
+    <div class="muscle-tabs" id="muscle-tabs">
+      <div class="mtab active" onclick="selectMuscle('Грудь + Трицепс',this)">Грудь+Три</div>
+      <div class="mtab" onclick="selectMuscle('Спина + Бицепс',this)">Спина+Би</div>
+      <div class="mtab" onclick="selectMuscle('Ноги + Ягодицы',this)">Ноги</div>
+      <div class="mtab" onclick="selectMuscle('Плечи + Трапеции',this)">Плечи</div>
+      <div class="mtab" onclick="selectMuscle('Руки (Би + Три)',this)">Руки</div>
+      <div class="mtab" onclick="selectMuscle('Пресс + Кор',this)">Пресс</div>
+    </div>
+
+    <div id="exercise-list"></div>
+
+    <div class="card add-ex-card" onclick="openAddSet()">+ Добавить подход</div>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- ═══════════════════════════════ CHARTS ════════════════════════════════ -->
+  <div class="screen" id="s-charts">
+    <div class="page-header">
+      <div class="ph-title">Прогресс</div>
+      <div class="ph-sub">Авторасчёт из лога</div>
+    </div>
+
+    <div class="section-label">Общая статистика</div>
+    <div class="card">
+      <div class="stat-row">
+        <div class="stat-item">
+          <div class="stat-num kpi-neon" id="stat-sessions">0</div>
+          <div class="stat-lbl">тренировок</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num kpi-green" id="stat-sets">0</div>
+          <div class="stat-lbl">подходов</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num kpi-orange" id="stat-volume">0</div>
+          <div class="stat-lbl">кг объём</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">1RM — Большая тройка</div>
+    <div class="card card-glow">
+      <div class="card-inner">
+        <div class="chart-canvas-wrap">
+          <canvas id="progressChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Рекорды (макс 1RM · ср. вес)</div>
+    <div class="card">
+      <div class="card-inner" id="pr-table"></div>
+    </div>
+
+    <div class="section-label">Средний рабочий вес</div>
+    <div class="card">
+      <div class="card-inner">
+        <div class="chart-canvas-wrap" style="height:130px">
+          <canvas id="avgChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ BODY (weight + cal) ═════════════════ -->
+  <div class="screen" id="s-body">
+    <div class="page-header">
+      <div class="ph-title">Вес и калории</div>
+      <div class="ph-sub" id="body-date-label"></div>
+    </div>
+
+    <div class="body-tabs">
+      <div class="btab active" onclick="selectBodyTab('weight',this)">⚖️ Вес</div>
+      <div class="btab" onclick="selectBodyTab('cal',this)">🔥 Калории</div>
+    </div>
+
+    <div id="body-weight-section">
+      <div class="section-label">Динамика веса</div>
+      <div class="card card-glow">
+        <div class="card-inner">
+          <div class="chart-canvas-wrap" style="height:140px">
+            <canvas id="weightChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card add-ex-card" onclick="openAddBody('weight')">+ Добавить замер веса</div>
+      <div class="section-label">История</div>
+      <div class="card"><div class="card-inner" id="weight-history"></div></div>
+    </div>
+
+    <div id="body-cal-section" style="display:none">
+      <div class="fatsecret-note">
+        🔗 <strong>Интеграция с FatSecret</strong> технически возможна через их API (подсчёт КБЖУ по базе продуктов), но требует OAuth и сервер — добавим на втором этапе. Сейчас калории вводятся вручную.
+      </div>
+      <div class="section-label">Калории по дням</div>
+      <div class="card card-glow">
+        <div class="card-inner">
+          <div class="chart-canvas-wrap" style="height:140px">
+            <canvas id="calChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card add-ex-card" onclick="openAddBody('cal')">+ Добавить калории за день</div>
+      <div class="section-label">История</div>
+      <div class="card"><div class="card-inner" id="cal-history"></div></div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- ════════════════════════════════ TASKS ════════════════════════════════ -->
+  <div class="screen" id="s-tasks">
+    <div class="page-header">
+      <div class="ph-title">Задачи</div>
+      <div class="task-counters">
+        <div class="tc-item"><div class="tc-num" id="t-total">0</div><div class="tc-lbl">всего</div></div>
+        <div class="tc-item"><div class="tc-num kpi-green" id="t-done">0</div><div class="tc-lbl">готово</div></div>
+        <div class="tc-item"><div class="tc-num kpi-orange" id="t-left">0</div><div class="tc-lbl">осталось</div></div>
+        <div class="tc-item"><div class="tc-num kpi-neon" id="t-pct">0%</div><div class="tc-lbl">прогресс</div></div>
+      </div>
+    </div>
+
+    <div class="section-label">Активные задачи</div>
+    <div class="card">
+      <div id="task-list-active"></div>
+    </div>
+    <div class="section-label">Выполненные</div>
+    <div class="card">
+      <div id="task-list-done"></div>
+    </div>
+
+    <button class="fab-btn" onclick="openAddTask()">+</button>
+  </div>
+
+  <!-- ══════════════════════════════ SUPPLEMENTS ═══════════════════════════ -->
+  <div class="screen" id="s-supps">
+    <div class="page-header">
+      <div class="ph-title">Добавки и лекарства</div>
+      <div class="ph-sub" id="supp-date-label"></div>
+    </div>
+
+    <div class="day-strip" id="day-strip"></div>
+
+    <div class="section-label">Список приёма</div>
+    <div class="card">
+      <div id="supp-list"></div>
+    </div>
+
+    <div class="card add-ex-card" onclick="openAddSupp()">+ Добавить свой препарат</div>
+
+    <div class="section-label">Общий прогресс дня</div>
+    <div class="card">
+      <div class="card-inner">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px">
+          <span>Принято сегодня</span>
+          <span id="supp-pct-label" style="color:var(--neon2);font-weight:700">0%</span>
+        </div>
+        <div class="prog-bar-wrap"><div class="prog-bar neon" id="supp-prog-bar" style="width:0%"></div></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="supp-count-label">0 из 0 приёмов</div>
+      </div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- ═══════════════════════════════ REPORT (monthly) ══════════════════════ -->
+  <div class="screen" id="s-report">
+    <div class="page-header">
+      <div class="ph-title">Отчёт за месяц</div>
+      <div class="ph-sub">Сводка по всем разделам</div>
+    </div>
+
+    <div class="report-month-switch">
+      <div class="month-arrow" onclick="shiftReportMonth(-1)">‹</div>
+      <div class="month-label" id="report-month-label">Июнь 2026</div>
+      <div class="month-arrow" onclick="shiftReportMonth(1)">›</div>
+    </div>
+
+    <div class="report-summary-grid">
+      <div class="rs-card">
+        <div class="rs-label">Тренировок</div>
+        <div class="rs-val kpi-neon" id="rep-sessions">0</div>
+      </div>
+      <div class="rs-card">
+        <div class="rs-label">Задач закрыто</div>
+        <div class="rs-val kpi-green" id="rep-tasks">0</div>
+      </div>
+      <div class="rs-card">
+        <div class="rs-label">Добавки %</div>
+        <div class="rs-val kpi-orange" id="rep-supps">0%</div>
+      </div>
+      <div class="rs-card">
+        <div class="rs-label">Δ Вес тела</div>
+        <div class="rs-val kpi-blue" id="rep-weight">—</div>
+      </div>
+    </div>
+
+    <div class="section-label">Силовые — прирост за месяц</div>
+    <div class="card">
+      <div class="card-inner" id="report-strength"></div>
+    </div>
+
+    <div class="section-label">Задачи по категориям</div>
+    <div class="card">
+      <div class="card-inner" id="report-tasks-cat"></div>
+    </div>
+
+    <div class="section-label">Калории — среднее за месяц</div>
+    <div class="card">
+      <div class="card-inner">
+        <div class="report-row">
+          <div class="rr-label">Среднее в день</div>
+          <div class="rr-val neon" id="rep-avg-cal">— ккал</div>
+        </div>
+        <div class="report-row">
+          <div class="rr-label">Записей за месяц</div>
+          <div class="rr-val" id="rep-cal-count">0</div>
+        </div>
+      </div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- ═══════════════════════════════ AI AGENT placeholder ══════════════════ -->
+  <div class="screen" id="s-ai">
+    <div class="page-header">
+      <div class="ph-title">ИИ-агент</div>
+      <div class="ph-sub">Скоро — анализ и рекомендации</div>
+    </div>
+
+    <div class="card card-glow">
+      <div class="ai-hero">
+        <div class="ai-icon-big">🤖</div>
+        <div class="ai-title">Раздел в разработке</div>
+        <div class="ai-desc">Здесь появится ИИ-агент, который будет анализировать твои данные и давать персональные рекомендации</div>
+      </div>
+    </div>
+
+    <div class="section-label">Что будет уметь</div>
+    <div class="card">
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">📊</div>
+        <div class="ai-feature-text">Анализ плато в силовых — подскажет когда менять программу</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">🍽</div>
+        <div class="ai-feature-text">Рекомендации по калориям на основе цели (набор/сушка)</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">💊</div>
+        <div class="ai-feature-text">Напоминания о пропущенных добавках и взаимодействиях</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">📈</div>
+        <div class="ai-feature-text">Прогноз 1RM и предложения по программе на след. месяц</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">💬</div>
+        <div class="ai-feature-text">Чат с ИИ по твоим данным — задавай вопросы напрямую</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+    </div>
+
+    <div class="section-label">Данные и синхронизация</div>
+    <div class="card">
+      <div class="card-inner">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div id="sync-dot" style="width:9px;height:9px;border-radius:50%;background:var(--text-muted)"></div>
+          <div style="font-size:12px;color:var(--text-sub)" id="sync-status">Проверка подключения…</div>
+        </div>
+        <div style="font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:12px">
+          Данные привязаны к твоему Telegram-аккаунту и хранятся на сервере. Дополнительно можешь сохранить копию вручную.
+        </div>
+        <button class="btn-ghost" onclick="exportData()" style="margin:0">⬇️ Скачать резервную копию (JSON)</button>
+      </div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="go('home')">
+    <div class="nav-icon">🏠</div><div class="nav-label">Главная</div>
+  </div>
+  <div class="nav-item" id="nav-workout" onclick="go('workout')">
+    <div class="nav-icon">🏋️</div><div class="nav-label">Трен.</div>
+  </div>
+  <div class="nav-item" id="nav-tasks" onclick="go('tasks')">
+    <div class="nav-icon">✅</div><div class="nav-label">Задачи</div>
+  </div>
+  <div class="nav-item" id="nav-supps" onclick="go('supps')">
+    <div class="nav-icon">💊</div><div class="nav-label">Добавки</div>
+  </div>
+  <div class="nav-item" id="nav-report" onclick="go('report')">
+    <div class="nav-icon">🗓</div><div class="nav-label">Отчёт</div>
+  </div>
+  <div class="nav-item" id="nav-ai" onclick="go('ai')">
+    <div class="nav-icon">🤖</div><div class="nav-label">ИИ</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MODALS ═══════════════════════════ -->
+<!-- Add Set Modal -->
+<div class="modal-overlay" id="modal-set">
+  <div class="modal-sheet">
+    <div class="modal-title">Добавить подход</div>
+    <div class="modal-row">
+      <div class="modal-label">Упражнение</div>
+      <select class="modal-input" id="m-exercise"></select>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-row">
+        <div class="modal-label">Подходы</div>
+        <input class="modal-input" type="number" id="m-sets" value="4" min="1" max="20">
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Повторения</div>
+        <input class="modal-input" type="number" id="m-reps" value="8" min="1" max="50">
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Вес (кг)</div>
+        <input class="modal-input" type="number" id="m-weight" value="80" step="2.5">
+      </div>
+    </div>
+    <div class="modal-hint">
+      1RM: <strong id="m-1rm-preview">—</strong> · Ср. вес: <strong id="m-avg-preview">—</strong>
+    </div>
+    <button class="btn-primary" onclick="saveSet()">Сохранить подход</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-set')">Отмена</button>
+  </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal-sheet">
+    <div class="modal-title">Новая задача</div>
+    <div class="modal-row">
+      <div class="modal-label">Задача</div>
+      <input class="modal-input" type="text" id="m-task-text" placeholder="Что нужно сделать?">
+    </div>
+    <div class="modal-grid">
+      <div class="modal-row">
+        <div class="modal-label">Приоритет</div>
+        <select class="modal-input" id="m-task-prio">
+          <option value="h">🔴 Высокий</option>
+          <option value="m" selected>🟡 Средний</option>
+          <option value="l">🟢 Низкий</option>
+        </select>
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Дедлайн</div>
+        <input class="modal-input" type="date" id="m-task-dl">
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Категория</div>
+        <input class="modal-input" type="text" id="m-task-cat" placeholder="SEO, Личное…">
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveTask()">Добавить задачу</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-task')">Отмена</button>
+  </div>
+</div>
+
+<!-- Add Supplement Modal -->
+<div class="modal-overlay" id="modal-supp">
+  <div class="modal-sheet">
+    <div class="modal-title">Свой препарат / добавка</div>
+    <div class="modal-row">
+      <div class="modal-label">Название</div>
+      <input class="modal-input" type="text" id="m-supp-name" placeholder="Например: Витамин B12">
+    </div>
+    <div class="modal-grid2">
+      <div class="modal-row">
+        <div class="modal-label">Дозировка</div>
+        <input class="modal-input" type="text" id="m-supp-dose" placeholder="1000 мкг">
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Эмодзи</div>
+        <input class="modal-input" type="text" id="m-supp-emoji" placeholder="💊" maxlength="2">
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Время приёма</div>
+      <div style="display:flex;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sub)">
+          <input type="checkbox" id="m-supp-morning" checked style="width:16px;height:16px"> Утро
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sub)">
+          <input type="checkbox" id="m-supp-day" style="width:16px;height:16px"> День
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sub)">
+          <input type="checkbox" id="m-supp-evening" style="width:16px;height:16px"> Вечер
+        </label>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveSupp()">Добавить препарат</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-supp')">Отмена</button>
+  </div>
+</div>
+
+<!-- Add Body Metric Modal -->
+<div class="modal-overlay" id="modal-body">
+  <div class="modal-sheet">
+    <div class="modal-title" id="m-body-title">Добавить замер</div>
+    <div class="modal-row">
+      <div class="modal-label">Дата</div>
+      <input class="modal-input" type="date" id="m-body-date">
+    </div>
+    <div class="modal-row" id="m-body-weight-row">
+      <div class="modal-label">Вес (кг)</div>
+      <input class="modal-input" type="number" id="m-body-weight" step="0.1" placeholder="78.5">
+    </div>
+    <div class="modal-row" id="m-body-cal-row" style="display:none">
+      <div class="modal-label">Калории (ккал)</div>
+      <input class="modal-input" type="number" id="m-body-cal" step="10" placeholder="2400">
+    </div>
+    <button class="btn-primary" onclick="saveBody()">Сохранить</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-body')">Отмена</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// TELEGRAM WEBAPP INIT
+// ════════════════════════════════════════════════════════════════
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor && tg.setHeaderColor('#0a0a12');
+  tg.setBackgroundColor && tg.setBackgroundColor('#0a0a12');
+  const u = tg.initDataUnsafe?.user;
+  if (u?.first_name) document.getElementById('user-name').textContent = u.first_name + ' 👋';
+}
+
+// ════════════════════════════════════════════════════════════════
+// API CONFIG — поменяй на свой Railway-домен после деплоя бэкенда
+// ════════════════════════════════════════════════════════════════
+const API_BASE = 'https://planner-backend-production-ad6d.up.railway.app';
+
+function getUserId() {
+  const u = tg?.initDataUnsafe?.user;
+  if (u?.id) return u.id;
+  let demoId = localStorage.getItem('demo_user_id');
+  if (!demoId) { demoId = String(Date.now()); localStorage.setItem('demo_user_id', demoId); }
+  return parseInt(demoId);
+}
+const USER_ID = getUserId();
+
+async function apiCall(method, path, body) {
+  try {
+    const res = await fetch(API_BASE + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': String(USER_ID) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    return await res.json();
+  } catch (e) {
+    console.error('API недоступен, работаем в офлайн-режиме (localStorage):', e);
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+let state = {
+  workouts: [],
+  tasks: [],
+  bodyWeight: [],   // [{date, weight}]
+  bodyCal: [],      // [{date, cal}]
+  supps: {
+    list: [
+      { name: 'Витамин D3', emoji: '🌅', dose: '2000 МЕ', times: ['Утро'] },
+      { name: 'Омега-3', emoji: '🐟', dose: '1000 мг', times: ['Утро', 'Вечер'] },
+      { name: 'Магний B6', emoji: '🌙', dose: '400 мг', times: ['Вечер'] },
+      { name: 'Цинк', emoji: '🔩', dose: '15 мг', times: ['Утро'] },
+      { name: 'Креатин', emoji: '⚡', dose: '5 г', times: ['Утро'] },
+      { name: 'Протеин', emoji: '🥛', dose: '30 г', times: ['День'] },
+    ],
+    checked: {}
+  }
+};
+
+// Твоя реальная история тренировок (Окт 2025 — Апр 2026), 118 подходов из 31 сессии
+const HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":45.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":12,"weight":15.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":17.5},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":65.0},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-10","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":3,"reps":5,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":5,"reps":6,"weight":60.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":40.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":72.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":4,"reps":12,"weight":20.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":35.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":3,"reps":12,"weight":7.5},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":3,"reps":10,"weight":10.0},{"date":"2025-12-16","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":3,"reps":10,"weight":18.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":17.5},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":15,"weight":17.5},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":23.0},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём гантелей на бицепс сидя","sets":4,"reps":10,"weight":10.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":50.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":3,"reps":15,"weight":40.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":10,"weight":20.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":70.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":8,"weight":22.5},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":22.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":22.5},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":60.0},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":25.0},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":7.5},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":70.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":40.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока одной рукой","sets":3,"reps":15,"weight":15.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":30.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":6,"weight":70.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":18,"weight":20.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":100.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":8,"weight":55.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":6,"weight":35.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":3,"weight":80.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":60.0},{"date":"2026-01-20","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":17.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":2,"weight":80.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":15.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":4,"reps":12,"weight":12.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":27.5},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":120.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":2,"reps":8,"weight":80.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":45.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-12","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":6,"weight":60.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":12,"weight":45.0},{"date":"2026-02-12","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":22.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":7.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":5,"reps":12,"weight":45.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":20.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":10,"weight":10.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Разведение в тренажёре (задние дельты)","sets":3,"reps":15,"weight":25.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":105.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга в хаммере","sets":5,"reps":6,"weight":70.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":10,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":5,"reps":6,"weight":20.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":3,"weight":104.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":8,"weight":120.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":15,"weight":45.0},{"date":"2026-02-28","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":2,"reps":10,"weight":40.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":7,"weight":20.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":120.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":65.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":100.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":6,"weight":120.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":10.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":12,"weight":10.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":10,"weight":75.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":140.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":70.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":70.0},{"date":"2026-03-21","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":10,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":12,"weight":17.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":50.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":3,"reps":15,"weight":12.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":6,"weight":20.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":25.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":120.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":100.0}]
+;
+
+let currentMuscle = 'Грудь + Трицепс';
+let currentBodyTab = 'weight';
+let selectedSuppDate = todayStr();
+let reportMonthOffset = 0; // 0 = current month
+let progChart=null, avgChart=null, weightChart=null, calChart=null;
+
+const EXERCISES = {
+  'Грудь + Трицепс':  ['Жим штанги лёжа','Жим штанги на наклонной скамье','Жим гантелей на наклонной скамье','Разводка гантелей лёжа','Сведение в тренажёре (Бабочка)','Французский жим','Разгибание на трицепс (блок)'],
+  'Спина + Бицепс':   ['Становая тяга','Румынская тяга','Тяга штанги в наклоне','Тяга верхнего блока к груди','Тяга нижнего блока к поясу','Тяга нижнего блока одной рукой','Тяга в хаммере','Подъём штанги на бицепс','Подъём EZ-штанги на бицепс','Подъём гантелей на бицепс сидя','Подъём гантелей на бицепс стоя','Сгибание на скамье Скотта','Молотки (Hammer Curl)'],
+  'Ноги + Ягодицы':   ['Приседания со штангой','Жим ногами','Разгибание ног (тренажёр)','Сгибание ног (тренажёр)','Выпады с гантелями','Подъём на носки'],
+  'Плечи + Трапеции': ['Жим гантелей сидя (плечи)','Жим штанги стоя','Подъём гантелей в стороны','Подъём гантелей перед собой','Разведение в тренажёре (задние дельты)','Тяга к подбородку','Шраги'],
+  'Руки (Би + Три)':  ['Подъём штанги на бицепс','Молотки (Hammer Curl)','Французский жим','Разгибание на трицепс (блок)'],
+  'Пресс + Кор':      ['Скручивания','Подъём ног в висе','Планка','Боковая планка','Велосипед','Русский твист'],
+};
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function formatDate(d) {
+  const opts = {day:'numeric',month:'long',weekday:'long'};
+  return new Date(d+'T00:00').toLocaleDateString('ru-RU', opts);
+}
+function round1(n) { return Math.round(n * 10) / 10; }
+function calc1rm(w, r) { return round1(w * (1 + r/30)); }
+
+const NEON_PALETTE = ['#b026ff','#00e5a0','#ff9d3d','#4dabff','#ff4d6a','#d946ef'];
+
+// ════════════════════════════════════════════════════════════════
+// CHART.JS GLOBAL DARK THEME
+// ════════════════════════════════════════════════════════════════
+if (window.Chart) {
+  Chart.defaults.color = '#8888a0';
+  Chart.defaults.borderColor = '#2a2a3d';
+  Chart.defaults.font.family = "'Montserrat', sans-serif";
+}
+
+// ════════════════════════════════════════════════════════════════
+// STORAGE — API (Postgres через бэкенд) с фоллбеком на localStorage
+// Это даёт привязку к Telegram user_id и независимость от CloudStorage.
+// Если API недоступен (бэкенд ещё не задеплоен/настроен) — всё работает
+// локально через localStorage, ничего не ломается.
+// ════════════════════════════════════════════════════════════════
+let apiAvailable = false;
+
+function saveStateLocal() {
+  const payload = {
+    workouts: JSON.stringify(state.workouts),
+    tasks: JSON.stringify(state.tasks),
+    supps_list: JSON.stringify(state.supps.list),
+    supps_checked: JSON.stringify(state.supps.checked),
+    body_weight: JSON.stringify(state.bodyWeight),
+    body_cal: JSON.stringify(state.bodyCal),
+  };
+  Object.entries(payload).forEach(([k,v]) => localStorage.setItem(k + '_' + USER_ID, v));
+}
+
+function loadStateLocal() {
+  const keys = ['workouts','tasks','supps_list','supps_checked','body_weight','body_cal'];
+  const vals = {};
+  keys.forEach(k => vals[k] = localStorage.getItem(k + '_' + USER_ID));
+  applyLoaded(vals);
+}
+
+function applyLoaded(vals) {
+  if (vals.workouts) state.workouts = JSON.parse(vals.workouts);
+  if (vals.tasks) state.tasks = JSON.parse(vals.tasks);
+  if (vals.supps_list) state.supps.list = JSON.parse(vals.supps_list);
+  if (vals.supps_checked) state.supps.checked = JSON.parse(vals.supps_checked);
+  if (vals.body_weight) state.bodyWeight = JSON.parse(vals.body_weight);
+  if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal);
+}
+
+// Общая функция сохранения — пишет в localStorage всегда (мгновенный отклик UI),
+// и параллельно пытается синхронизировать с сервером, если он доступен.
+function saveState() {
+  saveStateLocal();
+}
+
+// Загрузка при старте: сначала пробуем API (надёжный источник истины),
+// если недоступен — берём то, что есть в localStorage.
+async function loadState(cb) {
+  const [workouts, tasks, supps, checks, weight, cal] = await Promise.all([
+    apiCall('GET', '/api/workouts'),
+    apiCall('GET', '/api/tasks'),
+    apiCall('GET', '/api/supplements'),
+    apiCall('GET', '/api/supplement_checks'),
+    apiCall('GET', '/api/body/weight'),
+    apiCall('GET', '/api/body/calories'),
+  ]);
+
+  if (workouts !== null) {
+    apiAvailable = true;
+    state.workouts = workouts.map(w => ({...w, date: w.date, weight: parseFloat(w.weight)}));
+    state.tasks = tasks.map(t => ({...t, dl: t.dl || ''}));
+    if (supps && supps.length) state.supps.list = supps;
+    state.supps.checked = {};
+    (checks || []).forEach(c => {
+      state.supps.checked[`${c.date}_${c.supp_name}_${c.time_slot}`] = true;
+    });
+    state.bodyWeight = (weight || []).map(w => ({date: w.date, weight: parseFloat(w.weight)}));
+    state.bodyCal = (cal || []).map(c => ({date: c.date, cal: c.calories}));
+  } else {
+    apiAvailable = false;
+    loadStateLocal();
+  }
+
+  await maybeImportHistory();
+  cb();
+}
+
+// Импорт твоей истории тренировок при первом запуске (один раз на user_id)
+async function maybeImportHistory() {
+  const flagKey = 'history_imported_' + USER_ID;
+  if (localStorage.getItem(flagKey)) return;
+  if (state.workouts.length > 0) { localStorage.setItem(flagKey, '1'); return; }
+
+  if (apiAvailable) {
+    const result = await apiCall('POST', '/api/workouts/bulk', { workouts: HISTORY_SEED });
+    if (result) state.workouts = HISTORY_SEED.map(w => ({...w}));
+  } else {
+    state.workouts = HISTORY_SEED.map(w => ({...w}));
+    saveStateLocal();
+  }
+  localStorage.setItem(flagKey, '1');
+}
+
+// ════════════════════════════════════════════════════════════════
+// EXPORT — ручной бэкап в JSON-файл (доп. защита от потери данных)
+// ════════════════════════════════════════════════════════════════
+function exportData() {
+  const payload = {
+    exported_at: new Date().toISOString(),
+    user_id: USER_ID,
+    ...state
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `planner_backup_${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════════════
+const SCREENS = ['home','workout','charts','body','tasks','supps','report','ai'];
+function go(name) {
+  SCREENS.forEach(s => {
+    const scr = document.getElementById('s-'+s);
+    if (scr) scr.classList.toggle('active', s===name);
+  });
+  ['home','workout','tasks','supps','report','ai'].forEach(s => {
+    const nv = document.getElementById('nav-'+s);
+    if (nv) nv.classList.toggle('active', s===name || (s==='workout' && (name==='charts')) );
+  });
+  if (name === 'home') renderHome();
+  if (name === 'workout') renderWorkout();
+  if (name === 'charts') renderCharts();
+  if (name === 'body') renderBody();
+  if (name === 'tasks') renderTasks();
+  if (name === 'supps') renderSupps();
+  if (name === 'report') renderReport();
+}
+
+// ════════════════════════════════════════════════════════════════
+// HOME
+// ════════════════════════════════════════════════════════════════
+function renderHome() {
+  const today = todayStr();
+  document.getElementById('home-date').textContent = formatDate(today);
+
+  const benchSets = state.workouts.filter(w => w.exercise === 'Жим штанги лёжа');
+  if (benchSets.length) {
+    const maxRM = Math.max(...benchSets.map(w => calc1rm(w.weight, w.reps)));
+    document.getElementById('kpi-bench').textContent = maxRM + ' кг';
+    const avgW = round1(benchSets.reduce((a,b)=>a+b.weight,0)/benchSets.length);
+    document.getElementById('kpi-bench-sub').textContent = 'ср. вес ' + avgW + ' кг';
+  }
+
+  const deadSets = state.workouts.filter(w => w.exercise === 'Становая тяга');
+  if (deadSets.length) {
+    const maxRM = Math.max(...deadSets.map(w => calc1rm(w.weight, w.reps)));
+    document.getElementById('kpi-dead').textContent = maxRM + ' кг';
+    const avgW = round1(deadSets.reduce((a,b)=>a+b.weight,0)/deadSets.length);
+    document.getElementById('kpi-dead-sub').textContent = 'ср. вес ' + avgW + ' кг';
+  }
+
+  const total = state.tasks.length;
+  const done = state.tasks.filter(t=>t.done).length;
+  document.getElementById('kpi-tasks').textContent = done+'/'+total;
+  document.getElementById('kpi-tasks-sub').textContent = total ? Math.round(done/total*100)+'%' : '0%';
+  document.getElementById('q-tasks').textContent = (total-done)+' активных';
+
+  if (state.bodyWeight.length) {
+    const sorted = [...state.bodyWeight].sort((a,b)=>a.date.localeCompare(b.date));
+    const last = sorted[sorted.length-1];
+    document.getElementById('kpi-weight').textContent = last.weight + ' кг';
+    if (sorted.length > 1) {
+      const prev = sorted[sorted.length-2];
+      const delta = round1(last.weight - prev.weight);
+      document.getElementById('kpi-weight-sub').textContent = (delta>=0?'+':'')+delta+' кг с прошлого замера';
+    } else {
+      document.getElementById('kpi-weight-sub').textContent = last.date;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// WORKOUT
+// ════════════════════════════════════════════════════════════════
+function selectMuscle(muscle, el) {
+  currentMuscle = muscle;
+  document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderExercises();
+}
+
+function renderWorkout() {
+  document.getElementById('wo-date-label').textContent = formatDate(todayStr());
+  renderExercises();
+  updateExerciseSelect();
+}
+
+function renderExercises() {
+  const today = todayStr();
+  const exNames = EXERCISES[currentMuscle] || [];
+  const container = document.getElementById('exercise-list');
+
+  const todaySets = state.workouts.filter(w => w.date === today && w.muscle === currentMuscle);
+  const byEx = {};
+  todaySets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
+
+  const exToShow = [...new Set([...Object.keys(byEx), ...exNames])];
+
+  container.innerHTML = exToShow.map(ex => {
+    const sets = byEx[ex] || [];
+    if (!sets.length) return '';
+    const chips = sets.map(s => {
+      const orm = calc1rm(s.weight, s.reps);
+      const isPR = isPRFor(ex, orm);
+      return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</div>`;
+    }).join('');
+    const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
+    const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
+    return `<div class="card"><div class="card-inner">
+      <div class="ex-name">${ex}</div>
+      <div class="ex-sets">${chips}</div>
+      <div class="ex-stats">1RM: <strong>${maxRM} кг</strong> · Ср. вес сессии: <strong>${avgW} кг</strong></div>
+    </div></div>`;
+  }).join('');
+}
+
+function isPRFor(exercise, orm) {
+  const all = state.workouts.filter(w => w.exercise === exercise);
+  const max = all.length ? Math.max(...all.map(w=>calc1rm(w.weight,w.reps))) : 0;
+  return orm >= max;
+}
+
+function updateExerciseSelect() {
+  const sel = document.getElementById('m-exercise');
+  const exList = EXERCISES[currentMuscle] || [];
+  sel.innerHTML = exList.map(ex=>`<option value="${ex}">${ex}</option>`).join('');
+}
+
+function openAddSet() {
+  updateExerciseSelect();
+  updateRMPreview();
+  document.getElementById('modal-set').classList.add('open');
+}
+
+function updateRMPreview() {
+  const w = parseFloat(document.getElementById('m-weight').value)||0;
+  const r = parseInt(document.getElementById('m-reps').value)||0;
+  const ex = document.getElementById('m-exercise').value;
+  const orm = calc1rm(w,r);
+  document.getElementById('m-1rm-preview').textContent = orm + ' кг';
+  const prevSets = state.workouts.filter(s=>s.exercise===ex);
+  const avgW = prevSets.length ? round1(prevSets.reduce((a,s)=>a+s.weight,0)/prevSets.length) : w;
+  document.getElementById('m-avg-preview').textContent = avgW + ' кг';
+}
+['m-weight','m-reps','m-exercise'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input', updateRMPreview);
+});
+
+function saveSet() {
+  const entry = {
+    date: todayStr(), muscle: currentMuscle,
+    exercise: document.getElementById('m-exercise').value,
+    sets: parseInt(document.getElementById('m-sets').value)||1,
+    reps: parseInt(document.getElementById('m-reps').value)||1,
+    weight: parseFloat(document.getElementById('m-weight').value)||0,
+  };
+  state.workouts.push(entry);
+  saveState();
+  if (apiAvailable) apiCall('POST', '/api/workouts', entry);
+  closeModal('modal-set');
+  renderExercises();
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHARTS
+// ════════════════════════════════════════════════════════════════
+function renderCharts() {
+  const dates = [...new Set(state.workouts.map(w=>w.date))];
+  const totalSets = state.workouts.reduce((a,w)=>a+w.sets,0);
+  const totalVol = Math.round(state.workouts.reduce((a,w)=>a+w.weight*w.sets*w.reps,0));
+  document.getElementById('stat-sessions').textContent = dates.length;
+  document.getElementById('stat-sets').textContent = totalSets;
+  document.getElementById('stat-volume').textContent = (totalVol/1000).toFixed(1)+'т';
+
+  const keyEx = [
+    {name:'Жим штанги лёжа', color:'#b026ff'},
+    {name:'Становая тяга', color:'#00e5a0'},
+    {name:'Приседания со штангой', color:'#ff9d3d'},
+    {name:'Румынская тяга', color:'#4dabff'},
+    {name:'Тяга штанги в наклоне', color:'#ff4d6a'},
+  ];
+  const prHTML = keyEx.map(({name,color})=>{
+    const sets = state.workouts.filter(w=>w.exercise===name);
+    if (!sets.length) return `<div class="pr-row"><div class="pr-dot" style="background:${color};color:${color}"></div><div class="pr-ex">${name}</div><div class="pr-avg">нет данных</div><div class="pr-max" style="color:var(--text-muted)">—</div></div>`;
+    const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
+    const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
+    return `<div class="pr-row">
+      <div class="pr-dot" style="background:${color};color:${color}"></div>
+      <div class="pr-ex">${name}</div>
+      <div class="pr-avg">ср. ${avgW} кг</div>
+      <div class="pr-max" style="color:${color}">${maxRM} кг</div>
+    </div>`;
+  }).join('');
+  document.getElementById('pr-table').innerHTML = prHTML;
+
+  const big3 = [
+    {name:'Жим штанги лёжа', color:'#b026ff', label:'Жим'},
+    {name:'Становая тяга', color:'#00e5a0', label:'Становая'},
+    {name:'Приседания со штангой', color:'#ff9d3d', label:'Присед'},
+  ];
+  const allDates = [...new Set(state.workouts.map(w=>w.date))].sort();
+
+  const lineData = {
+    labels: allDates.map(d=>d.slice(5)),
+    datasets: big3.map(ex=>({
+      label: ex.label,
+      data: allDates.map(d=>{
+        const s = state.workouts.filter(w=>w.date===d&&w.exercise===ex.name);
+        return s.length ? Math.max(...s.map(w=>calc1rm(w.weight,w.reps))) : null;
+      }),
+      borderColor: ex.color, backgroundColor: ex.color+'22',
+      tension: 0.3, pointRadius: 4, spanGaps: true,
+    }))
+  };
+
+  if (progChart) progChart.destroy();
+  progChart = new Chart(document.getElementById('progressChart').getContext('2d'), {
+    type: 'line', data: lineData,
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{size:10},boxWidth:12,color:'#8888a0'}}},
+      scales:{
+        x:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}},
+        y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}
+      }
+    }
+  });
+
+  const avgExList = ['Жим штанги лёжа','Становая тяга','Приседания со штангой','Жим штанги стоя'];
+  const avgColors = ['#b026ff','#00e5a0','#ff9d3d','#4dabff'];
+  const avgVals = avgExList.map(ex=>{
+    const s = state.workouts.filter(w=>w.exercise===ex);
+    return s.length ? round1(s.reduce((a,w)=>a+w.weight,0)/s.length) : 0;
+  });
+
+  if (avgChart) avgChart.destroy();
+  avgChart = new Chart(document.getElementById('avgChart').getContext('2d'), {
+    type:'bar',
+    data:{ labels:['Жим','Становая','Присед','Жим стоя'],
+      datasets:[{label:'Ср. вес кг',data:avgVals,backgroundColor:avgColors,borderRadius:6}] },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}}
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// BODY (weight + calories)
+// ════════════════════════════════════════════════════════════════
+function selectBodyTab(tab, el) {
+  currentBodyTab = tab;
+  document.querySelectorAll('.btab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('body-weight-section').style.display = tab==='weight' ? 'block' : 'none';
+  document.getElementById('body-cal-section').style.display = tab==='cal' ? 'block' : 'none';
+}
+
+function renderBody() {
+  document.getElementById('body-date-label').textContent = formatDate(todayStr());
+  renderWeightChart();
+  renderCalChart();
+  renderWeightHistory();
+  renderCalHistory();
+}
+
+function renderWeightChart() {
+  const sorted = [...state.bodyWeight].sort((a,b)=>a.date.localeCompare(b.date));
+  if (weightChart) weightChart.destroy();
+  weightChart = new Chart(document.getElementById('weightChart').getContext('2d'), {
+    type:'line',
+    data:{
+      labels: sorted.map(e=>e.date.slice(5)),
+      datasets:[{
+        label:'Вес, кг', data: sorted.map(e=>e.weight),
+        borderColor:'#4dabff', backgroundColor:'#4dabff22',
+        tension:0.3, pointRadius:4, fill:true,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}},y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}}
+    }
+  });
+}
+
+function renderCalChart() {
+  const sorted = [...state.bodyCal].sort((a,b)=>a.date.localeCompare(b.date));
+  if (calChart) calChart.destroy();
+  calChart = new Chart(document.getElementById('calChart').getContext('2d'), {
+    type:'bar',
+    data:{
+      labels: sorted.map(e=>e.date.slice(5)),
+      datasets:[{
+        label:'Ккал', data: sorted.map(e=>e.cal),
+        backgroundColor:'#ff9d3d', borderRadius:5,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}}
+    }
+  });
+}
+
+function renderWeightHistory() {
+  const sorted = [...state.bodyWeight].sort((a,b)=>b.date.localeCompare(a.date));
+  const cont = document.getElementById('weight-history');
+  if (!sorted.length) { cont.innerHTML = '<div class="empty-state">Пока нет замеров</div>'; return; }
+  cont.innerHTML = sorted.map((e,i)=>{
+    const prev = sorted[i+1];
+    let deltaHTML = '';
+    if (prev) {
+      const d = round1(e.weight - prev.weight);
+      deltaHTML = `<span class="be-delta ${d>=0?'up':'down'}">${d>=0?'+':''}${d} кг</span>`;
+    }
+    return `<div class="body-entry-row">
+      <span class="be-date">${e.date}</span>
+      <span class="be-val">${e.weight} кг</span>
+      ${deltaHTML}
+    </div>`;
+  }).join('');
+}
+
+function renderCalHistory() {
+  const sorted = [...state.bodyCal].sort((a,b)=>b.date.localeCompare(a.date));
+  const cont = document.getElementById('cal-history');
+  if (!sorted.length) { cont.innerHTML = '<div class="empty-state">Пока нет записей</div>'; return; }
+  cont.innerHTML = sorted.map(e=>`<div class="body-entry-row">
+    <span class="be-date">${e.date}</span>
+    <span class="be-val">${e.cal} ккал</span>
+  </div>`).join('');
+}
+
+function openAddBody(type) {
+  document.getElementById('m-body-date').value = todayStr();
+  document.getElementById('m-body-title').textContent = type==='weight' ? 'Добавить замер веса' : 'Добавить калории за день';
+  document.getElementById('m-body-weight-row').style.display = type==='weight' ? 'block' : 'none';
+  document.getElementById('m-body-cal-row').style.display = type==='cal' ? 'block' : 'none';
+  document.getElementById('modal-body').dataset.type = type;
+  document.getElementById('modal-body').classList.add('open');
+}
+
+function saveBody() {
+  const type = document.getElementById('modal-body').dataset.type;
+  const date = document.getElementById('m-body-date').value || todayStr();
+  if (type === 'weight') {
+    const w = parseFloat(document.getElementById('m-body-weight').value);
+    if (!w) return;
+    state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
+    state.bodyWeight.push({date, weight: w});
+    if (apiAvailable) apiCall('POST', '/api/body/weight', {date, weight: w});
+  } else {
+    const c = parseInt(document.getElementById('m-body-cal').value);
+    if (!c) return;
+    state.bodyCal = state.bodyCal.filter(e=>e.date!==date);
+    state.bodyCal.push({date, cal: c});
+    if (apiAvailable) apiCall('POST', '/api/body/calories', {date, calories: c});
+  }
+  saveState();
+  closeModal('modal-body');
+  renderBody();
+}
+
+// ════════════════════════════════════════════════════════════════
+// TASKS
+// ════════════════════════════════════════════════════════════════
+function renderTasks() {
+  const total = state.tasks.length;
+  const done = state.tasks.filter(t=>t.done).length;
+  const left = total - done;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('t-total').textContent = total;
+  document.getElementById('t-done').textContent = done;
+  document.getElementById('t-left').textContent = left;
+  document.getElementById('t-pct').textContent = pct+'%';
+
+  const active = state.tasks.filter(t=>!t.done);
+  const completed = state.tasks.filter(t=>t.done);
+  const prioLabel = {h:'Высокий',m:'Средний',l:'Низкий'};
+  const prioClass = {h:'prio-h',m:'prio-m',l:'prio-l'};
+
+  function renderList(arr, container) {
+    if (!arr.length) {
+      document.getElementById(container).innerHTML = '<div class="empty-state">Пусто</div>';
+      return;
+    }
+    document.getElementById(container).innerHTML = arr.map(t=>`
+      <div class="task-item" onclick="toggleTask('${t.id}')">
+        <div class="task-cb ${t.done?'done':''}">${t.done?'✓':''}</div>
+        <div class="task-body">
+          <div class="task-text ${t.done?'done':''}">${t.text}</div>
+          <div class="task-meta">
+            <span class="prio ${prioClass[t.prio]}">${prioLabel[t.prio]}</span>
+            ${t.dl?`<span class="task-dl">${t.dl}</span>`:''}
+            ${t.cat?`<span class="task-cat">${t.cat}</span>`:''}
+          </div>
+        </div>
+      </div>`).join('');
+  }
+  renderList(active, 'task-list-active');
+  renderList(completed, 'task-list-done');
+}
+
+function toggleTask(id) {
+  const t = state.tasks.find(t=>t.id===id);
+  if (t) {
+    t.done = !t.done;
+    saveState();
+    if (apiAvailable) apiCall('POST', '/api/tasks', t);
+    renderTasks();
+  }
+}
+
+function openAddTask() {
+  document.getElementById('m-task-dl').value = todayStr();
+  document.getElementById('modal-task').classList.add('open');
+}
+
+function saveTask() {
+  const text = document.getElementById('m-task-text').value.trim();
+  if (!text) return;
+  const newTask = {
+    id: Date.now().toString(), text,
+    prio: document.getElementById('m-task-prio').value,
+    dl: document.getElementById('m-task-dl').value,
+    cat: document.getElementById('m-task-cat').value.trim(),
+    done: false,
+  };
+  state.tasks.push(newTask);
+  saveState();
+  if (apiAvailable) apiCall('POST', '/api/tasks', newTask);
+  closeModal('modal-task');
+  document.getElementById('m-task-text').value = '';
+  document.getElementById('m-task-cat').value = '';
+  renderTasks();
+}
+
+// ════════════════════════════════════════════════════════════════
+// SUPPLEMENTS — dates extend 1 year forward automatically
+// ════════════════════════════════════════════════════════════════
+function renderSupps() {
+  renderDayStrip();
+  document.getElementById('supp-date-label').textContent = formatDate(selectedSuppDate);
+
+  const list = document.getElementById('supp-list');
+  list.innerHTML = state.supps.list.map((s,si)=>{
+    const chips = s.times.map(t=>{
+      const key = selectedSuppDate+'_'+s.name+'_'+t;
+      const on = !!state.supps.checked[key];
+      return `<div class="time-chip${on?' on':''}" onclick="toggleSupp('${key}',this)">${t}${on?' ✓':''}</div>`;
+    }).join('');
+    const done = s.times.filter(t=>state.supps.checked[selectedSuppDate+'_'+s.name+'_'+t]).length;
+    const pct = Math.round(done/s.times.length*100);
+    return `<div class="supp-item">
+      <div class="supp-row">
+        <div class="supp-emoji">${s.emoji}</div>
+        <div class="supp-info"><div class="supp-name">${s.name}</div><div class="supp-dose">${s.dose}</div></div>
+        <div class="supp-pct">${pct}%</div>
+        <div class="supp-del" onclick="deleteSupp(${si})">🗑</div>
+      </div>
+      <div class="time-chips">${chips}</div>
+    </div>`;
+  }).join('');
+
+  updateSuppProgress();
+}
+
+function renderDayStrip() {
+  const strip = document.getElementById('day-strip');
+  const today = todayStr();
+  const days = [];
+  for (let i=-3; i<=3; i++) {
+    const d = new Date(); d.setDate(d.getDate()+i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  strip.innerHTML = days.map(d=>{
+    const dt = new Date(d+'T12:00');
+    const isToday = d === today;
+    const isSel = d === selectedSuppDate;
+    return `<div class="day-chip${isToday||isSel?' today':''}" onclick="selectSuppDate('${d}')">
+      <div class="dc-name">${dayNames[dt.getDay()]}</div>
+      <div class="dc-num">${dt.getDate()}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectSuppDate(d) { selectedSuppDate = d; renderSupps(); }
+
+function toggleSupp(key, el) {
+  const isOn = el.classList.contains('on');
+  const label = el.textContent.replace(' ✓','').trim();
+  const [date, ...rest] = key.split('_');
+  // supp name may contain underscores in theory, time_slot is always last token
+  const timeSlot = rest[rest.length-1];
+  const suppName = rest.slice(0, -1).join('_');
+  if (isOn) {
+    delete state.supps.checked[key]; el.classList.remove('on'); el.textContent = label;
+    if (apiAvailable) apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: false});
+  } else {
+    state.supps.checked[key] = true; el.classList.add('on'); el.textContent = label + ' ✓';
+    if (apiAvailable) apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: true});
+  }
+  saveState();
+  updateSuppProgress();
+}
+
+function updateSuppProgress() {
+  const d = selectedSuppDate;
+  const total = state.supps.list.reduce((a,s)=>a+s.times.length,0);
+  const done = state.supps.list.reduce((a,s)=>a+s.times.filter(t=>state.supps.checked[d+'_'+s.name+'_'+t]).length,0);
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('supp-pct-label').textContent = pct+'%';
+  document.getElementById('supp-prog-bar').style.width = pct+'%';
+  document.getElementById('supp-count-label').textContent = done+' из '+total+' приёмов';
+}
+
+function openAddSupp() {
+  document.getElementById('m-supp-name').value = '';
+  document.getElementById('m-supp-dose').value = '';
+  document.getElementById('m-supp-emoji').value = '💊';
+  document.getElementById('m-supp-morning').checked = true;
+  document.getElementById('m-supp-day').checked = false;
+  document.getElementById('m-supp-evening').checked = false;
+  document.getElementById('modal-supp').classList.add('open');
+}
+
+function saveSupp() {
+  const name = document.getElementById('m-supp-name').value.trim();
+  if (!name) return;
+  const times = [];
+  if (document.getElementById('m-supp-morning').checked) times.push('Утро');
+  if (document.getElementById('m-supp-day').checked) times.push('День');
+  if (document.getElementById('m-supp-evening').checked) times.push('Вечер');
+  if (!times.length) times.push('Утро');
+  const newSupp = {
+    name, emoji: document.getElementById('m-supp-emoji').value || '💊',
+    dose: document.getElementById('m-supp-dose').value.trim() || '—',
+    times
+  };
+  state.supps.list.push(newSupp);
+  saveState();
+  if (apiAvailable) apiCall('POST', '/api/supplements', newSupp);
+  closeModal('modal-supp');
+  renderSupps();
+}
+
+function deleteSupp(idx) {
+  const supp = state.supps.list[idx];
+  state.supps.list.splice(idx,1);
+  saveState();
+  if (apiAvailable && supp?.id) apiCall('DELETE', `/api/supplements/${supp.id}`);
+  renderSupps();
+}
+
+// ════════════════════════════════════════════════════════════════
+// MONTHLY REPORT
+// ════════════════════════════════════════════════════════════════
+function getReportMonthRange() {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth()+reportMonthOffset, 1);
+  const year = target.getFullYear(), month = target.getMonth();
+  const start = new Date(year, month, 1).toISOString().slice(0,10);
+  const end = new Date(year, month+1, 0).toISOString().slice(0,10);
+  return {start, end, year, month};
+}
+
+function shiftReportMonth(delta) {
+  reportMonthOffset += delta;
+  renderReport();
+}
+
+const MONTH_NAMES = ['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'];
+const MONTH_NAMES_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+function renderReport() {
+  const {start, end, year, month} = getReportMonthRange();
+  document.getElementById('report-month-label').textContent = MONTH_NAMES_NOM[month] + ' ' + year;
+
+  const inRange = d => d >= start && d <= end;
+
+  const monthWorkouts = state.workouts.filter(w=>inRange(w.date));
+  const sessions = new Set(monthWorkouts.map(w=>w.date)).size;
+  document.getElementById('rep-sessions').textContent = sessions;
+
+  const monthTasks = state.tasks.filter(t=>t.dl && inRange(t.dl) && t.done);
+  document.getElementById('rep-tasks').textContent = monthTasks.length;
+
+  let suppTotal=0, suppDone=0;
+  Object.keys(state.supps.checked).forEach(key=>{
+    const datePart = key.split('_')[0];
+    if (inRange(datePart)) suppDone++;
+  });
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  suppTotal = state.supps.list.reduce((a,s)=>a+s.times.length,0) * daysInMonth;
+  document.getElementById('rep-supps').textContent = suppTotal ? Math.round(suppDone/suppTotal*100)+'%' : '0%';
+
+  const monthWeights = state.bodyWeight.filter(e=>inRange(e.date)).sort((a,b)=>a.date.localeCompare(b.date));
+  if (monthWeights.length >= 2) {
+    const delta = round1(monthWeights[monthWeights.length-1].weight - monthWeights[0].weight);
+    document.getElementById('rep-weight').textContent = (delta>=0?'+':'')+delta+' кг';
+  } else {
+    document.getElementById('rep-weight').textContent = '—';
+  }
+
+  const keyEx = ['Жим штанги лёжа','Становая тяга','Приседания со штангой','Жим штанги стоя'];
+  const strHTML = keyEx.map(ex=>{
+    const before = state.workouts.filter(w=>w.exercise===ex && w.date < start);
+    const during = state.workouts.filter(w=>w.exercise===ex && inRange(w.date));
+    if (!during.length) return '';
+    const maxBefore = before.length ? Math.max(...before.map(w=>calc1rm(w.weight,w.reps))) : null;
+    const maxDuring = Math.max(...during.map(w=>calc1rm(w.weight,w.reps)));
+    let deltaStr = '';
+    if (maxBefore !== null) {
+      const d = round1(maxDuring - maxBefore);
+      deltaStr = ` <span style="color:${d>=0?'var(--green)':'var(--red)'}">(${d>=0?'+':''}${d} кг)</span>`;
+    }
+    return `<div class="report-row"><div class="rr-label">${ex}</div><div class="rr-val neon">${maxDuring} кг${deltaStr}</div></div>`;
+  }).filter(Boolean).join('');
+  document.getElementById('report-strength').innerHTML = strHTML || '<div class="empty-state">Нет тренировок в этом месяце</div>';
+
+  const catMap = {};
+  state.tasks.filter(t=>t.dl && inRange(t.dl)).forEach(t=>{
+    const cat = t.cat || 'Без категории';
+    if (!catMap[cat]) catMap[cat] = {total:0, done:0};
+    catMap[cat].total++;
+    if (t.done) catMap[cat].done++;
+  });
+  const catHTML = Object.entries(catMap).map(([cat,v])=>
+    `<div class="report-row"><div class="rr-label">${cat}</div><div class="rr-val">${v.done}/${v.total}</div></div>`
+  ).join('');
+  document.getElementById('report-tasks-cat').innerHTML = catHTML || '<div class="empty-state">Нет задач с дедлайном в этом месяце</div>';
+
+  const monthCals = state.bodyCal.filter(e=>inRange(e.date));
+  if (monthCals.length) {
+    const avg = Math.round(monthCals.reduce((a,e)=>a+e.cal,0)/monthCals.length);
+    document.getElementById('rep-avg-cal').textContent = avg + ' ккал';
+  } else {
+    document.getElementById('rep-avg-cal').textContent = '— ккал';
+  }
+  document.getElementById('rep-cal-count').textContent = monthCals.length;
+}
+
+// ════════════════════════════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════════════════════════════
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
+});
+
+// ════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════
+loadState(() => {
+  renderHome();
+  renderSupps();
+  const dot = document.getElementById('sync-dot');
+  const status = document.getElementById('sync-status');
+  if (dot && status) {
+    if (apiAvailable) {
+      dot.style.background = 'var(--green)';
+      dot.style.boxShadow = '0 0 6px var(--green)';
+      status.textContent = 'Подключено к серверу — данные синхронизируются';
+    } else {
+      dot.style.background = 'var(--orange)';
+      status.textContent = 'Офлайн-режим — данные сохраняются только на этом устройстве';
+    }
+  }
+});
+</script>
+</body>
+</html>
