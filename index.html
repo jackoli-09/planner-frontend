@@ -2042,33 +2042,75 @@ function renderFoodLog(entries) {
   }).join('');
 }
 
+function renderFoodResults(items) {
+  const resultsEl = document.getElementById('food-search-results');
+  if (!items.length) {
+    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">Ничего не найдено. Попробуй по-английски или отсканируй штрихкод.</div></div>';
+    return;
+  }
+  window._foodResults = items;
+  resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="padding:4px 0">' +
+    items.map((f,i) => `
+      <div onclick="openFoodModal(${i})" style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${f.food_name}${f.brand_name?' <span style="color:var(--text-muted);font-weight:400">('+f.brand_name+')</span>':''}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+            ${f.calories||0} ккал · Б:${f.protein||0}г · Ж:${f.fat||0}г · У:${f.carbs||0}г · на 100г
+          </div>
+        </div>
+        <div style="color:var(--neon);font-size:20px;padding-left:10px">+</div>
+      </div>`).join('') +
+  '</div></div>';
+}
+
+function parseOFFProduct(p) {
+  const n = p.nutriments || {};
+  const name = (p.product_name_ru || p.product_name || p.product_name_en || '').trim();
+  const brand = (p.brands || '').split(',')[0].trim();
+  return {
+    food_id: p.id || p._id || '',
+    food_name: name || 'Неизвестный продукт',
+    brand_name: brand,
+    serving_desc: 'на 100г',
+    calories: Math.round(parseFloat(n['energy-kcal_100g'] || n['energy_100g'] || 0)),
+    protein:  parseFloat((n.proteins_100g || 0).toFixed(1)),
+    fat:      parseFloat((n.fat_100g || 0).toFixed(1)),
+    carbs:    parseFloat((n.carbohydrates_100g || 0).toFixed(1)),
+  };
+}
+
+async function searchFoodDirect(q) {
+  // Прямой запрос к Open Food Facts из браузера (CORS разрешён)
+  const resp = await fetch(
+    `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=15&fields=id,product_name,product_name_ru,product_name_en,brands,nutriments&sort_by=unique_scans_n`,
+    { headers: { 'User-Agent': 'PlannerApp/1.0' } }
+  );
+  if (!resp.ok) throw new Error('OFF ' + resp.status);
+  const data = await resp.json();
+  return (data.products || [])
+    .map(parseOFFProduct)
+    .filter(p => p.food_name && p.food_name !== 'Неизвестный продукт');
+}
+
 async function searchFood() {
   const q = document.getElementById('food-search-input').value.trim();
   if (!q) return;
   const resultsEl = document.getElementById('food-search-results');
   resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">⏳ Поиск…</div></div>';
   try {
-    const data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
-    const items = data.results || [];
-    if (!items.length) {
-      resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">Ничего не найдено. Попробуй на английском.</div></div>';
-      return;
+    // Сначала пробуем через бэкенд
+    let items = [];
+    try {
+      const data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
+      items = data.results || [];
+    } catch(e) {
+      // Фоллбек — напрямую из браузера
+      console.warn('Backend search failed, trying direct:', e.message);
+      items = await searchFoodDirect(q);
     }
-    window._foodResults = items;
-    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="padding:4px 0">' +
-      items.map((f,i) => `
-        <div onclick="openFoodModal(${i})" style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600">${f.food_name}${f.brand_name?' <span style="color:var(--text-muted);font-weight:400">('+f.brand_name+')</span>':''}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-              ${f.calories} ккал · Б:${f.protein}г · Ж:${f.fat}г · У:${f.carbs}г · на 100г
-            </div>
-          </div>
-          <div style="color:var(--neon);font-size:20px;padding-left:10px">+</div>
-        </div>`).join('') +
-    '</div></div>';
+    renderFoodResults(items);
   } catch(e) {
-    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--red);font-size:13px">Ошибка: ' + e.message + '</div></div>';
+    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--red);font-size:13px">Ошибка поиска: ' + e.message + '</div></div>';
   }
 }
 
