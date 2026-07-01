@@ -304,9 +304,16 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
   box-shadow: 0 0 14px var(--neon-glow);
 }
+.day-chip.selected {
+  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
+  box-shadow: 0 0 14px var(--neon-glow);
+}
+.day-chip.past { opacity: 0.5; }
+.day-chip:hover:not(.today):not(.selected) { background: var(--card2); border-color: var(--border-light); }
 .dc-name { font-size: 10px; color: var(--text-muted); }
 .dc-num { font-size: 15px; font-weight: 700; color: var(--text); }
 .day-chip.today .dc-name, .day-chip.today .dc-num { color: #fff; }
+.day-chip.selected .dc-name, .day-chip.selected .dc-num { color: #fff; }
 
 .supp-item { padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .supp-item:last-child { border-bottom: none; }
@@ -635,7 +642,11 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="ph-sub" id="supp-date-label"></div>
     </div>
 
-    <div class="day-strip" id="day-strip"></div>
+    <div style="display:flex;align-items:center;gap:4px;padding:6px 12px 2px">
+      <button onclick="shiftSuppWeek(-1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1">◀</button>
+      <div class="day-strip" id="day-strip" style="flex:1"></div>
+      <button onclick="shiftSuppWeek(1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1">▶</button>
+    </div>
 
     <div class="section-label">Список приёма</div>
     <div class="card">
@@ -772,21 +783,123 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       </div>
     </div>
 
-    <div class="section-label">🍎 Питание (FatSecret)</div>
-    <div class="card"><div class="card-inner">
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input id="food-search-input" class="input-field" placeholder="Поиск еды…" style="flex:1;margin:0" onkeydown="if(event.key==='Enter')searchFood()">
-        <button class="btn-primary" onclick="searchFood()" style="margin:0;padding:0 14px">🔍</button>
+    <div style="height:8px"></div>
+  </div>
+
+
+  <!-- ═══════════════════════════════ FOOD ════════════════════════════════ -->
+  <div class="screen" id="s-food">
+    <div class="page-header">
+      <div class="ph-title">Питание</div>
+      <div class="ph-sub" id="food-date-label"></div>
+    </div>
+
+    <!-- Дата -->
+    <div style="display:flex;gap:8px;align-items:center;padding:0 16px 12px">
+      <button onclick="foodDateShift(-1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer">◀</button>
+      <div style="flex:1;text-align:center;font-size:13px;font-weight:600" id="food-date-display"></div>
+      <button onclick="foodDateShift(1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer">▶</button>
+    </div>
+
+    <!-- Итоги дня -->
+    <div class="card card-glow" style="margin:0 16px 12px">
+      <div class="card-inner">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+          <div>
+            <div style="font-size:20px;font-weight:800;color:var(--neon)" id="fd-cal">0</div>
+            <div style="font-size:10px;color:var(--text-muted)">ккал</div>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:800;color:var(--green)" id="fd-protein">0</div>
+            <div style="font-size:10px;color:var(--text-muted)">белки г</div>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:800;color:var(--orange)" id="fd-fat">0</div>
+            <div style="font-size:10px;color:var(--text-muted)">жиры г</div>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:800;color:var(--blue)" id="fd-carbs">0</div>
+            <div style="font-size:10px;color:var(--text-muted)">углев г</div>
+          </div>
+        </div>
+        <!-- прогресс бар калорий -->
+        <div style="margin-top:12px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px">
+            <span>Калории</span><span id="fd-cal-goal-lbl">цель: 2500 ккал</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:3px">
+            <div id="fd-cal-bar" style="height:100%;border-radius:3px;background:var(--neon);transition:width .3s;width:0%"></div>
+          </div>
+        </div>
       </div>
-      <div id="food-search-results"></div>
-      <div style="margin-top:12px">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">Сегодня съедено:</div>
-        <div id="food-log-today"></div>
-        <div id="food-totals" style="font-size:12px;color:var(--neon);margin-top:8px"></div>
+    </div>
+
+    <!-- Поиск -->
+    <div class="card" style="margin:0 16px 12px">
+      <div class="card-inner" style="padding:12px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="food-search-input" class="input-field" placeholder="🔍 Поиск продукта…" 
+            style="flex:1;margin:0" onkeydown="if(event.key==='Enter')searchFood()">
+          <button onclick="searchFood()" class="btn-primary" style="margin:0;padding:0 14px">Найти</button>
+        </div>
+        <button onclick="openBarcodeScanner()" style="width:100%;padding:9px;background:var(--neon-soft);border:1px solid var(--neon);color:var(--neon);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">
+          📷 Сканировать штрихкод
+        </button>
       </div>
-    </div></div>
+    </div>
+
+    <!-- Результаты поиска -->
+    <div id="food-search-results" style="margin:0 16px 12px"></div>
+
+    <!-- Приёмы пищи -->
+    <div id="food-meals-container"></div>
 
     <div style="height:8px"></div>
+  </div>
+
+  <!-- Модалка добавления еды -->
+  <div class="modal-overlay" id="modal-food-add">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="mf-title">Добавить продукт</div>
+      <div class="modal-body">
+        <div style="background:var(--card2);border-radius:12px;padding:12px;margin-bottom:16px">
+          <div style="font-size:14px;font-weight:700" id="mf-food-name">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="mf-food-desc">—</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;text-align:center">
+            <div><div style="font-size:15px;font-weight:700;color:var(--neon)" id="mf-cal">0</div><div style="font-size:10px;color:var(--text-muted)">ккал</div></div>
+            <div><div style="font-size:15px;font-weight:700;color:var(--green)" id="mf-prot">0</div><div style="font-size:10px;color:var(--text-muted)">белки</div></div>
+            <div><div style="font-size:15px;font-weight:700;color:var(--orange)" id="mf-fat">0</div><div style="font-size:10px;color:var(--text-muted)">жиры</div></div>
+            <div><div style="font-size:15px;font-weight:700;color:var(--blue)" id="mf-carb">0</div><div style="font-size:10px;color:var(--text-muted)">углев</div></div>
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text-muted)">Приём пищи</label>
+          <select id="mf-meal-type" class="input-field" style="margin-top:4px">
+            <option value="завтрак">🌅 Завтрак</option>
+            <option value="обед" selected>☀️ Обед</option>
+            <option value="ужин">🌙 Ужин</option>
+            <option value="перекус">🍪 Перекус</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;color:var(--text-muted)">Количество (г / мл / шт)</label>
+          <input id="mf-amount" class="input-field" type="number" value="100" min="1" style="margin-top:4px" oninput="updateFoodModalNutrition()">
+        </div>
+        <button class="btn-primary" onclick="confirmAddFood()" style="width:100%;margin:0">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Сканер штрихкода -->
+  <div class="modal-overlay" id="modal-barcode" style="z-index:1100">
+    <div style="background:var(--bg-deep);border-radius:20px 20px 0 0;position:fixed;bottom:0;left:0;right:0;padding:20px">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px;text-align:center">Сканирование штрихкода</div>
+      <video id="barcode-video" style="width:100%;border-radius:12px;max-height:260px;object-fit:cover;background:#000"></video>
+      <div id="barcode-status" style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px">Наведи камеру на штрихкод</div>
+      <button onclick="closeBarcodeScanner()" class="btn-ghost" style="width:100%;margin-top:12px">Отмена</button>
+    </div>
   </div>
 
 </div><!-- #app -->
@@ -807,6 +920,9 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   </div>
   <div class="nav-item" id="nav-report" onclick="go('report')">
     <div class="nav-icon">🗓</div><div class="nav-label">Отчёт</div>
+  </div>
+  <div class="nav-item" id="nav-food" onclick="go('food')">
+    <div class="nav-icon">🍎</div><div class="nav-label">Питание</div>
   </div>
   <div class="nav-item" id="nav-ai" onclick="go('ai')">
     <div class="nav-icon">🤖</div><div class="nav-label">ИИ</div>
@@ -1629,23 +1745,47 @@ function renderDayStrip() {
   const strip = document.getElementById('day-strip');
   const today = todayStr();
   const days = [];
-  for (let i=-3; i<=3; i++) {
-    const d = new Date(); d.setDate(d.getDate()+i);
-    days.push(d.toISOString().slice(0,10));
+  // 30 дней назад + 365 вперёд
+  for (let i = -30; i <= 365; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    days.push(d.toISOString().slice(0, 10));
   }
   const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  strip.innerHTML = days.map(d=>{
-    const dt = new Date(d+'T12:00');
+  strip.innerHTML = days.map(d => {
+    const dt = new Date(d + 'T12:00');
     const isToday = d === today;
     const isSel = d === selectedSuppDate;
-    return `<div class="day-chip${isToday||isSel?' today':''}" onclick="selectSuppDate('${d}')">
+    const isPast = d < today;
+    return `<div class="day-chip${isSel ? ' selected' : (isToday ? ' today' : '')}${isPast && !isSel ? ' past' : ''}" 
+      id="dchip-${d}" onclick="selectSuppDate('${d}')">
       <div class="dc-name">${dayNames[dt.getDay()]}</div>
       <div class="dc-num">${dt.getDate()}</div>
+      ${isToday ? '<div style="width:4px;height:4px;border-radius:50%;background:#fff;margin-top:2px"></div>' : ''}
     </div>`;
   }).join('');
+  // Скролл к выбранной дате
+  setTimeout(() => {
+    const chip = document.getElementById('dchip-' + selectedSuppDate);
+    if (chip) chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, 50);
 }
 
-function selectSuppDate(d) { selectedSuppDate = d; renderSupps(); }
+function selectSuppDate(d) {
+  selectedSuppDate = d;
+  renderSupps();
+  // Скролл к выбранному дню
+  setTimeout(() => {
+    const chip = document.getElementById('dchip-' + d);
+    if (chip) chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, 50);
+}
+
+function shiftSuppWeek(dir) {
+  const d = new Date(selectedSuppDate + 'T12:00');
+  d.setDate(d.getDate() + dir * 7);
+  selectedSuppDate = d.toISOString().slice(0, 10);
+  renderSupps();
+}
 
 function toggleSupp(key, el) {
   const isOn = el.classList.contains('on');
@@ -1801,6 +1941,251 @@ function renderReport() {
   document.getElementById('rep-cal-count').textContent = monthCals.length;
 }
 
+
+
+// ════════════════════════════════════════════════════════════════
+// ПИТАНИЕ
+// ════════════════════════════════════════════════════════════════
+let currentFoodDate = todayStr();
+let selectedFood = null;
+let barcodeStream = null;
+let barcodeInterval = null;
+const CALORIE_GOAL = 2500;
+
+const MEAL_ORDER = ['завтрак','обед','ужин','перекус'];
+const MEAL_EMOJI = {завтрак:'🌅',обед:'☀️',ужин:'🌙',перекус:'🍪'};
+
+function renderFoodScreen() {
+  updateFoodDateDisplay();
+  loadFoodLog();
+}
+
+function updateFoodDateDisplay() {
+  const d = new Date(currentFoodDate + 'T00:00:00');
+  const today = todayStr();
+  const label = currentFoodDate === today ? 'Сегодня' :
+    d.toLocaleDateString('ru', {weekday:'short', day:'numeric', month:'long'});
+  document.getElementById('food-date-display').textContent = label;
+  document.getElementById('food-date-label').textContent = label;
+}
+
+function foodDateShift(delta) {
+  const d = new Date(currentFoodDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  currentFoodDate = d.toISOString().slice(0,10);
+  updateFoodDateDisplay();
+  loadFoodLog();
+}
+
+async function loadFoodLog() {
+  try {
+    const data = await apiCall('GET', '/api/food/log?log_date=' + currentFoodDate);
+    renderFoodLog(data || []);
+  } catch(e) {
+    renderFoodLog([]);
+  }
+}
+
+function renderFoodLog(entries) {
+  // Итоги
+  const totCal  = entries.reduce((a,e) => a+(parseFloat(e.calories)||0)*((parseFloat(e.amount)||1)), 0);
+  const totProt = entries.reduce((a,e) => a+(parseFloat(e.protein)||0)*((parseFloat(e.amount)||1)), 0);
+  const totFat  = entries.reduce((a,e) => a+(parseFloat(e.fat)||0)*((parseFloat(e.amount)||1)), 0);
+  const totCarb = entries.reduce((a,e) => a+(parseFloat(e.carbs)||0)*((parseFloat(e.amount)||1)), 0);
+
+  document.getElementById('fd-cal').textContent    = Math.round(totCal);
+  document.getElementById('fd-protein').textContent = totProt.toFixed(1);
+  document.getElementById('fd-fat').textContent     = totFat.toFixed(1);
+  document.getElementById('fd-carbs').textContent   = totCarb.toFixed(1);
+  const pct = Math.min(100, Math.round(totCal/CALORIE_GOAL*100));
+  document.getElementById('fd-cal-bar').style.width = pct + '%';
+  document.getElementById('fd-cal-bar').style.background = pct>100 ? 'var(--red)' : 'var(--neon)';
+
+  // По приёмам пищи
+  const byMeal = {};
+  MEAL_ORDER.forEach(m => byMeal[m] = []);
+  entries.forEach(e => {
+    const m = e.meal_type || 'перекус';
+    if (!byMeal[m]) byMeal[m] = [];
+    byMeal[m].push(e);
+  });
+
+  const container = document.getElementById('food-meals-container');
+  container.innerHTML = MEAL_ORDER.map(meal => {
+    const items = byMeal[meal] || [];
+    const mealCal = items.reduce((a,e) => a+(parseFloat(e.calories)||0)*(parseFloat(e.amount)||1), 0);
+    return `<div class="card" style="margin:0 16px 10px">
+      <div class="card-inner">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${items.length?'10px':'0'}">
+          <div style="font-size:14px;font-weight:700">${MEAL_EMOJI[meal]} ${meal.charAt(0).toUpperCase()+meal.slice(1)}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${items.length ? Math.round(mealCal)+' ккал' : 'пусто'}</div>
+        </div>
+        ${items.map(e => {
+          const cal = Math.round((parseFloat(e.calories)||0)*(parseFloat(e.amount)||1));
+          const prot = ((parseFloat(e.protein)||0)*(parseFloat(e.amount)||1)).toFixed(1);
+          const fat  = ((parseFloat(e.fat)||0)*(parseFloat(e.amount)||1)).toFixed(1);
+          const carb = ((parseFloat(e.carbs)||0)*(parseFloat(e.amount)||1)).toFixed(1);
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--border)">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600">${e.food_name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${e.amount||1}г · Б:${prot} Ж:${fat} У:${carb}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:13px;font-weight:700;color:var(--neon)">${cal}</div>
+              <span onclick="deleteFoodLog(${e.id})" style="color:var(--red);cursor:pointer;font-size:18px;opacity:0.7;line-height:1">×</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function searchFood() {
+  const q = document.getElementById('food-search-input').value.trim();
+  if (!q) return;
+  const resultsEl = document.getElementById('food-search-results');
+  resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">⏳ Поиск…</div></div>';
+  try {
+    const data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
+    const items = data.results || [];
+    if (!items.length) {
+      resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">Ничего не найдено. Попробуй на английском.</div></div>';
+      return;
+    }
+    window._foodResults = items;
+    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="padding:4px 0">' +
+      items.map((f,i) => `
+        <div onclick="openFoodModal(${i})" style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${f.food_name}${f.brand_name?' <span style="color:var(--text-muted);font-weight:400">('+f.brand_name+')</span>':''}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+              ${f.calories} ккал · Б:${f.protein}г · Ж:${f.fat}г · У:${f.carbs}г · на 100г
+            </div>
+          </div>
+          <div style="color:var(--neon);font-size:20px;padding-left:10px">+</div>
+        </div>`).join('') +
+    '</div></div>';
+  } catch(e) {
+    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--red);font-size:13px">Ошибка: ' + e.message + '</div></div>';
+  }
+}
+
+function openFoodModal(idx) {
+  selectedFood = (window._foodResults || [])[idx];
+  if (!selectedFood) return;
+  document.getElementById('mf-food-name').textContent = selectedFood.food_name + (selectedFood.brand_name ? ' ('+selectedFood.brand_name+')' : '');
+  document.getElementById('mf-food-desc').textContent = selectedFood.serving_desc || 'на 100г';
+  document.getElementById('mf-amount').value = 100;
+  updateFoodModalNutrition();
+  document.getElementById('modal-food-add').classList.add('open');
+}
+
+function updateFoodModalNutrition() {
+  if (!selectedFood) return;
+  const amount = parseFloat(document.getElementById('mf-amount').value) || 100;
+  const ratio = amount / 100;
+  document.getElementById('mf-cal').textContent  = Math.round((selectedFood.calories||0)*ratio);
+  document.getElementById('mf-prot').textContent = ((selectedFood.protein||0)*ratio).toFixed(1);
+  document.getElementById('mf-fat').textContent  = ((selectedFood.fat||0)*ratio).toFixed(1);
+  document.getElementById('mf-carb').textContent = ((selectedFood.carbs||0)*ratio).toFixed(1);
+}
+
+async function confirmAddFood() {
+  if (!selectedFood) return;
+  const amount = parseFloat(document.getElementById('mf-amount').value) || 100;
+  const meal   = document.getElementById('mf-meal-type').value;
+  const ratio  = amount / 100;
+  const entry = {
+    date: currentFoodDate,
+    meal_type: meal,
+    food_id: selectedFood.food_id || 'manual',
+    food_name: selectedFood.food_name,
+    serving_desc: selectedFood.serving_desc || '',
+    calories: parseFloat(((selectedFood.calories||0)*ratio).toFixed(1)),
+    protein:  parseFloat(((selectedFood.protein||0)*ratio).toFixed(1)),
+    fat:      parseFloat(((selectedFood.fat||0)*ratio).toFixed(1)),
+    carbs:    parseFloat(((selectedFood.carbs||0)*ratio).toFixed(1)),
+    amount: amount,
+  };
+  await apiCall('POST', '/api/food/log', entry);
+  closeModal('modal-food-add');
+  document.getElementById('food-search-results').innerHTML = '';
+  document.getElementById('food-search-input').value = '';
+  loadFoodLog();
+}
+
+async function deleteFoodLog(id) {
+  await apiCall('DELETE', '/api/food/log/' + id);
+  loadFoodLog();
+}
+
+// ─── СКАНЕР ШТРИХКОДА ──────────────────────────────────────────
+async function openBarcodeScanner() {
+  document.getElementById('modal-barcode').classList.add('open');
+  try {
+    barcodeStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: {ideal:1280}, height: {ideal:720} }
+    });
+    const video = document.getElementById('barcode-video');
+    video.srcObject = barcodeStream;
+    await video.play();
+
+    // Используем BarcodeDetector если доступен
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'] });
+      document.getElementById('barcode-status').textContent = 'Наведи камеру на штрихкод…';
+      barcodeInterval = setInterval(async () => {
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            clearInterval(barcodeInterval);
+            closeBarcodeScanner();
+            await searchByBarcode(code);
+          }
+        } catch(e) {}
+      }, 500);
+    } else {
+      // Фоллбек — ручной ввод
+      document.getElementById('barcode-status').innerHTML =
+        '<div style="margin-top:8px">Автосканирование недоступно в этом браузере.<br><input id="barcode-manual-input" class="input-field" placeholder="Введи код вручную" style="margin-top:8px;text-align:center"><button onclick="manualBarcode()" class="btn-primary" style="width:100%;margin-top:8px">Найти</button></div>';
+    }
+  } catch(e) {
+    document.getElementById('barcode-status').textContent = 'Нет доступа к камере: ' + e.message;
+  }
+}
+
+function closeBarcodeScanner() {
+  if (barcodeStream) { barcodeStream.getTracks().forEach(t=>t.stop()); barcodeStream = null; }
+  if (barcodeInterval) { clearInterval(barcodeInterval); barcodeInterval = null; }
+  document.getElementById('barcode-video').srcObject = null;
+  document.getElementById('modal-barcode').classList.remove('open');
+}
+
+function manualBarcode() {
+  const code = document.getElementById('barcode-manual-input')?.value?.trim();
+  if (code) { closeBarcodeScanner(); searchByBarcode(code); }
+}
+
+async function searchByBarcode(code) {
+  document.getElementById('food-search-results').innerHTML =
+    '<div class="card" style="margin:0 16px"><div class="card-inner" style="text-align:center;padding:16px;color:var(--text-muted)">⏳ Ищу продукт по коду ' + code + '…</div></div>';
+  try {
+    const data = await apiCall('GET', '/api/food/barcode?barcode=' + encodeURIComponent(code));
+    const items = data.results || [];
+    if (!items.length) {
+      document.getElementById('food-search-results').innerHTML =
+        '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px">Продукт не найден в базе FatSecret</div></div>';
+      return;
+    }
+    window._foodResults = items;
+    openFoodModal(0);
+  } catch(e) {
+    document.getElementById('food-search-results').innerHTML =
+      '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--red);font-size:13px">Ошибка: ' + e.message + '</div></div>';
+  }
+}
 
 // ════════════════════════════════════════════════════════════════
 // ИИ АНАЛИЗ
