@@ -2832,14 +2832,18 @@ async function deleteFoodLog(id) {
 // МЕНЮ ЕЩЁ
 // ════════════════════════════════════════════════════════════════
 function openMore() {
-  // Обновляем счётчики
-  const done = state.tasks.filter(t=>t.done).length;
-  const total = state.tasks.length;
+  // Защита от незагруженного state
+  const tasks = (state && state.tasks) || [];
+  const suppChecks = (state && state.suppChecks) || [];
+  const supplements = (state && state.supplements) || [];
+
+  const done = tasks.filter(t=>t.done).length;
+  const total = tasks.length;
   const el1 = document.getElementById('more-tasks-count');
   if (el1) el1.textContent = total ? `${done}/${total} выполнено` : 'нет задач';
 
-  const todayChecks = state.suppChecks.filter(c => c.date === todayStr() && c.checked).length;
-  const suppSlots = state.supplements.reduce((a,s) => a + (s.times||[]).length, 0);
+  const todayChecks = suppChecks.filter(c => c.date === todayStr() && c.checked).length;
+  const suppSlots = supplements.reduce((a,s) => a + (s.times||[]).length, 0);
   const el2 = document.getElementById('more-supps-pct');
   if (el2) el2.textContent = suppSlots ? `${Math.round(todayChecks/suppSlots*100)}% сегодня` : '';
 
