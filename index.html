@@ -380,6 +380,19 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 }
 .ob-module-btn.active { border-color:var(--neon);background:var(--neon-soft); }
 .ob-check { font-size:16px;color:var(--neon);font-weight:700; }
+.plan-day-card {
+  background:var(--card2);border:1.5px solid var(--border);border-radius:14px;
+  padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;
+  transition:border-color .15s;
+}
+.plan-day-card.today { border-color:var(--neon);background:var(--neon-soft); }
+.plan-day-card.rest { opacity:0.6; }
+.muscle-chip-sel {
+  padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
+  background:var(--card2);border:1.5px solid var(--border);color:var(--text-sub);
+  transition:all .15s;
+}
+.muscle-chip-sel.active { background:var(--neon-soft);border-color:var(--neon);color:var(--neon); }
 .day-chip:hover:not(.today):not(.selected) { background: var(--card2); border-color: var(--border-light); }
 .dc-name { font-size: 10px; color: var(--text-muted); }
 .dc-num { font-size: 15px; font-weight: 700; color: var(--text); }
@@ -1046,6 +1059,10 @@ if ('serviceWorker' in navigator) {
         <button class="btn-primary" onclick="confirmAddFood()" style="width:100%;margin:0">✓ Добавить</button>
       </div>
       <div style="margin:8px 16px 0">
+        <div onclick="closeMore();go('plan')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📅</span>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Программа тренировок</div>
+        </div>
         <div onclick="closeMore();go('settings')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
           <span style="font-size:20px">⚙️</span>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Настройки</div>
@@ -1271,6 +1288,10 @@ if ('serviceWorker' in navigator) {
           <span style="font-size:20px">⚖️</span>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Вес и калории</div>
         </div>
+        <div onclick="closeMore();go('plan')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📅</span>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Программа тренировок</div>
+        </div>
         <div onclick="closeMore();go('settings')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
           <span style="font-size:20px">⚙️</span>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Настройки</div>
@@ -1444,6 +1465,79 @@ if ('serviceWorker' in navigator) {
         <div style="display:flex;gap:10px">
           <button class="btn-ghost" onclick="closeModal('modal-edit-set')" style="flex:1;margin:0">Отмена</button>
           <button class="btn-primary" onclick="saveEditSet()" style="flex:2;margin:0">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ PLAN ════════════════════════════════ -->
+  <div class="screen" id="s-plan">
+    <div class="page-header">
+      <div class="ph-title">Программа тренировок</div>
+      <div class="ph-sub">Настрой свой сплит</div>
+    </div>
+
+    <!-- Текущая неделя -->
+    <div class="section-label">Эта неделя</div>
+    <div id="plan-week-grid" style="margin:0 16px 16px;display:grid;gap:8px"></div>
+
+    <!-- Редактор сплита -->
+    <div class="section-label">Мой сплит</div>
+    <div class="card" style="margin:0 16px 12px"><div class="card-inner" style="padding:8px 4px">
+      <div id="plan-split-list"></div>
+    </div></div>
+
+    <!-- Мышечные группы для быстрого добавления -->
+    <div class="section-label">Типовые программы</div>
+    <div style="margin:0 16px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div onclick="applyTemplate('ppl')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
+        <div style="font-size:20px;margin-bottom:4px">💪</div>
+        <div style="font-size:13px;font-weight:700">Push/Pull/Legs</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">6 дней</div>
+      </div>
+      <div onclick="applyTemplate('upper_lower')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
+        <div style="font-size:20px;margin-bottom:4px">🏋️</div>
+        <div style="font-size:13px;font-weight:700">Верх/Низ</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">4 дня</div>
+      </div>
+      <div onclick="applyTemplate('bro')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
+        <div style="font-size:20px;margin-bottom:4px">🎯</div>
+        <div style="font-size:13px;font-weight:700">Бро-сплит</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">5 дней</div>
+      </div>
+      <div onclick="applyTemplate('fullbody')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
+        <div style="font-size:20px;margin-bottom:4px">⚡</div>
+        <div style="font-size:13px;font-weight:700">Full Body</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">3 дня</div>
+      </div>
+    </div>
+
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- Модалка редактирования дня -->
+  <div class="modal-overlay" id="modal-plan-day">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="plan-day-title">Понедельник</div>
+      <div class="modal-body">
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text-muted)">Название тренировки</label>
+          <input id="plan-day-name" class="input-field" placeholder="Например: Грудь + Трицепс" style="margin-top:6px">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:block">Группы мышц</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px" id="plan-muscle-chips"></div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div class="settings-row" style="padding:8px 0">
+            <div><div class="settings-row-title">День отдыха</div></div>
+            <div class="stoggle" id="plan-rest-toggle" onclick="togglePlanRest()"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-ghost" onclick="closeModal('modal-plan-day')" style="flex:1;margin:0">Отмена</button>
+          <button class="btn-primary" onclick="savePlanDay()" style="flex:2;margin:0">Сохранить</button>
         </div>
       </div>
     </div>
@@ -1804,7 +1898,7 @@ function exportData() {
 // ════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
-const SCREENS = ['home','workout','charts','body','tasks','supps','report','food','ai','settings'];
+const SCREENS = ['home','workout','charts','body','tasks','supps','report','food','ai','settings','plan'];
 function go(name) {
   SCREENS.forEach(s => {
     const scr = document.getElementById('s-'+s);
@@ -1822,6 +1916,7 @@ function go(name) {
   if (name === 'supps') renderSupps();
   if (name === 'report') renderReport();
   if (name === 'food') renderFoodScreen();
+  if (name === 'plan') renderPlan();
   if (name === 'settings') {
     updateOnlineStatus();
     const qc = document.getElementById('queue-count');
@@ -2496,6 +2591,175 @@ function renderReport() {
 
 
 
+
+
+// ════════════════════════════════════════════════════════════════
+// ПЛАН ТРЕНИРОВОК
+// ════════════════════════════════════════════════════════════════
+const DAY_NAMES = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const DAY_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+const MUSCLES_LIST = ['Грудь','Спина','Ноги','Плечи','Бицепс','Трицепс','Пресс','Икры','Ягодицы','Предплечья'];
+
+const TEMPLATES = {
+  ppl: {
+    1:{name:'Толчок (Push)',muscles:['Грудь','Плечи','Трицепс'],rest:false},
+    2:{name:'Тяга (Pull)',muscles:['Спина','Бицепс'],rest:false},
+    3:{name:'Ноги',muscles:['Ноги','Икры','Ягодицы'],rest:false},
+    4:{name:'Толчок (Push)',muscles:['Грудь','Плечи','Трицепс'],rest:false},
+    5:{name:'Тяга (Pull)',muscles:['Спина','Бицепс'],rest:false},
+    6:{name:'Ноги',muscles:['Ноги','Икры'],rest:false},
+    0:{name:'Отдых',muscles:[],rest:true},
+  },
+  upper_lower: {
+    1:{name:'Верх тела',muscles:['Грудь','Спина','Плечи'],rest:false},
+    2:{name:'Низ тела',muscles:['Ноги','Ягодицы','Икры'],rest:false},
+    3:{name:'Отдых',muscles:[],rest:true},
+    4:{name:'Верх тела',muscles:['Бицепс','Трицепс','Плечи'],rest:false},
+    5:{name:'Низ тела',muscles:['Ноги','Пресс'],rest:false},
+    6:{name:'Отдых',muscles:[],rest:true},
+    0:{name:'Отдых',muscles:[],rest:true},
+  },
+  bro: {
+    1:{name:'Грудь',muscles:['Грудь','Трицепс'],rest:false},
+    2:{name:'Спина',muscles:['Спина','Бицепс'],rest:false},
+    3:{name:'Плечи',muscles:['Плечи','Трицепс'],rest:false},
+    4:{name:'Ноги',muscles:['Ноги','Икры'],rest:false},
+    5:{name:'Руки',muscles:['Бицепс','Трицепс','Предплечья'],rest:false},
+    6:{name:'Отдых',muscles:[],rest:true},
+    0:{name:'Отдых',muscles:[],rest:true},
+  },
+  fullbody: {
+    1:{name:'Full Body A',muscles:['Грудь','Спина','Ноги'],rest:false},
+    2:{name:'Отдых',muscles:[],rest:true},
+    3:{name:'Full Body B',muscles:['Плечи','Бицепс','Трицепс','Ноги'],rest:false},
+    4:{name:'Отдых',muscles:[],rest:true},
+    5:{name:'Full Body C',muscles:['Грудь','Спина','Пресс'],rest:false},
+    6:{name:'Отдых',muscles:[],rest:true},
+    0:{name:'Отдых',muscles:[],rest:true},
+  },
+};
+
+// Загружаем план из localStorage
+function loadPlan() {
+  return JSON.parse(localStorage.getItem('planner_split') || 'null') || {
+    1:{name:'Грудь + Трицепс',muscles:['Грудь','Трицепс'],rest:false},
+    2:{name:'Спина + Бицепс',muscles:['Спина','Бицепс'],rest:false},
+    3:{name:'Ноги',muscles:['Ноги','Икры'],rest:false},
+    4:{name:'Плечи',muscles:['Плечи'],rest:false},
+    5:{name:'Грудь + Трицепс',muscles:['Грудь','Трицепс'],rest:false},
+    6:{name:'Отдых',muscles:[],rest:true},
+    0:{name:'Отдых',muscles:[],rest:true},
+  };
+}
+
+function savePlan(plan) {
+  localStorage.setItem('planner_split', JSON.stringify(plan));
+}
+
+function renderPlan() {
+  const plan = loadPlan();
+  const today = new Date().getDay();
+  
+  // Сетка недели
+  const grid = document.getElementById('plan-week-grid');
+  if (!grid) return;
+  
+  grid.innerHTML = [1,2,3,4,5,6,0].map(dow => {
+    const day = plan[dow] || {name:'Отдых',muscles:[],rest:true};
+    const isToday = dow === today;
+    const muscles = day.muscles && day.muscles.length ? day.muscles.join(' · ') : '';
+    return `<div class="plan-day-card${isToday?' today':''}${day.rest?' rest':''}" onclick="openPlanDay(${dow})">
+      <div style="width:36px;height:36px;border-radius:10px;background:${isToday?'var(--neon)':'var(--card)'};
+        display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;
+        color:${isToday?'#fff':'var(--text-muted)'};flex-shrink:0">${DAY_SHORT[dow]}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:${isToday?'var(--neon)':'var(--text)'}">${day.name}</div>
+        ${muscles ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+muscles+'</div>' : ''}
+      </div>
+      ${isToday ? '<div style="font-size:11px;color:var(--neon);font-weight:700">Сегодня</div>' : ''}
+      <div style="color:var(--text-muted);font-size:16px">›</div>
+    </div>`;
+  }).join('');
+
+  // Обновляем главную с актуальным планом
+  updateHomeFromPlan(plan, today);
+}
+
+function updateHomeFromPlan(plan, today) {
+  const day = plan[today];
+  if (!day) return;
+  const titleEl = document.getElementById('home-workout-title');
+  const subEl = document.getElementById('home-workout-sub');
+  if (titleEl) titleEl.textContent = day.rest ? 'День отдыха' : day.name;
+  if (subEl) subEl.textContent = day.rest ? 'Хорошего восстановления!' : (day.muscles||[]).join(' · ');
+}
+
+let editDow = -1;
+let editMuscles = [];
+let editIsRest = false;
+
+function openPlanDay(dow) {
+  const plan = loadPlan();
+  const day = plan[dow] || {name:'Отдых',muscles:[],rest:true};
+  editDow = dow;
+  editMuscles = [...(day.muscles||[])];
+  editIsRest = day.rest || false;
+
+  document.getElementById('plan-day-title').textContent = DAY_NAMES[dow];
+  document.getElementById('plan-day-name').value = day.name || '';
+
+  const tog = document.getElementById('plan-rest-toggle');
+  if (tog) { if (editIsRest) tog.classList.add('on'); else tog.classList.remove('on'); }
+
+  // Чипы мышц
+  const chipsEl = document.getElementById('plan-muscle-chips');
+  if (chipsEl) {
+    chipsEl.innerHTML = MUSCLES_LIST.map(m => 
+      `<div class="muscle-chip-sel${editMuscles.includes(m)?' active':''}" onclick="togglePlanMuscle('${m}',this)">${m}</div>`
+    ).join('');
+  }
+
+  document.getElementById('modal-plan-day').classList.add('open');
+}
+
+function togglePlanMuscle(muscle, el) {
+  el.classList.toggle('active');
+  if (editMuscles.includes(muscle)) {
+    editMuscles = editMuscles.filter(m => m !== muscle);
+  } else {
+    editMuscles.push(muscle);
+  }
+}
+
+function togglePlanRest() {
+  editIsRest = !editIsRest;
+  const tog = document.getElementById('plan-rest-toggle');
+  if (tog) { if (editIsRest) tog.classList.add('on'); else tog.classList.remove('on'); }
+}
+
+function savePlanDay() {
+  const plan = loadPlan();
+  const name = document.getElementById('plan-day-name').value.trim() || (editIsRest ? 'Отдых' : 'Тренировка');
+  plan[editDow] = {name, muscles: editIsRest ? [] : editMuscles, rest: editIsRest};
+  savePlan(plan);
+  closeModal('modal-plan-day');
+  renderPlan();
+  renderHome();
+}
+
+function applyTemplate(key) {
+  const tmpl = TEMPLATES[key];
+  if (!tmpl) return;
+  savePlan(tmpl);
+  renderPlan();
+  renderHome();
+  // Показываем тост
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
+  toast.textContent = 'Программа применена!';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
 
 // ════════════════════════════════════════════════════════════════
 // РЕДАКТИРОВАНИЕ ПОДХОДА
