@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<meta name="version" content="cfe0625d">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Мой планировщик</title>
@@ -584,7 +585,7 @@ if ('serviceWorker' in navigator) {
             <div style="font-size:15px;font-weight:700;color:var(--text)" id="home-workout-title">День отдыха</div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="home-workout-sub">Хорошего восстановления!</div>
           </div>
-          <button onclick="go('workout')" style="background:var(--neon);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">
+          <button onclick="goWorkoutRecord()" style="background:var(--neon);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">
             Записать
           </button>
         </div>
@@ -1412,6 +1413,41 @@ if ('serviceWorker' in navigator) {
       </div>
     </div>
   </div>
+
+  <!-- Модалка редактирования подхода -->
+  <div class="modal-overlay" id="modal-edit-set">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Редактировать подход</div>
+      <div class="modal-body">
+        <div style="background:var(--card2);border-radius:12px;padding:12px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--neon)" id="edit-ex-name">—</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <label style="font-size:11px;color:var(--text-muted)">Подходы</label>
+            <input id="edit-sets" class="input-field" type="number" min="1" style="margin-top:4px;text-align:center">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted)">Повторения</label>
+            <input id="edit-reps" class="input-field" type="number" min="1" style="margin-top:4px;text-align:center">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted)">Вес (кг)</label>
+            <input id="edit-weight" class="input-field" type="number" min="0" step="0.5" style="margin-top:4px;text-align:center">
+          </div>
+        </div>
+        <div style="background:var(--neon-soft);border-radius:10px;padding:10px;text-align:center;margin-bottom:16px">
+          <div style="font-size:11px;color:var(--text-muted)">1RM после изменения</div>
+          <div style="font-size:20px;font-weight:800;color:var(--neon)" id="edit-1rm-preview">—</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-ghost" onclick="closeModal('modal-edit-set')" style="flex:1;margin:0">Отмена</button>
+          <button class="btn-primary" onclick="saveEditSet()" style="flex:2;margin:0">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div><!-- #app -->
 
 <!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
@@ -1871,7 +1907,8 @@ function renderExercises() {
       const isPR = isPRFor(ex, orm);
       const idx = state.workouts.indexOf(s);
       return `<div class="set-chip${isPR?' pr':''}" style="display:flex;align-items:center;gap:6px">
-        <span>${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</span>
+        <span onclick="openEditSet(${idx})" style="flex:1;cursor:pointer">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</span>
+        <span onclick="openEditSet(${idx})" style="color:var(--text-muted);opacity:0.6;cursor:pointer;font-size:12px">✎</span>
         <span onclick="deleteSet(${idx})" style="color:var(--red);opacity:0.7;cursor:pointer;font-size:15px;line-height:1;padding:0 2px">×</span>
       </div>`;
     }).join('');
@@ -2459,6 +2496,69 @@ function renderReport() {
 
 
 
+
+// ════════════════════════════════════════════════════════════════
+// РЕДАКТИРОВАНИЕ ПОДХОДА
+// ════════════════════════════════════════════════════════════════
+let editSetIdx = -1;
+
+function openEditSet(idx) {
+  const w = state.workouts[idx];
+  if (!w) return;
+  editSetIdx = idx;
+  
+  document.getElementById('edit-ex-name').textContent = w.exercise;
+  document.getElementById('edit-sets').value = w.sets;
+  document.getElementById('edit-reps').value = w.reps;
+  document.getElementById('edit-weight').value = w.weight;
+  updateEdit1RM();
+  
+  document.getElementById('modal-edit-set').classList.add('open');
+  
+  // Обновляем 1RM при вводе
+  ['edit-sets','edit-reps','edit-weight'].forEach(id => {
+    document.getElementById(id).oninput = updateEdit1RM;
+  });
+}
+
+function updateEdit1RM() {
+  const reps = parseFloat(document.getElementById('edit-reps').value) || 0;
+  const weight = parseFloat(document.getElementById('edit-weight').value) || 0;
+  const orm = calc1rm(weight, reps);
+  document.getElementById('edit-1rm-preview').textContent = orm + ' кг';
+}
+
+async function saveEditSet() {
+  const w = state.workouts[editSetIdx];
+  if (!w) return;
+  
+  const newSets = parseInt(document.getElementById('edit-sets').value) || w.sets;
+  const newReps = parseInt(document.getElementById('edit-reps').value) || w.reps;
+  const newWeight = parseFloat(document.getElementById('edit-weight').value) || w.weight;
+  
+  // Обновляем локально
+  state.workouts[editSetIdx] = {...w, sets: newSets, reps: newReps, weight: newWeight};
+  
+  // Удаляем старую запись и создаём новую на сервере
+  if (w.id && apiAvailable) {
+    await apiCall('DELETE', '/api/workouts/' + w.id);
+    const result = await apiCall('POST', '/api/workouts', {
+      date: w.date,
+      muscle: w.muscle,
+      exercise: w.exercise,
+      sets: newSets,
+      reps: newReps,
+      weight: newWeight
+    });
+    if (result && result.id) state.workouts[editSetIdx].id = result.id;
+  }
+  
+  saveStateLocal();
+  closeModal('modal-edit-set');
+  renderExercises();
+  renderHome();
+}
+
 // ════════════════════════════════════════════════════════════════
 // ГЛАВНАЯ — ДАШБОРД
 // ════════════════════════════════════════════════════════════════
@@ -2509,6 +2609,11 @@ async function loadHomeFoodStats() {
     const carbsEl = document.getElementById('home-carbs');
     if (carbsEl) carbsEl.textContent = Math.round(carbs);
   } catch(e) {}
+}
+
+function goWorkoutRecord() {
+  go('workout');
+  setTimeout(() => openAddSet(), 400);
 }
 
 function calcStreak() {
