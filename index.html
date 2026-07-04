@@ -2534,9 +2534,7 @@ function calcStreak() {
   if (streak >= 2 && block) {
     block.style.display = 'block';
     if (num) num.textContent = streak;
-    if (sub) sub.textContent = streak >= 7 ? '🏆 Отличная
-серия!' : 'Продолжай
-в том же духе!';
+    if (sub) sub.textContent = streak >= 7 ? 'Отличная серия! 🏆' : 'Продолжай в том же духе!';
   }
 }
 
