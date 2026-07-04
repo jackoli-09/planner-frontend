@@ -1160,6 +1160,54 @@ if ('serviceWorker' in navigator) {
 
     <div style="height:8px"></div>
   </div>
+
+  <!-- Шторка "Ещё" -->
+  <div class="modal-overlay" id="modal-more" onclick="closeMore()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="padding-bottom:24px">
+      <div class="modal-handle"></div>
+      <div style="padding:4px 20px 16px;font-size:13px;font-weight:700;color:var(--text-muted);letter-spacing:0.05em">ЕЩЁ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px">
+        <div onclick="closeMore();go('tasks')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">✅</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Задачи</div>
+            <div style="font-size:11px;color:var(--text-muted)" id="more-tasks-count"></div>
+          </div>
+        </div>
+        <div onclick="closeMore();go('supps')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">💊</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Добавки</div>
+            <div style="font-size:11px;color:var(--text-muted)" id="more-supps-pct"></div>
+          </div>
+        </div>
+        <div onclick="closeMore();go('report')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">📅</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Отчёт</div>
+            <div style="font-size:11px;color:var(--text-muted)">за месяц</div>
+          </div>
+        </div>
+        <div onclick="closeMore();go('ai')" style="background:var(--card2);border:1px solid var(--neon);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">🤖</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--neon)">ИИ анализ</div>
+            <div style="font-size:11px;color:var(--text-muted)">прогресс и плато</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin:16px 16px 0;display:grid;gap:8px">
+        <div onclick="closeMore();go('body')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">⚖️</span>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Вес и калории</div>
+        </div>
+        <div onclick="closeMore();go('settings')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">⚙️</span>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Настройки</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div><!-- #app -->
 
 <!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
