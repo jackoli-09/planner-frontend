@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000510; overflow:hidden; width:155px; height:310px; }
+canvas { display:block; }
+#status { position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
+  font-size:7px; color:rgba(0,200,255,0.5); font-family:monospace; white-space:nowrap; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="status">◈ LOADING ◈</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+const W = 155, H = 310;
+const canvas = document.getElementById('c');
+const status = document.getElementById('status');
+
+// Проверяем WebGL
+function hasWebGL() {
+  try {
+    const t = document.createElement('canvas');
+    return !!(t.getContext('webgl') || t.getContext('experimental-webgl'));
+  } catch(e) { return false; }
+}
+
+if (!hasWebGL()) {
+  status.textContent = '◈ NO WEBGL ◈';
+  // Рисуем простой силуэт через 2D canvas
+  draw2DFallback();
+} else {
+  initThree();
+}
+
+function draw2DFallback() {
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  // Простой голубой силуэт
+  ctx.fillStyle = '#000510';
+  ctx.fillRect(0,0,W,H);
+  
+  function glow(fn) {
+    for (let b of [12,6,2]) {
+      ctx.save();
+      ctx.filter = `blur(${b}px)`;
+      ctx.strokeStyle = b===2 ? '#88eeff' : b===6 ? '#00ccff' : '#0088ff';
+      ctx.lineWidth = b===2 ? 1.2 : b===6 ? 2 : 4;
+      ctx.globalAlpha = b===2 ? 1 : b===6 ? 0.6 : 0.3;
+      fn();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  const cx = W/2;
+  // Голова
+  glow(() => { ctx.beginPath(); ctx.ellipse(cx,35,16,20,0,0,Math.PI*2); });
+  // Тело
+  glow(() => {
+    ctx.beginPath();
+    ctx.moveTo(cx-8,54); ctx.lineTo(cx-8,62); // шея лево
+    ctx.bezierCurveTo(cx-45,65, cx-42,70, cx-40,78); // плечо
+    ctx.bezierCurveTo(cx-48,90, cx-50,110, cx-46,128); // рука
+    ctx.bezierCurveTo(cx-44,145, cx-42,158, cx-42,168); // предплечье
+    ctx.quadraticCurveTo(cx-38,176, cx-35,170); // кисть
+    ctx.bezierCurveTo(cx-30,162, cx-30,145, cx-34,128); // рука внутрь
+    ctx.bezierCurveTo(cx-36,112, cx-30,95, cx-28,82); // бок
+    ctx.bezierCurveTo(cx-26,100, cx-22,118, cx-22,132); // талия
+    ctx.bezierCurveTo(cx-22,142, cx-38,148, cx-40,158); // бедро
+    ctx.lineTo(cx-38,170); // пах
+    ctx.quadraticCurveTo(cx,178, cx+38,170);
+    ctx.lineTo(cx+40,158);
+    ctx.bezierCurveTo(cx+38,148, cx+22,142, cx+22,132);
+    ctx.bezierCurveTo(cx+22,118, cx+26,100, cx+28,82);
+    ctx.bezierCurveTo(cx+30,95, cx+36,112, cx+34,128);
+    ctx.bezierCurveTo(cx+30,145, cx+30,162, cx+35,170);
+    ctx.quadraticCurveTo(cx+38,176, cx+42,168);
+    ctx.lineTo(cx+42,128);
+    ctx.bezierCurveTo(cx+50,110, cx+48,90, cx+40,78);
+    ctx.bezierCurveTo(cx+42,70, cx+45,65, cx+8,62);
+    ctx.lineTo(cx+8,54); ctx.lineTo(cx+8,62);
+    ctx.closePath();
+  });
+
+  // Ноги
+  glow(() => {
+    ctx.beginPath();
+    // Левая нога
+    ctx.moveTo(cx-38,170); ctx.bezierCurveTo(cx-36,200,cx-34,225,cx-34,245);
+    ctx.bezierCurveTo(cx-34,265,cx-36,280,cx-36,295);
+    ctx.quadraticCurveTo(cx-28,300,cx-22,295);
+    ctx.bezierCurveTo(cx-20,280,cx-20,265,cx-20,245);
+    ctx.bezierCurveTo(cx-20,225,cx-18,200,cx-16,172);
+    // Правая нога
+    ctx.moveTo(cx+38,170); ctx.bezierCurveTo(cx+36,200,cx+34,225,cx+34,245);
+    ctx.bezierCurveTo(cx+34,265,cx+36,280,cx+36,295);
+    ctx.quadraticCurveTo(cx+28,300,cx+22,295);
+    ctx.bezierCurveTo(cx+20,280,cx+20,265,cx+20,245);
+    ctx.bezierCurveTo(cx+20,225,cx+18,200,cx+16,172);
+  });
+
+  // Анимация сканера
+  let scanY = 0;
+  function animScan() {
+    requestAnimationFrame(animScan);
+    ctx.clearRect(0, scanY-15, W, 30);
+    ctx.fillStyle = '#000510';
+    ctx.fillRect(0, scanY-15, W, 30);
+    
+    const grad = ctx.createLinearGradient(0, scanY-10, 0, scanY+10);
+    grad.addColorStop(0, 'rgba(0,200,255,0)');
+    grad.addColorStop(0.5, 'rgba(0,200,255,0.3)');
+    grad.addColorStop(1, 'rgba(0,200,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, scanY-10, W, 20);
+    
+    ctx.strokeStyle = 'rgba(180,240,255,0.6)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(5, scanY); ctx.lineTo(W-5, scanY); ctx.stroke();
+    
+    scanY = (scanY + 1.5) % H;
+  }
+  animScan();
+  status.textContent = '◈ BODY SCAN ◈';
+}
+
+function initThree() {
+  canvas.width = W; canvas.height = H;
+  
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x000510, 0.35);
+
+  const cam = new THREE.PerspectiveCamera(38, W/H, 0.01, 50);
+  cam.position.set(0, 1.1, 7.5);
+  cam.lookAt(0, 1.2, 0);
+
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x000510, 1);
+
+  // Освещение
+  scene.add(new THREE.AmbientLight(0x001133, 3));
+  const pt = new THREE.PointLight(0x00aaff, 4, 12);
+  pt.position.set(0, 2, 2); scene.add(pt);
+  const pt2 = new THREE.PointLight(0x0033aa, 2, 8);
+  pt2.position.set(-2, 1, 1); scene.add(pt2);
+
+  // Сетка пола
+  const grid = new THREE.GridHelper(3, 8, 0x003366, 0x001133);
+  grid.position.y = -0.1;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.35;
+  scene.add(grid);
+
+  // Частицы
+  const pGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(100*3);
+  for (let i=0;i<100;i++) {
+    pPos[i*3]=(Math.random()-0.5)*3;
+    pPos[i*3+1]=Math.random()*4;
+    pPos[i*3+2]=(Math.random()-0.5)*2;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos,3));
+  const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
+    color:0x0088cc, size:0.01, transparent:true, opacity:0.5
+  }));
+  scene.add(particles);
+
+  let model = null;
+
+  // Загружаем GLB
+  const loader = new THREE.GLTFLoader();
+  loader.load('/human_body_base_mesh.glb',
+    (gltf) => {
+      model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const scale = 2.8 / Math.max(size.x, size.y, size.z);
+
+      model.position.sub(center.multiplyScalar(scale));
+      model.scale.setScalar(scale);
+      model.position.y += size.y * scale * 0.5;
+      model.rotation.y = 0.15;
+
+      model.traverse(child => {
+        if (!child.isMesh) return;
+
+        // Основной материал
+        child.material = new THREE.MeshPhongMaterial({
+          color: 0x001833,
+          emissive: 0x0044aa,
+          emissiveIntensity: 0.8,
+          specular: 0x00ccff,
+          shininess: 100,
+          transparent: true,
+          opacity: 0.5,
+        });
+
+        // Контур (outline trick)
+        const outlineGeo = child.geometry.clone();
+        const outlineMat = new THREE.MeshBasicMaterial({
+          color: 0x00ccff,
+          side: THREE.BackSide,
+          transparent: true,
+          opacity: 0.85,
+        });
+        const outline = new THREE.Mesh(outlineGeo, outlineMat);
+        outline.scale.multiplyScalar(1.03);
+        child.add(outline);
+
+        // Wireframe
+        const wireMat = new THREE.MeshBasicMaterial({
+          color: 0x004488,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.12,
+        });
+        const wire = new THREE.Mesh(child.geometry, wireMat);
+        child.add(wire);
+      });
+
+      scene.add(model);
+      status.textContent = '◈ SCANNING ◈';
+    },
+    null,
+    () => { draw2DFallback(); }
+  );
+
+  let t = 0;
+  let scanY = 0;
+
+  function animate() {
+    requestAnimationFrame(animate);
+    t += 0.016;
+
+    // Нет вращения — статичная поза
+    if (model) {
+      model.traverse(child => {
+        if (child.isMesh && child.material.emissiveIntensity !== undefined) {
+          child.material.emissiveIntensity = 0.6 + Math.sin(t*1.5)*0.25;
+        }
+      });
+    }
+
+    // Частицы
+    const pos = particles.geometry.attributes.position;
+    for (let i=0;i<pos.count;i++) {
+      const y = pos.getY(i)+0.005;
+      pos.setY(i, y>4.2 ? -0.2 : y);
+    }
+    pos.needsUpdate = true;
+
+    renderer.render(scene, cam);
+  }
+  animate();
+
+  // Слушаем замеры от родителя
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'measures' && model) {
+      const d = e.data.data;
+      const cN = (d.chest||100)/100;
+      const hN = (d.hips||100)/100;
+      const wN = (d.waist||85)/85;
+      model.scale.set(2.8*(cN*0.6+hN*0.4), 2.8, 2.8*(cN*0.5+wN*0.5));
+    }
+  });
+}
+</script>
+</body>
+</html>
