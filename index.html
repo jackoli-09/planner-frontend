@@ -1969,36 +1969,48 @@ function exportData() {
 // ════════════════════════════════════════════════════════════════
 function go(name) {
   try {
-    // Переключаем экраны
-    (SCREENS || []).forEach(function(s) {
-      var scr = document.getElementById('s-'+s);
-      if (scr) scr.classList.toggle('active', s===name);
-    });
-    // Активная кнопка навигации
-    ['home','workout','food','charts','tasks','supps','report','ai','body','more'].forEach(function(s) {
-      var nv = document.getElementById('nav-'+s);
-      if (nv) nv.classList.toggle('active', s===name);
-    });
-    // Рендеринг экрана
-    try { if (name === 'home') renderHome(); } catch(e) { console.warn('renderHome err:', e); }
-    try { if (name === 'workout') renderWorkout(); } catch(e) { console.warn('renderWorkout err:', e); }
-    try { if (name === 'charts') renderCharts(); } catch(e) { console.warn('renderCharts err:', e); }
-    try { if (name === 'body') renderBody(); } catch(e) { console.warn('renderBody err:', e); }
-    try { if (name === 'tasks') renderTasks(); } catch(e) { console.warn('renderTasks err:', e); }
-    try { if (name === 'supps') renderSupps(); } catch(e) { console.warn('renderSupps err:', e); }
-    try { if (name === 'report') renderReport(); } catch(e) { console.warn('renderReport err:', e); }
-    try { if (name === 'food') renderFoodScreen(); } catch(e) { console.warn('renderFood err:', e); }
-    try { if (name === 'plan') renderPlan(); } catch(e) { console.warn('renderPlan err:', e); }
-    if (name === 'settings') {
-      try { updateOnlineStatus(); } catch(e) {}
-      var qc = document.getElementById('queue-count');
-      if (qc) qc.textContent = (offlineQueue||[]).length;
+    // Все экраны напрямую без SCREENS массива
+    var allScreens = ['home','workout','charts','body','tasks','supps','report','food','ai','settings','plan'];
+    for (var i = 0; i < allScreens.length; i++) {
+      var scr = document.getElementById('s-' + allScreens[i]);
+      if (scr) {
+        if (allScreens[i] === name) {
+          scr.classList.add('active');
+        } else {
+          scr.classList.remove('active');
+        }
+      }
     }
+    // Навигация
+    var allNav = ['home','workout','food','charts'];
+    for (var j = 0; j < allNav.length; j++) {
+      var nv = document.getElementById('nav-' + allNav[j]);
+      if (nv) {
+        if (allNav[j] === name) {
+          nv.classList.add('active');
+        } else {
+          nv.classList.remove('active');
+        }
+      }
+    }
+    // Кнопка Ещё
+    var navMore = document.getElementById('nav-more');
+    if (navMore) navMore.classList.remove('active');
+    // Рендер
+    if (name === 'home') { try { renderHome(); } catch(e) {} }
+    if (name === 'workout') { try { renderWorkout(); } catch(e) {} }
+    if (name === 'charts') { try { renderCharts(); } catch(e) {} }
+    if (name === 'body') { try { renderBody(); } catch(e) {} }
+    if (name === 'tasks') { try { renderTasks(); } catch(e) {} }
+    if (name === 'supps') { try { renderSupps(); } catch(e) {} }
+    if (name === 'report') { try { renderReport(); } catch(e) {} }
+    if (name === 'food') { try { renderFoodScreen(); } catch(e) {} }
+    if (name === 'plan') { try { renderPlan(); } catch(e) {} }
+    if (name === 'settings') { try { updateOnlineStatus(); } catch(e) {} }
   } catch(e) {
-    console.error('go() error:', e);
+    console.error('go error:', e);
   }
 }
-
 // ════════════════════════════════════════════════════════════════
 // HOME
 // ════════════════════════════════════════════════════════════════
@@ -3933,7 +3945,5 @@ loadState(() => {
   }
 });
 </script>
-<div id="test-btn" style="position:fixed;bottom:70px;right:10px;z-index:9999;background:red;color:white;padding:10px 16px;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer" onclick="document.getElementById('test-result').textContent='CLICK OK: '+Date.now()">TEST</div>
-<div id="test-result" style="position:fixed;bottom:130px;right:10px;z-index:9999;background:green;color:white;padding:6px 10px;border-radius:10px;font-size:11px;max-width:200px;word-break:break-all"></div>
 </body>
 </html>
