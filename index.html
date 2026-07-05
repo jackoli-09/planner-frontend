@@ -1573,7 +1573,6 @@ if ('serviceWorker' in navigator) {
         <div style="width:155px;height:310px;border-radius:10px;overflow:hidden;position:relative;background:#000510">
           <iframe id="holo-frame" src="/hologram.html" 
             style="width:155px;height:310px;border:none;display:block"
-            sandbox="allow-scripts allow-same-origin"
             loading="lazy">
           </iframe>
           <!-- HUD поверх -->
@@ -2002,43 +2001,52 @@ function go(name) {
 // HOME
 // ════════════════════════════════════════════════════════════════
 function renderHome() {
-  const today = todayStr();
-  document.getElementById('home-date').textContent = formatDate(today);
+  // Дата
+  const today = new Date();
+  const dateEl = document.getElementById('home-date-sub');
+  if (dateEl) dateEl.textContent = today.toLocaleDateString('ru', {weekday:'long', day:'numeric', month:'long'});
 
-  const benchSets = state.workouts.filter(w => w.exercise === 'Жим штанги лёжа');
-  if (benchSets.length) {
-    const maxRM = Math.max(...benchSets.map(w => calc1rm(w.weight, w.reps)));
-    document.getElementById('kpi-bench').textContent = maxRM + ' кг';
-    const avgW = round1(benchSets.reduce((a,b)=>a+b.weight,0)/benchSets.length);
-    document.getElementById('kpi-bench-sub').textContent = 'ср. вес ' + avgW + ' кг';
-  }
+  // Следующая тренировка из пользовательского плана
+  const dow = today.getDay();
+  const userPlan = loadPlan();
+  const todayPlan = userPlan[dow];
+  const titleEl = document.getElementById('home-workout-title');
+  const subEl = document.getElementById('home-workout-sub');
+  if (titleEl) titleEl.textContent = todayPlan ? (todayPlan.rest ? 'День отдыха' : todayPlan.name) : 'День отдыха';
+  if (subEl) subEl.textContent = todayPlan && !todayPlan.rest ? (todayPlan.muscles||[]).join(' · ') : 'Хорошего восстановления!';
 
-  const deadSets = state.workouts.filter(w => w.exercise === 'Становая тяга');
-  if (deadSets.length) {
-    const maxRM = Math.max(...deadSets.map(w => calc1rm(w.weight, w.reps)));
-    document.getElementById('kpi-dead').textContent = maxRM + ' кг';
-    const avgW = round1(deadSets.reduce((a,b)=>a+b.weight,0)/deadSets.length);
-    document.getElementById('kpi-dead-sub').textContent = 'ср. вес ' + avgW + ' кг';
-  }
+  if (!state) return;
 
-  const total = state.tasks.length;
-  const done = state.tasks.filter(t=>t.done).length;
-  document.getElementById('kpi-tasks').textContent = done+'/'+total;
-  document.getElementById('kpi-tasks-sub').textContent = total ? Math.round(done/total*100)+'%' : '0%';
-  document.getElementById('q-tasks').textContent = (total-done)+' активных';
+  // PR жим и становая
+  const bench = state.workouts.filter(w => w.exercise && w.exercise.includes('Жим штанги лёжа'));
+  const deadlift = state.workouts.filter(w => w.exercise && (w.exercise.includes('Становая') || w.exercise.includes('Мёртвая')));
 
-  if (state.bodyWeight.length) {
-    const sorted = [...state.bodyWeight].sort((a,b)=>a.date.localeCompare(b.date));
-    const last = sorted[sorted.length-1];
-    document.getElementById('kpi-weight').textContent = last.weight + ' кг';
-    if (sorted.length > 1) {
-      const prev = sorted[sorted.length-2];
-      const delta = round1(last.weight - prev.weight);
-      document.getElementById('kpi-weight-sub').textContent = (delta>=0?'+':'')+delta+' кг с прошлого замера';
-    } else {
-      document.getElementById('kpi-weight-sub').textContent = last.date;
-    }
-  }
+  const maxBench = bench.length ? Math.max(...bench.map(w => calc1rm(w.weight, w.reps))) : 0;
+  const maxDead = deadlift.length ? Math.max(...deadlift.map(w => calc1rm(w.weight, w.reps))) : 0;
+
+  const benchEl = document.getElementById('home-bench-pr');
+  const deadEl = document.getElementById('home-deadlift-pr');
+  if (benchEl) benchEl.textContent = maxBench ? maxBench + ' кг' : '—';
+  if (deadEl) deadEl.textContent = maxDead ? maxDead + ' кг' : '—';
+
+  // Добавки
+  const todayStr_ = todayStr();
+  const checks = Object.keys(state.supps.checked || {}).filter(k => k.startsWith(todayStr_) && state.supps.checked[k]).length;
+  const slots = (state.supps.list || []).reduce((a,s) => a + (s.times||[]).length, 0);
+  const suppEl = document.getElementById('home-supps-pct');
+  if (suppEl) suppEl.textContent = slots ? Math.round(checks/slots*100) + '%' : '—';
+
+  // Задачи
+  const done = (state.tasks || []).filter(t => t.done).length;
+  const total = (state.tasks || []).length;
+  const tasksEl = document.getElementById('home-tasks-done');
+  if (tasksEl) tasksEl.textContent = total ? done + '/' + total : '—';
+
+  // Стрик
+  calcStreak();
+
+  // Калории
+  loadHomeFoodStats();
 }
 
 // ════════════════════════════════════════════════════════════════
