@@ -25,31 +25,31 @@ if ('serviceWorker' in navigator) {
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; overflow: hidden; font-family: 'Montserrat', -apple-system, Arial, sans-serif; }
+html, body { height: 100%; overflow: hidden; font-family: 'Manrope', -apple-system, Arial, sans-serif; }
 
 :root {
-  --bg: #0a0a12;
-  --bg-deep: #050508;
-  --card: #14141f;
-  --card2: #1a1a28;
-  --border: #2a2a3d;
-  --border-light: #34344a;
-  --text: #f0f0f5;
-  --text-sub: #8888a0;
-  --text-muted: #5c5c70;
-  --neon: #b026ff;
-  --neon2: #d946ef;
-  --neon-glow: rgba(176, 38, 255, 0.45);
-  --neon-soft: rgba(176, 38, 255, 0.12);
-  --neon-soft2: rgba(176, 38, 255, 0.06);
-  --green: #00e5a0;
-  --green-soft: rgba(0, 229, 160, 0.12);
-  --orange: #ff9d3d;
-  --orange-soft: rgba(255, 157, 61, 0.12);
-  --red: #ff4d6a;
-  --red-soft: rgba(255, 77, 106, 0.12);
-  --blue: #4dabff;
-  --blue-soft: rgba(77, 171, 255, 0.12);
+  --bg: #f5f4f0;
+  --bg-deep: #eeece7;
+  --card: #ffffff;
+  --card2: #f5f4f0;
+  --border: #e8e4dc;
+  --border-light: #d8d4cc;
+  --text: #1a1a1a;
+  --text-sub: #6b7280;
+  --text-muted: #a09c94;
+  --neon: #1a1a1a;
+  --neon2: #3a3a3a;
+  --neon-glow: rgba(26,26,26,0.15);
+  --neon-soft: rgba(26,26,26,0.06);
+  --neon-soft2: rgba(26,26,26,0.03);
+  --green: #16a34a;
+  --green-soft: rgba(22,163,74,0.08);
+  --orange: #d97706;
+  --orange-soft: rgba(217,119,6,0.08);
+  --red: #c0392b;
+  --red-soft: rgba(192,57,43,0.08);
+  --blue: #2563eb;
+  --blue-soft: rgba(37,99,235,0.08);
 }
 
 body { background: var(--bg); color: var(--text); }
@@ -68,23 +68,50 @@ body { background: var(--bg); color: var(--text); }
 
 /* ── Bottom nav ── */
 .bottom-nav {
-  height: 60px;
-  background: var(--bg-deep);
+  background: var(--card);
   border-top: 1px solid var(--border);
-  display: flex;
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 100;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.nav-item { background:none; border:none; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 3px; cursor: pointer; padding: 6px 0;
-  color: var(--text-muted); transition: color .15s;
-  position: relative;
+.nav-indicator {
+  display: flex;
+  height: 2px;
 }
-.nav-item.active { color: var(--neon2); }
+.nav-ind-seg {
+  flex: 1;
+  background: transparent;
+  transition: background 0.2s;
+}
+.nav-ind-seg.on {
+  background: var(--text);
+}
+.nav-buttons {
+  display: flex;
+  padding: 4px 0 10px;
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  font-family: 'Manrope', sans-serif;
+  cursor: pointer;
+  padding: 4px 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-icon {
+  font-size: 20px;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+.nav-item.active .nav-icon { color: var(--text); }
+.nav-item.active .nav-label { color: var(--text); font-weight: 600; }
 .nav-item.active::before {
   content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
   width: 28px; height: 2px; background: var(--neon2);
@@ -794,8 +821,36 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 
 <!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
 <div class="bottom-nav">
-  <button class="nav-item active" id="nav-home" onclick="go('home')">
-    <div class="nav-icon">🏠</div><div class="nav-label">Главная</div>
+  <div class="nav-indicator">
+    <div class="nav-ind-seg on" id="nind-home"></div>
+    <div class="nav-ind-seg" id="nind-tasks"></div>
+    <div class="nav-ind-seg" id="nind-food"></div>
+    <div class="nav-ind-seg" id="nind-workout"></div>
+    <div class="nav-ind-seg" id="nind-more"></div>
+  </div>
+  <div class="nav-buttons">
+    <button class="nav-item active" id="nav-home" onclick="go('home')">
+      <i class="ti ti-home nav-icon"></i>
+      <div class="nav-label">Главная</div>
+    </button>
+    <button class="nav-item" id="nav-tasks" onclick="go('tasks')">
+      <i class="ti ti-checkbox nav-icon"></i>
+      <div class="nav-label">Задачи</div>
+    </button>
+    <button class="nav-item" id="nav-food" onclick="go('food')">
+      <i class="ti ti-salad nav-icon"></i>
+      <div class="nav-label">Питание</div>
+    </button>
+    <button class="nav-item" id="nav-workout" onclick="go('workout')">
+      <i class="ti ti-barbell nav-icon"></i>
+      <div class="nav-label">Трен.</div>
+    </button>
+    <button class="nav-item" id="nav-more" onclick="openMore()">
+      <i class="ti ti-dots nav-icon"></i>
+      <div class="nav-label">Ещё</div>
+    </button>
+  </div>
+</div><div class="nav-label">Главная</div>
   </button>
   <button class="nav-item" id="nav-workout" onclick="go('workout')">
     <div class="nav-icon">🏋️</div><div class="nav-label">Трен.</div>
@@ -1033,7 +1088,7 @@ const NEON_PALETTE = ['#b026ff','#00e5a0','#ff9d3d','#4dabff','#ff4d6a','#d946ef
 if (window.Chart) {
   Chart.defaults.color = '#8888a0';
   Chart.defaults.borderColor = '#2a2a3d';
-  Chart.defaults.font.family = "'Montserrat', sans-serif";
+  Chart.defaults.font.family = "'Manrope', sans-serif";
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1148,23 +1203,49 @@ function exportData() {
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
 function go(name) {
-  var SCREENS = ['home','workout','charts','body','tasks','supps','report','ai'];
-  SCREENS.forEach(s => {
-    const scr = document.getElementById('s-'+s);
-    if (scr) scr.classList.toggle('active', s===name);
+  var allScreens = ['home','workout','charts','body','tasks','supps','report','ai'];
+  // Если есть food — добавляем
+  allScreens.push('food');
+  for (var i = 0; i < allScreens.length; i++) {
+    var scr = document.getElementById('s-' + allScreens[i]);
+    if (scr) {
+      if (allScreens[i] === name) scr.classList.add('active');
+      else scr.classList.remove('active');
+    }
+  }
+  // Обновляем навигацию
+  var navMap = {home:'home', tasks:'tasks', food:'food', workout:'workout'};
+  ['home','tasks','food','workout'].forEach(function(s) {
+    var btn = document.getElementById('nav-' + s);
+    var ind = document.getElementById('nind-' + s);
+    var isActive = s === name || (s === 'workout' && name === 'charts');
+    if (btn) { if (isActive) btn.classList.add('active'); else btn.classList.remove('active'); }
+    if (ind) { if (isActive) ind.classList.add('on'); else ind.classList.remove('on'); }
   });
-  ['home','workout','tasks','supps','report','ai'].forEach(s => {
-    const nv = document.getElementById('nav-'+s);
-    if (nv) nv.classList.toggle('active', s===name || (s==='workout' && (name==='charts')) );
-  });
-  if (name === 'home') renderHome();
-  if (name === 'workout') renderWorkout();
-  if (name === 'charts') renderCharts();
-  if (name === 'body') renderBody();
-  if (name === 'tasks') renderTasks();
-  if (name === 'supps') renderSupps();
-  if (name === 'report') renderReport();
+  // Сбрасываем кнопку Ещё
+  var moreBtn = document.getElementById('nav-more');
+  var moreInd = document.getElementById('nind-more');
+  if (moreBtn) moreBtn.classList.remove('active');
+  if (moreInd) moreInd.classList.remove('on');
+
+  try { if (name === 'home') renderHome(); } catch(e) {}
+  try { if (name === 'workout') renderWorkout(); } catch(e) {}
+  try { if (name === 'charts') renderCharts(); } catch(e) {}
+  try { if (name === 'body') renderBody(); } catch(e) {}
+  try { if (name === 'tasks') renderTasks(); } catch(e) {}
+  try { if (name === 'supps') renderSupps(); } catch(e) {}
+  try { if (name === 'report') renderReport(); } catch(e) {}
 }
+
+function openMore() {
+  var moreBtn = document.getElementById('nav-more');
+  var moreInd = document.getElementById('nind-more');
+  if (moreBtn) moreBtn.classList.add('active');
+  if (moreInd) moreInd.classList.add('on');
+  // Показываем шторку (если есть) или переходим на supps
+  try { go('supps'); } catch(e) {}
+}
+
 
 // ════════════════════════════════════════════════════════════════
 // HOME
