@@ -1728,6 +1728,29 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <script>
+// ─── ПЕРЕМЕННЫЕ (объявлены первыми во избежание TDZ) ────────────
+var state = null;
+var userId = 0;
+var selectedSuppDate = new Date().toISOString().slice(0,10);
+var offlineQueue = [];
+
+var currentMeasureDate = new Date().toISOString().slice(0,10);
+var selectedFood = null;
+var currentFoodDate = new Date().toISOString().slice(0,10);
+var editSetIdx = -1;
+var editDow = -1;
+var editMuscles = [];
+var editIsRest = false;
+var obGoal = 'sport';
+var obModules = {workout:true, food:true, supps:true, tasks:false};
+
+var isOnline = true;
+var activeMeasureTab = 'waist';
+var barcodeStream = null;
+var barcodeInterval = null;
+
+// ─────────────────────────────────────────────────────────────────
+
 // Глобальный перехват ошибок
 window.onerror = function(msg, src, line, col, err) {
   const div = document.createElement('div');
@@ -1745,6 +1768,8 @@ window.addEventListener('unhandledrejection', function(e) {
   setTimeout(() => div.remove(), 8000);
 });
 
+// Глобальные переменные (до всего остального)
+
 // ════════════════════════════════════════════════════════════════
 // TELEGRAM WEBAPP INIT
 // ════════════════════════════════════════════════════════════════
@@ -1755,7 +1780,7 @@ if (tg) {
   tg.setHeaderColor && tg.setHeaderColor('#0a0a12');
   tg.setBackgroundColor && tg.setBackgroundColor('#0a0a12');
   const u = tg.initDataUnsafe?.user;
-  if (u?.first_name) document.getElementById('user-name').textContent = u.first_name + ' 👋';
+  if (u?.first_name) { const greet = document.getElementById('home-greeting'); if (greet) greet.textContent = 'Привет, ' + u.first_name + ' 👋'; }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1790,7 +1815,7 @@ async function apiCall(method, path, body) {
 // ════════════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════════════
-let state = {
+state = {
   workouts: [],
   tasks: [],
   bodyWeight: [],   // [{date, weight}]
@@ -1814,7 +1839,7 @@ var HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","e
 
 let currentMuscle = 'Грудь + Трицепс';
 let currentBodyTab = 'weight';
-let selectedSuppDate = todayStr();
+ todayStr();
 let reportMonthOffset = 0; // 0 = current month
 let progChart=null, avgChart=null, weightChart=null, calChart=null;
 
@@ -1957,7 +1982,6 @@ function exportData() {
 // ════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
-var SCREENS = ['home','workout','charts','body','tasks','supps','report','food','ai','settings','plan'];
 function go(name) {
   SCREENS.forEach(s => {
     const scr = document.getElementById('s-'+s);
@@ -2678,7 +2702,7 @@ var MEASURE_FIELDS = [
 
 let currentMeasureDate = todayStr();
 let measuresData = {};  // {date: {neck:38, chest:100, ...}}
-let activeMeasureTab = 'waist';
+
 
 function loadMeasures() {
   measuresData = JSON.parse(localStorage.getItem('planner_measures') || '{}');
@@ -3000,9 +3024,9 @@ function updateHomeFromPlan(plan, today) {
   if (subEl) subEl.textContent = day.rest ? 'Хорошего восстановления!' : (day.muscles||[]).join(' · ');
 }
 
-let editDow = -1;
-let editMuscles = [];
-let editIsRest = false;
+
+
+
 
 function openPlanDay(dow) {
   const plan = loadPlan();
@@ -3070,7 +3094,7 @@ function applyTemplate(key) {
 // ════════════════════════════════════════════════════════════════
 // РЕДАКТИРОВАНИЕ ПОДХОДА
 // ════════════════════════════════════════════════════════════════
-let editSetIdx = -1;
+
 
 function openEditSet(idx) {
   const w = state.workouts[idx];
@@ -3216,8 +3240,8 @@ function calcStreak() {
 // ════════════════════════════════════════════════════════════════
 // ОНБОРДИНГ
 // ════════════════════════════════════════════════════════════════
-let obGoal = 'sport';
-let obModules = {workout:true, food:true, supps:true, tasks:false};
+
+
 
 function checkOnboarding() {
   const done = localStorage.getItem('planner_onboarding_done');
@@ -3314,7 +3338,7 @@ function finishOnboarding() {
 // ════════════════════════════════════════════════════════════════
 // ОФЛАЙН / ОНЛАЙН
 // ════════════════════════════════════════════════════════════════
-let isOnline = navigator.onLine;
+
 let offlineQueue = JSON.parse(localStorage.getItem('planner_offline_queue') || '[]');
 
 function updateOnlineStatus() {
@@ -3508,11 +3532,11 @@ function toggleThis(el) {
 // ════════════════════════════════════════════════════════════════
 // ПИТАНИЕ
 // ════════════════════════════════════════════════════════════════
-let currentFoodDate = todayStr();
-let selectedFood = null;
-let barcodeStream = null;
-let barcodeInterval = null;
-var CALORIE_GOAL = 2500;
+
+
+
+
+
 
 var MEAL_ORDER = ['завтрак','обед','ужин','перекус'];
 var MEAL_EMOJI = {завтрак:'🌅',обед:'☀️',ужин:'🌙',перекус:'🍪'};
