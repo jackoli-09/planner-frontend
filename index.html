@@ -25,31 +25,14 @@ if ('serviceWorker' in navigator) {
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; overflow: hidden; font-family: 'Manrope', -apple-system, Arial, sans-serif; }
-
-:root {
-  --bg: #f5f4f0;
-  --bg-deep: #eeece7;
-  --card: #ffffff;
-  --card2: #f5f4f0;
-  --border: #e8e4dc;
-  --border-light: #d8d4cc;
-  --text: #1a1a1a;
-  --text-sub: #6b7280;
-  --text-muted: #a09c94;
-  --neon: #1a1a1a;
-  --neon2: #3a3a3a;
-  --neon-glow: rgba(26,26,26,0.15);
-  --neon-soft: rgba(26,26,26,0.06);
-  --neon-soft2: rgba(26,26,26,0.03);
-  --green: #16a34a;
-  --green-soft: rgba(22,163,74,0.08);
-  --orange: #d97706;
-  --orange-soft: rgba(217,119,6,0.08);
-  --red: #c0392b;
-  --red-soft: rgba(192,57,43,0.08);
-  --blue: #2563eb;
-  --blue-soft: rgba(37,99,235,0.08);
+html, body {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 body { background: var(--bg); color: var(--text); }
@@ -465,71 +448,76 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 
   <!-- ═══════════════════════════════════ HOME ═══════════════════════════════ -->
   <div class="screen active" id="s-home">
-    <div class="page-header">
-      <div class="home-greeting">Привет,</div>
-      <div class="home-name" id="user-name">Вадим 👋</div>
-      <div class="home-date" id="home-date"></div>
+
+    <!-- Шапка -->
+    <div style="padding: 16px 16px 10px; background: var(--bg);">
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 3px;" id="home-date-sub"></div>
+      <div style="font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2;" id="home-greeting">Доброе утро</div>
     </div>
 
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">Жим лёжа 1RM</div>
-        <div class="kpi-val kpi-neon" id="kpi-bench">—</div>
-        <div class="kpi-sub" id="kpi-bench-sub">нет данных</div>
+    <!-- Прогресс дня -->
+    <div style="background: var(--card); border-radius: 16px; margin: 0 12px 10px; border: 1px solid var(--border); padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div style="font-size: 11px; font-weight: 600; color: var(--text-sub);">Прогресс дня</div>
+        <div style="font-size: 11px; font-weight: 700; color: var(--text);" id="home-tasks-progress">0 / 0 задач</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Задач выполнено</div>
-        <div class="kpi-val kpi-green" id="kpi-tasks">0/0</div>
-        <div class="kpi-sub" id="kpi-tasks-sub">0%</div>
+      <div style="height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 12px;">
+        <div id="home-progress-bar" style="height: 100%; background: var(--text); border-radius: 2px; width: 0%; transition: width 0.4s;"></div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Становая 1RM</div>
-        <div class="kpi-val kpi-orange" id="kpi-dead">—</div>
-        <div class="kpi-sub" id="kpi-dead-sub">нет данных</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Вес тела</div>
-        <div class="kpi-val kpi-blue" id="kpi-weight">—</div>
-        <div class="kpi-sub" id="kpi-weight-sub">нет данных</div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center;">
+        <div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text);" id="home-tasks-done">0</div>
+          <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">задачи</div>
+        </div>
+        <div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text);" id="home-cal-today">—</div>
+          <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">ккал</div>
+        </div>
+        <div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text);" id="home-workouts-week">—</div>
+          <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">трен. нед.</div>
+        </div>
+        <div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text);" id="home-streak">—</div>
+          <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">стрик</div>
+        </div>
       </div>
     </div>
 
-    <div class="section-label">Быстрый доступ</div>
-    <div class="quick-grid">
-      <div class="quick-card" onclick="go('workout')">
-        <div class="quick-icon">🏋️</div>
-        <div class="quick-title">Тренировка</div>
-        <div class="quick-meta">Добавить подход</div>
+    <!-- Задачи на сегодня -->
+    <div style="font-size: 9px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; padding: 0 16px 6px;">На сегодня</div>
+    <div style="background: var(--card); border-radius: 16px; margin: 0 12px 10px; border: 1px solid var(--border);">
+      <div id="home-tasks-list" style="padding: 4px 14px;">
+        <div style="padding: 10px 0; color: var(--text-muted); font-size: 12px; text-align: center;">Загрузка...</div>
       </div>
-      <div class="quick-card" onclick="go('charts')">
-        <div class="quick-icon">📈</div>
-        <div class="quick-title">Прогресс</div>
-        <div class="quick-meta">Графики и PR</div>
-      </div>
-      <div class="quick-card" onclick="go('body')">
-        <div class="quick-icon">⚖️</div>
-        <div class="quick-title">Вес и ккал</div>
-        <div class="quick-meta">Дневник тела</div>
-      </div>
-      <div class="quick-card" onclick="go('tasks')">
-        <div class="quick-icon">✅</div>
-        <div class="quick-title">Задачи</div>
-        <div class="quick-meta" id="q-tasks">0 активных</div>
-      </div>
-      <div class="quick-card" onclick="go('supps')">
-        <div class="quick-icon">💊</div>
-        <div class="quick-title">Добавки</div>
-        <div class="quick-meta">Отметить приём</div>
-      </div>
-      <div class="quick-card" onclick="go('report')">
-        <div class="quick-icon">🗓</div>
-        <div class="quick-title">Отчёт</div>
-        <div class="quick-meta">Итоги месяца</div>
+      <div style="padding: 8px 14px 12px; border-top: 1px solid var(--border);">
+        <div onclick="go('tasks')" style="font-size: 11px; color: var(--text-muted); cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+          <span>Все задачи</span>
+          <i class="ti ti-chevron-right" style="font-size: 14px;"></i>
+        </div>
       </div>
     </div>
+
+    <!-- 2 карточки: тренировка + питание -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 12px 10px;">
+      <div onclick="go('workout')" style="background: var(--text); border-radius: 14px; padding: 14px; cursor: pointer;">
+        <div style="font-size: 9px; color: #888; letter-spacing: 0.06em; margin-bottom: 6px; text-transform: uppercase;">Тренировка</div>
+        <div style="font-size: 13px; font-weight: 700; color: #fff; line-height: 1.3;" id="home-workout-name">День отдыха</div>
+        <div style="font-size: 10px; color: #666; margin-top: 6px;">Начать →</div>
+      </div>
+      <div onclick="go('food')" style="background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; cursor: pointer;">
+        <div style="font-size: 9px; color: var(--text-muted); letter-spacing: 0.06em; margin-bottom: 6px; text-transform: uppercase;">Питание</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--text); line-height: 1;" id="home-cal-card">—</div>
+        <div style="font-size: 9px; color: var(--text-muted); margin-bottom: 5px;">ккал сегодня</div>
+        <div style="height: 3px; background: var(--border); border-radius: 2px;">
+          <div id="home-cal-bar" style="height: 100%; background: var(--text); border-radius: 2px; width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 80px;"></div>
   </div>
 
-  <!-- ═══════════════════════════════ WORKOUT ═══════════════════════════════ -->
   <div class="screen" id="s-workout">
     <div class="page-header">
       <div class="ph-title">Силовой дневник</div>
@@ -1251,44 +1239,107 @@ function openMore() {
 // HOME
 // ════════════════════════════════════════════════════════════════
 function renderHome() {
-  const today = todayStr();
-  document.getElementById('home-date').textContent = formatDate(today);
-
-  const benchSets = state.workouts.filter(w => w.exercise === 'Жим штанги лёжа');
-  if (benchSets.length) {
-    const maxRM = Math.max(...benchSets.map(w => calc1rm(w.weight, w.reps)));
-    document.getElementById('kpi-bench').textContent = maxRM + ' кг';
-    const avgW = round1(benchSets.reduce((a,b)=>a+b.weight,0)/benchSets.length);
-    document.getElementById('kpi-bench-sub').textContent = 'ср. вес ' + avgW + ' кг';
+  // Дата
+  var today = new Date();
+  var hours = today.getHours();
+  var greeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер';
+  var days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  var months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  var dateSub = days[today.getDay()] + ', ' + today.getDate() + ' ' + months[today.getMonth()];
+  
+  var dateEl = document.getElementById('home-date-sub');
+  if (dateEl) dateEl.textContent = dateSub;
+  
+  var greetEl = document.getElementById('home-greeting');
+  if (greetEl) {
+    var name = '';
+    try { name = JSON.parse(localStorage.getItem('planner_settings') || '{}').name || ''; } catch(e) {}
+    greetEl.textContent = greeting + (name ? ', ' + name : '');
   }
 
-  const deadSets = state.workouts.filter(w => w.exercise === 'Становая тяга');
-  if (deadSets.length) {
-    const maxRM = Math.max(...deadSets.map(w => calc1rm(w.weight, w.reps)));
-    document.getElementById('kpi-dead').textContent = maxRM + ' кг';
-    const avgW = round1(deadSets.reduce((a,b)=>a+b.weight,0)/deadSets.length);
-    document.getElementById('kpi-dead-sub').textContent = 'ср. вес ' + avgW + ' кг';
-  }
+  if (!state) return;
 
-  const total = state.tasks.length;
-  const done = state.tasks.filter(t=>t.done).length;
-  document.getElementById('kpi-tasks').textContent = done+'/'+total;
-  document.getElementById('kpi-tasks-sub').textContent = total ? Math.round(done/total*100)+'%' : '0%';
-  document.getElementById('q-tasks').textContent = (total-done)+' активных';
+  // Задачи сегодня
+  var todayStr_ = todayStr();
+  var todayTasks = (state.tasks || []).filter(function(t) {
+    return !t.dl || t.dl === todayStr_;
+  });
+  var doneTasks = todayTasks.filter(function(t) { return t.done; });
+  var total = todayTasks.length;
+  var done = doneTasks.length;
 
-  if (state.bodyWeight.length) {
-    const sorted = [...state.bodyWeight].sort((a,b)=>a.date.localeCompare(b.date));
-    const last = sorted[sorted.length-1];
-    document.getElementById('kpi-weight').textContent = last.weight + ' кг';
-    if (sorted.length > 1) {
-      const prev = sorted[sorted.length-2];
-      const delta = round1(last.weight - prev.weight);
-      document.getElementById('kpi-weight-sub').textContent = (delta>=0?'+':'')+delta+' кг с прошлого замера';
+  var progressEl = document.getElementById('home-tasks-progress');
+  if (progressEl) progressEl.textContent = done + ' / ' + total + ' задач';
+
+  var barEl = document.getElementById('home-progress-bar');
+  if (barEl) barEl.style.width = (total ? Math.round(done/total*100) : 0) + '%';
+
+  var doneEl = document.getElementById('home-tasks-done');
+  if (doneEl) doneEl.textContent = done;
+
+  // Список задач на сегодня
+  var listEl = document.getElementById('home-tasks-list');
+  if (listEl) {
+    var pending = todayTasks.filter(function(t) { return !t.done; }).slice(0, 3);
+    if (!pending.length && !done) {
+      listEl.innerHTML = '<div style="padding:12px 0;color:var(--text-muted);font-size:12px;text-align:center;">Нет задач на сегодня</div>';
     } else {
-      document.getElementById('kpi-weight-sub').textContent = last.date;
+      var html_ = '';
+      pending.forEach(function(t) {
+        var isPrio = t.prio === 'high';
+        html_ += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="width:15px;height:15px;border-radius:50%;border:1.5px solid ' + (isPrio ? '#c0392b' : 'var(--border-light)') + ';flex-shrink:0;"></div>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:12px;color:var(--text);font-weight:500;">' + t.text + '</div>' +
+            (t.dl ? '<div style="font-size:9px;color:' + (isPrio ? '#c0392b' : 'var(--text-muted)') + ';margin-top:1px;">' + t.dl + '</div>' : '') +
+          '</div>' +
+          (isPrio ? '<div style="font-size:8px;background:#fef2f0;color:#c0392b;border-radius:4px;padding:1px 5px;font-weight:600;">Срочно</div>' : '') +
+        '</div>';
+      });
+      if (done > 0) {
+        html_ += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;">' +
+          '<div style="width:15px;height:15px;border-radius:50%;background:var(--text);flex-shrink:0;display:flex;align-items:center;justify-content:center;"><div style="font-size:8px;color:#fff;">✓</div></div>' +
+          '<div style="font-size:12px;color:var(--text-muted);">' + done + ' выполнено</div>' +
+        '</div>';
+      }
+      listEl.innerHTML = html_;
     }
   }
+
+  // Тренировки
+  var weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+  var weekWorkouts = (state.workouts || []).filter(function(w) {
+    return new Date(w.date) >= weekAgo;
+  });
+  var uniqueDays = new Set(weekWorkouts.map(function(w) { return w.date; })).size;
+  var workEl = document.getElementById('home-workouts-week');
+  if (workEl) workEl.textContent = uniqueDays;
+
+  // Стрик
+  var dates = Array.from(new Set((state.workouts||[]).map(function(w){return w.date;}))).sort().reverse();
+  var streak = 0;
+  var cur = new Date(); cur.setHours(0,0,0,0);
+  for (var i=0;i<dates.length;i++) {
+    var wd = new Date(dates[i]+'T00:00:00');
+    var diff = Math.round((cur-wd)/86400000);
+    if (diff <= 1) { streak++; cur=wd; } else break;
+  }
+  var strkEl = document.getElementById('home-streak');
+  if (strkEl) strkEl.textContent = streak ? streak + 'д' : '—';
+
+  // Тренировка сегодня
+  var workoutNameEl = document.getElementById('home-workout-name');
+  if (workoutNameEl) {
+    try {
+      var plan = JSON.parse(localStorage.getItem('planner_split') || 'null');
+      var dow = new Date().getDay();
+      if (plan && plan[dow]) {
+        workoutNameEl.textContent = plan[dow].rest ? 'День отдыха' : plan[dow].name;
+      }
+    } catch(e) {}
+  }
 }
+
 
 // ════════════════════════════════════════════════════════════════
 // WORKOUT
