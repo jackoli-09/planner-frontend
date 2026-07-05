@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta name="version" content="cfe0625d">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Мой планировщик</title>
@@ -39,38 +38,6 @@ html, body { height: 100%; overflow: hidden; font-family: 'Montserrat', -apple-s
   --blue-soft: rgba(77, 171, 255, 0.12);
 }
 
-/* ── ТЕМЫ ── */
-[data-theme="violet"] {
-  --bg:#0a0a12;--bg-deep:#050508;--card:#14141f;--card2:#1a1a28;
-  --border:#2a2a3d;--border-light:#34344a;--text:#f0f0f5;--text-sub:#8888a0;--text-muted:#5c5c70;
-  --neon:#b026ff;--neon2:#d946ef;--neon-glow:rgba(176,38,255,0.45);--neon-soft:rgba(176,38,255,0.12);--neon-soft2:rgba(176,38,255,0.06);
-}
-[data-theme="blue"] {
-  --bg:#080e1e;--bg-deep:#040912;--card:#0f1628;--card2:#151e35;
-  --border:#1e2d4a;--border-light:#253660;--text:#e8f0ff;--text-sub:#6880b0;--text-muted:#3d4e70;
-  --neon:#3b82f6;--neon2:#60a5fa;--neon-glow:rgba(59,130,246,0.45);--neon-soft:rgba(59,130,246,0.12);--neon-soft2:rgba(59,130,246,0.06);
-}
-[data-theme="green"] {
-  --bg:#071210;--bg-deep:#030a08;--card:#0d1e1a;--card2:#122620;
-  --border:#1a3028;--border-light:#1f3c32;--text:#e8fff8;--text-sub:#5a8878;--text-muted:#3a5850;
-  --neon:#10b981;--neon2:#34d399;--neon-glow:rgba(16,185,129,0.45);--neon-soft:rgba(16,185,129,0.12);--neon-soft2:rgba(16,185,129,0.06);
-}
-[data-theme="light"] {
-  --bg:#f5f5f0;--bg-deep:#ebebeb;--card:#ffffff;--card2:#f0f0f8;
-  --border:#dddde8;--border-light:#c8c8da;--text:#1a1a2e;--text-sub:#555570;--text-muted:#8888a0;
-  --neon:#7c3aed;--neon2:#a855f7;--neon-glow:rgba(124,58,237,0.3);--neon-soft:rgba(124,58,237,0.1);--neon-soft2:rgba(124,58,237,0.05);
-}
-[data-theme="gray"] {
-  --bg:#0f0f11;--bg-deep:#080809;--card:#18181b;--card2:#212124;
-  --border:#2e2e32;--border-light:#3a3a40;--text:#f4f4f5;--text-sub:#71717a;--text-muted:#52525b;
-  --neon:#a1a1aa;--neon2:#d4d4d8;--neon-glow:rgba(161,161,170,0.3);--neon-soft:rgba(161,161,170,0.1);--neon-soft2:rgba(161,161,170,0.05);
-}
-[data-theme="orange"] {
-  --bg:#0f0800;--bg-deep:#080400;--card:#1a1000;--card2:#221600;
-  --border:#3a2800;--border-light:#4a3400;--text:#fff8f0;--text-sub:#aa8855;--text-muted:#705530;
-  --neon:#f97316;--neon2:#fb923c;--neon-glow:rgba(249,115,22,0.45);--neon-soft:rgba(249,115,22,0.12);--neon-soft2:rgba(249,115,22,0.06);
-}
-
 body { background: var(--bg); color: var(--text); }
 
 #app {
@@ -86,7 +53,7 @@ body { background: var(--bg); color: var(--text); }
 .screen::-webkit-scrollbar { display: none; }
 
 /* ── Bottom nav ── */
-.bottom-nav { pointer-events: auto; z-index: 1000; /* FIXED */
+.bottom-nav {
   height: 60px;
   background: var(--bg-deep);
   border-top: 1px solid var(--border);
@@ -96,7 +63,7 @@ body { background: var(--bg); color: var(--text); }
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
 }
-.nav-item { cursor: pointer; touch-action: manipulation; user-select: none;
+.nav-item {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 3px; cursor: pointer; padding: 6px 0;
@@ -337,67 +304,9 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
   box-shadow: 0 0 14px var(--neon-glow);
 }
-.day-chip.selected {
-  background: linear-gradient(135deg, var(--neon) 0%, var(--neon2) 100%);
-  box-shadow: 0 0 14px var(--neon-glow);
-}
-.day-chip.past { opacity: 0.5; }
-.mode-btn {
-  background:var(--card2);border:1.5px solid var(--border);border-radius:12px;
-  padding:12px 8px;text-align:center;cursor:pointer;transition:border-color .15s;
-}
-.mode-btn.active { border-color:var(--neon);background:var(--neon-soft); }
-.theme-btn {
-  border:1.5px solid transparent;border-radius:12px;padding:12px 8px;
-  text-align:center;cursor:pointer;transition:border-color .15s;
-}
-.theme-btn.active { border-color:var(--neon); }
-.stoggle {
-  width:42px;height:24px;border-radius:12px;background:var(--border-light);
-  position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;
-}
-.stoggle.on { background:var(--neon); }
-.stoggle::after {
-  content:'';position:absolute;width:20px;height:20px;border-radius:50%;
-  background:#fff;top:2px;left:2px;transition:left .2s;
-}
-.stoggle.on::after { left:20px; }
-.settings-row {
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 0;border-bottom:1px solid var(--border);
-}
-.settings-row:last-child { border-bottom:none; }
-.settings-row-title { font-size:13px;font-weight:600;color:var(--text); }
-.settings-row-sub { font-size:11px;color:var(--text-muted);margin-top:2px; }
-.ob-goal-btn {
-  background:var(--card2);border:1.5px solid var(--border);border-radius:14px;
-  padding:14px 8px;text-align:center;cursor:pointer;transition:all .15s;
-}
-.ob-goal-btn.active { border-color:var(--neon);background:var(--neon-soft); }
-.ob-module-btn {
-  background:var(--card2);border:1.5px solid var(--border);border-radius:14px;
-  padding:14px 16px;cursor:pointer;display:flex;align-items:center;transition:all .15s;
-}
-.ob-module-btn.active { border-color:var(--neon);background:var(--neon-soft); }
-.ob-check { font-size:16px;color:var(--neon);font-weight:700; }
-.plan-day-card {
-  background:var(--card2);border:1.5px solid var(--border);border-radius:14px;
-  padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;
-  transition:border-color .15s;
-}
-.plan-day-card.today { border-color:var(--neon);background:var(--neon-soft); }
-.plan-day-card.rest { opacity:0.6; }
-.muscle-chip-sel {
-  padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
-  background:var(--card2);border:1.5px solid var(--border);color:var(--text-sub);
-  transition:all .15s;
-}
-.muscle-chip-sel.active { background:var(--neon-soft);border-color:var(--neon);color:var(--neon); }
-.day-chip:hover:not(.today):not(.selected) { background: var(--card2); border-color: var(--border-light); }
 .dc-name { font-size: 10px; color: var(--text-muted); }
 .dc-num { font-size: 15px; font-weight: 700; color: var(--text); }
 .day-chip.today .dc-name, .day-chip.today .dc-num { color: #fff; }
-.day-chip.selected .dc-name, .day-chip.selected .dc-num { color: #fff; }
 
 .supp-item { padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .supp-item:last-child { border-bottom: none; }
@@ -509,22 +418,6 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   margin-left: auto;
 }
 </style>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-      console.log('SW registered');
-      // Слушаем сообщения от SW
-      navigator.serviceWorker.addEventListener('message', e => {
-        if (e.data?.type === 'SYNC_DONE') {
-          showSyncBadge();
-          loadState(() => { renderHome(); });
-        }
-      });
-    }).catch(e => console.log('SW error:', e));
-  });
-}
-</script>
 </head>
 <body>
 <div id="app">
@@ -532,128 +425,70 @@ if ('serviceWorker' in navigator) {
   <!-- ═══════════════════════════════════ HOME ═══════════════════════════════ -->
   <div class="screen active" id="s-home">
     <div class="page-header">
-      <div class="ph-title" id="home-greeting">Добро пожаловать 👋</div>
-      <div class="ph-sub" id="home-date-sub"></div>
+      <div class="home-greeting">Привет,</div>
+      <div class="home-name" id="user-name">Вадим 👋</div>
+      <div class="home-date" id="home-date"></div>
     </div>
 
-    <!-- Streak -->
-    <div id="home-streak-block" style="display:none;margin:0 16px 12px">
-      <div style="background:linear-gradient(135deg,var(--orange-soft),var(--neon-soft));border:1px solid var(--orange);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:28px">🔥</div>
-        <div>
-          <div style="font-size:18px;font-weight:800;color:var(--orange)" id="home-streak-num">0</div>
-          <div style="font-size:11px;color:var(--text-muted)">дней подряд</div>
-        </div>
-        <div style="margin-left:auto;font-size:11px;color:var(--text-muted);text-align:right" id="home-streak-sub"></div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Жим лёжа 1RM</div>
+        <div class="kpi-val kpi-neon" id="kpi-bench">—</div>
+        <div class="kpi-sub" id="kpi-bench-sub">нет данных</div>
       </div>
-    </div>
-
-    <!-- Кольцо калорий + БЖУ -->
-    <div class="card card-glow" style="margin:0 16px 12px">
-      <div class="card-inner">
-        <div style="display:flex;align-items:center;gap:16px">
-          <div style="position:relative;width:90px;height:90px;flex-shrink:0">
-            <svg width="90" height="90" viewBox="0 0 90 90">
-              <circle cx="45" cy="45" r="38" fill="none" stroke="var(--border)" stroke-width="8"/>
-              <circle id="cal-ring" cx="45" cy="45" r="38" fill="none" stroke="var(--neon)" stroke-width="8"
-                stroke-dasharray="239" stroke-dashoffset="239" stroke-linecap="round"
-                transform="rotate(-90 45 45)" style="transition:stroke-dashoffset .6s ease"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-              <div style="font-size:16px;font-weight:800;color:var(--text)" id="home-cal-eaten">0</div>
-              <div style="font-size:9px;color:var(--text-muted)">ккал</div>
-            </div>
-          </div>
-          <div style="flex:1">
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Питание сегодня</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-              <div style="text-align:center">
-                <div style="font-size:15px;font-weight:700;color:var(--green)" id="home-protein">0</div>
-                <div style="font-size:10px;color:var(--text-muted)">белки г</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:15px;font-weight:700;color:var(--orange)" id="home-fat">0</div>
-                <div style="font-size:10px;color:var(--text-muted)">жиры г</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:15px;font-weight:700;color:var(--blue)" id="home-carbs">0</div>
-                <div style="font-size:10px;color:var(--text-muted)">углев г</div>
-              </div>
-            </div>
-            <div style="margin-top:8px;height:4px;background:var(--border);border-radius:2px">
-              <div id="home-cal-bar" style="height:100%;border-radius:2px;background:var(--neon);width:0%;transition:width .5s"></div>
-            </div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">цель: <span id="home-cal-goal">2500</span> ккал</div>
-          </div>
-        </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Задач выполнено</div>
+        <div class="kpi-val kpi-green" id="kpi-tasks">0/0</div>
+        <div class="kpi-sub" id="kpi-tasks-sub">0%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Становая 1RM</div>
+        <div class="kpi-val kpi-orange" id="kpi-dead">—</div>
+        <div class="kpi-sub" id="kpi-dead-sub">нет данных</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Вес тела</div>
+        <div class="kpi-val kpi-blue" id="kpi-weight">—</div>
+        <div class="kpi-sub" id="kpi-weight-sub">нет данных</div>
       </div>
     </div>
 
-    <!-- Следующая тренировка -->
-    <div class="card" style="margin:0 16px 12px" id="home-next-workout">
-      <div class="card-inner">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Сегодня</div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div style="font-size:15px;font-weight:700;color:var(--text)" id="home-workout-title">День отдыха</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="home-workout-sub">Хорошего восстановления!</div>
-          </div>
-          <button onclick="goWorkoutRecord()" style="background:var(--neon);color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">
-            Записать
-          </button>
-        </div>
+    <div class="section-label">Быстрый доступ</div>
+    <div class="quick-grid">
+      <div class="quick-card" onclick="go('workout')">
+        <div class="quick-icon">🏋️</div>
+        <div class="quick-title">Тренировка</div>
+        <div class="quick-meta">Добавить подход</div>
+      </div>
+      <div class="quick-card" onclick="go('charts')">
+        <div class="quick-icon">📈</div>
+        <div class="quick-title">Прогресс</div>
+        <div class="quick-meta">Графики и PR</div>
+      </div>
+      <div class="quick-card" onclick="go('body')">
+        <div class="quick-icon">⚖️</div>
+        <div class="quick-title">Вес и ккал</div>
+        <div class="quick-meta">Дневник тела</div>
+      </div>
+      <div class="quick-card" onclick="go('tasks')">
+        <div class="quick-icon">✅</div>
+        <div class="quick-title">Задачи</div>
+        <div class="quick-meta" id="q-tasks">0 активных</div>
+      </div>
+      <div class="quick-card" onclick="go('supps')">
+        <div class="quick-icon">💊</div>
+        <div class="quick-title">Добавки</div>
+        <div class="quick-meta">Отметить приём</div>
+      </div>
+      <div class="quick-card" onclick="go('report')">
+        <div class="quick-icon">🗓</div>
+        <div class="quick-title">Отчёт</div>
+        <div class="quick-meta">Итоги месяца</div>
       </div>
     </div>
-
-    <!-- KPI карточки -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px 12px">
-      <div class="card" onclick="go('workout')" style="cursor:pointer">
-        <div class="card-inner">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Лучший жим</div>
-          <div style="font-size:22px;font-weight:800;color:var(--neon)" id="home-bench-pr">—</div>
-          <div style="font-size:10px;color:var(--text-muted)">1RM кг</div>
-        </div>
-      </div>
-      <div class="card" onclick="go('workout')" style="cursor:pointer">
-        <div class="card-inner">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Лучшая становая</div>
-          <div style="font-size:22px;font-weight:800;color:var(--neon)" id="home-deadlift-pr">—</div>
-          <div style="font-size:10px;color:var(--text-muted)">1RM кг</div>
-        </div>
-      </div>
-      <div class="card" onclick="go('supps')" style="cursor:pointer">
-        <div class="card-inner">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Добавки сегодня</div>
-          <div style="font-size:22px;font-weight:800;color:var(--green)" id="home-supps-pct">0%</div>
-          <div style="font-size:10px;color:var(--text-muted)">принято</div>
-        </div>
-      </div>
-      <div class="card" onclick="go('tasks')" style="cursor:pointer">
-        <div class="card-inner">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Задачи</div>
-          <div style="font-size:22px;font-weight:800;color:var(--blue)" id="home-tasks-done">0/0</div>
-          <div style="font-size:10px;color:var(--text-muted)">выполнено</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Быстрые действия -->
-    <div class="section-label">Быстрые действия</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 16px 12px">
-      <div onclick="go('workout');setTimeout(openAddSet,300)" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer">
-        <div style="font-size:20px">💪</div><div style="font-size:11px;color:var(--text-sub);margin-top:4px">Подход</div>
-      </div>
-      <div onclick="go('food')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer">
-        <div style="font-size:20px">🍎</div><div style="font-size:11px;color:var(--text-sub);margin-top:4px">Питание</div>
-      </div>
-      <div onclick="go('supps')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer">
-        <div style="font-size:20px">💊</div><div style="font-size:11px;color:var(--text-sub);margin-top:4px">Добавки</div>
-      </div>
-    </div>
-
-    <div style="height:8px"></div>
   </div>
 
+  <!-- ═══════════════════════════════ WORKOUT ═══════════════════════════════ -->
   <div class="screen" id="s-workout">
     <div class="page-header">
       <div class="ph-title">Силовой дневник</div>
@@ -800,11 +635,7 @@ if ('serviceWorker' in navigator) {
       <div class="ph-sub" id="supp-date-label"></div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:4px;padding:6px 12px 2px">
-      <button onclick="shiftSuppWeek(-1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1">◀</button>
-      <div class="day-strip" id="day-strip" style="flex:1"></div>
-      <button onclick="shiftSuppWeek(1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:16px;line-height:1">▶</button>
-    </div>
+    <div class="day-strip" id="day-strip"></div>
 
     <div class="section-label">Список приёма</div>
     <div class="card">
@@ -889,42 +720,44 @@ if ('serviceWorker' in navigator) {
   <div class="screen" id="s-ai">
     <div class="page-header">
       <div class="ph-title">ИИ-агент</div>
-      <div class="ph-sub">Анализ прогресса и плато</div>
+      <div class="ph-sub">Скоро — анализ и рекомендации</div>
     </div>
 
     <div class="card card-glow">
-      <div class="card-inner">
-        <button class="btn-primary" onclick="runAiAnalysis()" id="ai-btn" style="width:100%;margin:0">
-          🤖 Запустить анализ
-        </button>
-        <div id="ai-loading" style="display:none;text-align:center;padding:20px;color:var(--text-sub);font-size:13px">
-          ⏳ Анализирую твои данные…
-        </div>
+      <div class="ai-hero">
+        <div class="ai-icon-big">🤖</div>
+        <div class="ai-title">Раздел в разработке</div>
+        <div class="ai-desc">Здесь появится ИИ-агент, который будет анализировать твои данные и давать персональные рекомендации</div>
       </div>
     </div>
 
-    <div id="ai-result" style="display:none">
-      <div class="section-label">Итог</div>
-      <div class="card"><div class="card-inner" id="ai-summary" style="font-size:13.5px;line-height:1.6;color:var(--text)"></div></div>
-
-      <div class="section-label">🏆 Достижения</div>
-      <div class="card"><div class="card-inner" id="ai-achievements"></div></div>
-
-      <div class="section-label">📈 Прогресс по упражнениям</div>
-      <div class="card"><div class="card-inner" id="ai-progress"></div></div>
-
-      <div class="section-label">⚠️ Плато</div>
-      <div class="card"><div class="card-inner" id="ai-plateau"></div></div>
-
-      <div class="section-label">📋 Рекомендация на неделю</div>
-      <div class="card"><div class="card-inner" id="ai-weekly" style="font-size:13.5px;line-height:1.6;color:var(--text)"></div></div>
-
-      <div class="section-label">💤 Восстановление</div>
-      <div class="card"><div class="card-inner" id="ai-recovery" style="font-size:13px;color:var(--text-sub);line-height:1.6"></div></div>
-    </div>
-
-    <div id="ai-error" style="display:none" class="card">
-      <div class="card-inner" style="color:var(--red);font-size:13px" id="ai-error-msg"></div>
+    <div class="section-label">Что будет уметь</div>
+    <div class="card">
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">📊</div>
+        <div class="ai-feature-text">Анализ плато в силовых — подскажет когда менять программу</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">🍽</div>
+        <div class="ai-feature-text">Рекомендации по калориям на основе цели (набор/сушка)</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">💊</div>
+        <div class="ai-feature-text">Напоминания о пропущенных добавках и взаимодействиях</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">📈</div>
+        <div class="ai-feature-text">Прогноз 1RM и предложения по программе на след. месяц</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
+      <div class="ai-feature-row">
+        <div class="ai-feature-icon">💬</div>
+        <div class="ai-feature-text">Чат с ИИ по твоим данным — задавай вопросы напрямую</div>
+        <div class="ai-badge-soon">Скоро</div>
+      </div>
     </div>
 
     <div class="section-label">Данные и синхронизация</div>
@@ -935,655 +768,14 @@ if ('serviceWorker' in navigator) {
           <div style="font-size:12px;color:var(--text-sub)" id="sync-status">Проверка подключения…</div>
         </div>
         <div style="font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:12px">
-          Данные привязаны к твоему Telegram-аккаунту и хранятся на сервере.
+          Данные привязаны к твоему Telegram-аккаунту и хранятся на сервере. Дополнительно можешь сохранить копию вручную.
         </div>
         <button class="btn-ghost" onclick="exportData()" style="margin:0">⬇️ Скачать резервную копию (JSON)</button>
       </div>
     </div>
-
     <div style="height:8px"></div>
   </div>
 
-
-  <!-- ═══════════════════════════════ FOOD ════════════════════════════════ -->
-  <div class="screen" id="s-food">
-    <div class="page-header">
-      <div class="ph-title">Питание</div>
-      <div class="ph-sub" id="food-date-label"></div>
-    </div>
-
-    <!-- Дата -->
-    <div style="display:flex;gap:8px;align-items:center;padding:0 16px 12px">
-      <button onclick="foodDateShift(-1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer">◀</button>
-      <div style="flex:1;text-align:center;font-size:13px;font-weight:600" id="food-date-display"></div>
-      <button onclick="foodDateShift(1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer">▶</button>
-    </div>
-
-    <!-- Итоги дня -->
-    <div class="card card-glow" style="margin:0 16px 12px">
-      <div class="card-inner">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
-          <div>
-            <div style="font-size:20px;font-weight:800;color:var(--neon)" id="fd-cal">0</div>
-            <div style="font-size:10px;color:var(--text-muted)">ккал</div>
-          </div>
-          <div>
-            <div style="font-size:20px;font-weight:800;color:var(--green)" id="fd-protein">0</div>
-            <div style="font-size:10px;color:var(--text-muted)">белки г</div>
-          </div>
-          <div>
-            <div style="font-size:20px;font-weight:800;color:var(--orange)" id="fd-fat">0</div>
-            <div style="font-size:10px;color:var(--text-muted)">жиры г</div>
-          </div>
-          <div>
-            <div style="font-size:20px;font-weight:800;color:var(--blue)" id="fd-carbs">0</div>
-            <div style="font-size:10px;color:var(--text-muted)">углев г</div>
-          </div>
-        </div>
-        <!-- прогресс бар калорий -->
-        <div style="margin-top:12px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px">
-            <span>Калории</span><span id="fd-cal-goal-lbl">цель: 2500 ккал</span>
-          </div>
-          <div style="height:6px;background:var(--border);border-radius:3px">
-            <div id="fd-cal-bar" style="height:100%;border-radius:3px;background:var(--neon);transition:width .3s;width:0%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Поиск -->
-    <div class="card" style="margin:0 16px 12px">
-      <div class="card-inner" style="padding:12px">
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input id="food-search-input" class="input-field" placeholder="🔍 Поиск продукта…" 
-            style="flex:1;margin:0" onkeydown="if(event.key==='Enter')searchFood()">
-          <button onclick="searchFood()" class="btn-primary" style="margin:0;padding:0 14px">Найти</button>
-        </div>
-        <button onclick="openBarcodeScanner()" style="width:100%;padding:9px;background:var(--neon-soft);border:1px solid var(--neon);color:var(--neon);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">
-          📷 Сканировать штрихкод
-        </button>
-      </div>
-    </div>
-
-    <!-- Результаты поиска -->
-    <div id="food-search-results" style="margin:0 16px 12px"></div>
-
-    <!-- Приёмы пищи -->
-    <div id="food-meals-container"></div>
-
-    <div style="height:8px"></div>
-  </div>
-
-  <!-- Модалка добавления еды -->
-  <div class="modal-overlay" id="modal-food-add">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-title" id="mf-title">Добавить продукт</div>
-      <div class="modal-body">
-        <div style="background:var(--card2);border-radius:12px;padding:12px;margin-bottom:16px">
-          <div style="font-size:14px;font-weight:700" id="mf-food-name">—</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px" id="mf-food-desc">—</div>
-          <!-- Итого с учётом количества -->
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;text-align:center">
-            <div><div style="font-size:18px;font-weight:800;color:var(--neon)" id="mf-cal">0</div><div style="font-size:10px;color:var(--text-muted)">ккал</div></div>
-            <div><div style="font-size:18px;font-weight:800;color:var(--green)" id="mf-prot">0</div><div style="font-size:10px;color:var(--text-muted)">белки г</div></div>
-            <div><div style="font-size:18px;font-weight:800;color:var(--orange)" id="mf-fat">0</div><div style="font-size:10px;color:var(--text-muted)">жиры г</div></div>
-            <div><div style="font-size:18px;font-weight:800;color:var(--blue)" id="mf-carb">0</div><div style="font-size:10px;color:var(--text-muted)">углев г</div></div>
-          </div>
-          <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:6px" id="mf-per100">на 100г: 0 ккал</div>
-        </div>
-        <div style="margin-bottom:12px">
-          <label style="font-size:12px;color:var(--text-muted)">Количество</label>
-          <div style="display:flex;gap:8px;margin-top:4px;align-items:center">
-            <button onclick="changeAmount(-10)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:16px">−</button>
-            <input id="mf-amount" class="input-field" type="number" value="100" min="1" style="flex:1;margin:0;text-align:center;font-size:16px;font-weight:700" oninput="updateFoodModalNutrition()">
-            <button onclick="changeAmount(10)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:16px">+</button>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button onclick="setAmount(50)" style="flex:1;background:var(--neon-soft);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:6px;cursor:pointer;font-size:12px">50г</button>
-            <button onclick="setAmount(100)" style="flex:1;background:var(--neon-soft);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:6px;cursor:pointer;font-size:12px">100г</button>
-            <button onclick="setAmount(150)" style="flex:1;background:var(--neon-soft);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:6px;cursor:pointer;font-size:12px">150г</button>
-            <button onclick="setAmount(200)" style="flex:1;background:var(--neon-soft);border:1px solid var(--border);color:var(--text-sub);border-radius:8px;padding:6px;cursor:pointer;font-size:12px">200г</button>
-          </div>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="font-size:12px;color:var(--text-muted)">Приём пищи</label>
-          <select id="mf-meal-type" class="input-field" style="margin-top:4px">
-            <option value="завтрак">🌅 Завтрак</option>
-            <option value="обед" selected>☀️ Обед</option>
-            <option value="ужин">🌙 Ужин</option>
-            <option value="перекус">🍪 Перекус</option>
-          </select>
-        </div>
-        <button class="btn-primary" onclick="confirmAddFood()" style="width:100%;margin:0">✓ Добавить</button>
-      </div>
-      <div style="margin:8px 16px 0">
-        <div onclick="closeMore();go('plan')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">📅</span>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Программа тренировок</div>
-        </div>
-        <div onclick="closeMore();go('settings')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">⚙️</span>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Настройки</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Сканер штрихкода -->
-  <div class="modal-overlay" id="modal-barcode" style="z-index:1100">
-    <div style="background:var(--bg-deep);border-radius:20px 20px 0 0;position:fixed;bottom:0;left:0;right:0;padding:20px">
-      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
-      <div style="font-size:16px;font-weight:700;margin-bottom:12px;text-align:center">Сканирование штрихкода</div>
-      <video id="barcode-video" style="width:100%;border-radius:12px;max-height:260px;object-fit:cover;background:#000"></video>
-      <div id="barcode-status" style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px">Наведи камеру на штрихкод</div>
-      <button onclick="closeBarcodeScanner()" class="btn-ghost" style="width:100%;margin-top:12px">Отмена</button>
-    </div>
-  </div>
-
-
-  <!-- ═══════════════════════════════ SETTINGS ═══════════════════════════ -->
-  <div class="screen" id="s-settings">
-    <div class="page-header">
-      <div class="ph-title">Настройки</div>
-      <div class="ph-sub">Персонализация приложения</div>
-    </div>
-
-    <!-- Профиль -->
-    <div class="section-label">Профиль</div>
-    <div class="card"><div class="card-inner">
-      <div style="display:flex;gap:12px;align-items:center">
-        <div style="width:52px;height:52px;border-radius:50%;background:var(--neon-soft);border:2px solid var(--neon);display:flex;align-items:center;justify-content:center;font-size:22px" id="settings-avatar">👤</div>
-        <div style="flex:1">
-          <input id="settings-name" class="input-field" placeholder="Твоё имя" style="margin:0 0 6px;font-weight:700" oninput="saveSettings()">
-          <div style="font-size:11px;color:var(--text-muted)">Имя отображается на главной</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
-        <div>
-          <label style="font-size:11px;color:var(--text-muted)">Цель (ккал/день)</label>
-          <input id="settings-cal-goal" class="input-field" type="number" placeholder="2500" style="margin-top:4px" oninput="saveSettings()">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--text-muted)">Вес (кг)</label>
-          <input id="settings-weight-goal" class="input-field" type="number" placeholder="80" style="margin-top:4px" oninput="saveSettings()">
-        </div>
-      </div>
-    </div></div>
-
-    <!-- Режим -->
-    <div class="section-label">Режим использования</div>
-    <div class="card"><div class="card-inner" style="padding:8px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="mode-btn active" id="mode-sport" onclick="setMode('sport')">
-          <div style="font-size:20px">💪</div>
-          <div style="font-size:12px;font-weight:700;margin-top:4px">Спортсмен</div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Тренировки в центре</div>
-        </div>
-        <div class="mode-btn" id="mode-planner" onclick="setMode('planner')">
-          <div style="font-size:20px">📋</div>
-          <div style="font-size:12px;font-weight:700;margin-top:4px">Планировщик</div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Задачи и привычки</div>
-        </div>
-        <div class="mode-btn" id="mode-diet" onclick="setMode('diet')">
-          <div style="font-size:20px">🥗</div>
-          <div style="font-size:12px;font-weight:700;margin-top:4px">Похудение</div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Калории и вес</div>
-        </div>
-        <div class="mode-btn" id="mode-all" onclick="setMode('all')">
-          <div style="font-size:20px">⚡</div>
-          <div style="font-size:12px;font-weight:700;margin-top:4px">Всё сразу</div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Полный функционал</div>
-        </div>
-      </div>
-    </div></div>
-
-    <!-- Тема -->
-    <div class="section-label">Тема оформления</div>
-    <div class="card"><div class="card-inner" style="padding:8px">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-        <div class="theme-btn active" id="theme-violet" onclick="setTheme('violet')" style="background:linear-gradient(135deg,#0a0a12,#1a0a2e)">
-          <div style="width:20px;height:20px;border-radius:50%;background:#b026ff;margin:0 auto 4px"></div>
-          <div style="font-size:11px;color:#d4a0ff">Фиолетовая</div>
-        </div>
-        <div class="theme-btn" id="theme-blue" onclick="setTheme('blue')" style="background:linear-gradient(135deg,#080e1e,#0a1830)">
-          <div style="width:20px;height:20px;border-radius:50%;background:#3b82f6;margin:0 auto 4px"></div>
-          <div style="font-size:11px;color:#90bbff">Синяя</div>
-        </div>
-        <div class="theme-btn" id="theme-green" onclick="setTheme('green')" style="background:linear-gradient(135deg,#071210,#0a1e18)">
-          <div style="width:20px;height:20px;border-radius:50%;background:#10b981;margin:0 auto 4px"></div>
-          <div style="font-size:11px;color:#6ee7b7">Зелёная</div>
-        </div>
-        <div class="theme-btn" id="theme-light" onclick="setTheme('light')" style="background:linear-gradient(135deg,#f5f5f0,#ebebf5)">
-          <div style="width:20px;height:20px;border-radius:50%;background:#7c3aed;margin:0 auto 4px"></div>
-          <div style="font-size:11px;color:#5b21b6">Светлая</div>
-        </div>
-        <div class="theme-btn" id="theme-gray" onclick="setTheme('gray')" style="background:linear-gradient(135deg,#0f0f11,#1c1c20)">
-          <div style="width:20px;height:20px;border-radius:50%;background:#a1a1aa;margin:0 auto 4px"></div>
-          <div style="font-size:11px;color:#d4d4d8">Серая</div>
-        </div>
-        <div class="theme-btn" id="theme-orange" onclick="setTheme('orange')" style="background:linear-gradient(135deg,#0f0800,#1f1000)">
-          <div style="width:20px;height:20px;border-radius:50%;background:#f97316;margin:0 auto 4px"></div>
-          <div style="font-size:11px;color:#fdba74">Оранжевая</div>
-        </div>
-      </div>
-    </div></div>
-
-    <!-- Модули -->
-    <div class="section-label">Модули</div>
-    <div class="card"><div class="card-inner" style="padding:0 4px">
-      <div class="settings-row">
-        <div><div class="settings-row-title">💪 Тренировки</div><div class="settings-row-sub">1RM, прогресс, сплит</div></div>
-        <div class="stoggle on" id="mod-workout" onclick="toggleModule(this,'workout')"></div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">🍎 Питание</div><div class="settings-row-sub">Поиск еды, КБЖУ</div></div>
-        <div class="stoggle on" id="mod-food" onclick="toggleModule(this,'food')"></div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">💊 Добавки</div><div class="settings-row-sub">Чеклист приёма</div></div>
-        <div class="stoggle on" id="mod-supps" onclick="toggleModule(this,'supps')"></div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">⚖️ Вес тела</div><div class="settings-row-sub">Динамика, график</div></div>
-        <div class="stoggle on" id="mod-body" onclick="toggleModule(this,'body')"></div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">✅ Задачи</div><div class="settings-row-sub">Приоритеты, дедлайны</div></div>
-        <div class="stoggle" id="mod-tasks" onclick="toggleModule(this,'tasks')"></div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">🤖 ИИ анализ</div><div class="settings-row-sub">Прогресс и плато</div></div>
-        <div class="stoggle on" id="mod-ai" onclick="toggleModule(this,'ai')"></div>
-      </div>
-    </div></div>
-
-    <!-- Уведомления -->
-    <div class="section-label">Уведомления</div>
-    <div class="card"><div class="card-inner" style="padding:0 4px">
-      <div class="settings-row">
-        <div><div class="settings-row-title">🌅 Утренние добавки</div><div class="settings-row-sub" id="notif-morning-time">08:00</div></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="time" id="notif-morning" value="08:00" style="font-size:12px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 8px" onchange="saveSettings()">
-          <div class="stoggle on" id="notif-morning-tog" onclick="toggleThis(this)"></div>
-        </div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">💪 День тренировки</div><div class="settings-row-sub">По расписанию сплита</div></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="time" id="notif-workout" value="10:00" style="font-size:12px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 8px" onchange="saveSettings()">
-          <div class="stoggle on" id="notif-workout-tog" onclick="toggleThis(this)"></div>
-        </div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">🌙 Вечерние добавки</div><div class="settings-row-sub">Магний, омега-3</div></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="time" id="notif-evening" value="21:00" style="font-size:12px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 8px" onchange="saveSettings()">
-          <div class="stoggle on" id="notif-evening-tog" onclick="toggleThis(this)"></div>
-        </div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-row-title">📊 Еженедельный отчёт</div><div class="settings-row-sub">Итоги в воскресенье</div></div>
-        <div class="stoggle on" id="notif-weekly-tog" onclick="toggleThis(this)"></div>
-      </div>
-    </div></div>
-
-    <!-- Данные -->
-    <div class="section-label">Данные и синхронизация</div>
-    <div class="card"><div class="card-inner">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div id="online-dot" style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
-        <div style="font-size:12px;color:var(--text-sub)" id="online-label">Онлайн</div>
-        <button onclick="syncOfflineQueue()" style="margin-left:auto;padding:4px 12px;background:var(--neon-soft);border:1px solid var(--neon);color:var(--neon);border-radius:8px;font-size:11px;cursor:pointer">↻ Синхронизировать</button>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:12px;color:var(--text-sub)">Ожидают синхронизации</div>
-        <div style="font-size:12px;font-weight:700;color:var(--neon)" id="queue-count">0</div>
-      </div>
-      <button class="btn-ghost" onclick="exportData()" style="width:100%;margin:0 0 8px">⬇️ Скачать резервную копию</button>
-      <div style="font-size:11px;color:var(--text-muted);text-align:center">Данные хранятся на сервере и в локальном хранилище устройства</div>
-    </div></div>
-
-    <div style="height:8px"></div>
-  </div>
-
-  <!-- Шторка "Ещё" -->
-  <div class="modal-overlay" id="modal-more" onclick="closeMore()">
-    <div class="modal-sheet" onclick="event.stopPropagation()" style="padding-bottom:24px">
-      <div class="modal-handle"></div>
-      <div style="padding:4px 20px 16px;font-size:13px;font-weight:700;color:var(--text-muted);letter-spacing:0.05em">ЕЩЁ</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px">
-        <div onclick="closeMore();go('tasks')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:22px">✅</span>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">Задачи</div>
-            <div style="font-size:11px;color:var(--text-muted)" id="more-tasks-count"></div>
-          </div>
-        </div>
-        <div onclick="closeMore();go('supps')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:22px">💊</span>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">Добавки</div>
-            <div style="font-size:11px;color:var(--text-muted)" id="more-supps-pct"></div>
-          </div>
-        </div>
-        <div onclick="closeMore();go('report')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:22px">📅</span>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">Отчёт</div>
-            <div style="font-size:11px;color:var(--text-muted)">за месяц</div>
-          </div>
-        </div>
-        <div onclick="closeMore();go('ai')" style="background:var(--card2);border:1px solid var(--neon);border-radius:14px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:22px">🤖</span>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--neon)">ИИ анализ</div>
-            <div style="font-size:11px;color:var(--text-muted)">прогресс и плато</div>
-          </div>
-        </div>
-      </div>
-      <div style="margin:16px 16px 0;display:grid;gap:8px">
-        <div onclick="closeMore();go('body')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">⚖️</span>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Вес и калории</div>
-        </div>
-
-        <div onclick="closeMore();go('plan')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">📅</span>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Программа тренировок</div>
-        </div>
-        <div onclick="closeMore();go('settings')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">⚙️</span>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Настройки</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════ ONBOARDING ═══════════════════════ -->
-  <div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:var(--bg-deep);z-index:9000;overflow-y:auto;padding-bottom:40px">
-    <div style="max-width:420px;margin:0 auto;padding:24px 20px">
-      
-      <!-- Шаг 1 -->
-      <div id="ob-step-1">
-        <div style="text-align:center;padding:40px 0 32px">
-          <div style="font-size:56px;margin-bottom:16px">💪</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:8px">Добро пожаловать</div>
-          <div style="font-size:14px;color:var(--text-muted);line-height:1.5">Персональный планировщик тренировок, питания и здоровья</div>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Как тебя зовут?</label>
-          <input id="ob-name" class="input-field" placeholder="Введи имя" style="margin-top:8px;font-size:16px;font-weight:700">
-        </div>
-        <div style="margin-bottom:24px">
-          <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Твоя цель</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-            <div class="ob-goal-btn active" id="ob-goal-sport" onclick="selectObGoal('sport',this)">
-              <div style="font-size:24px">💪</div><div style="font-size:12px;font-weight:700;margin-top:4px">Набор силы</div>
-            </div>
-            <div class="ob-goal-btn" id="ob-goal-loss" onclick="selectObGoal('loss',this)">
-              <div style="font-size:24px">🔥</div><div style="font-size:12px;font-weight:700;margin-top:4px">Похудение</div>
-            </div>
-            <div class="ob-goal-btn" id="ob-goal-mass" onclick="selectObGoal('mass',this)">
-              <div style="font-size:24px">📈</div><div style="font-size:12px;font-weight:700;margin-top:4px">Набор массы</div>
-            </div>
-            <div class="ob-goal-btn" id="ob-goal-health" onclick="selectObGoal('health',this)">
-              <div style="font-size:24px">❤️</div><div style="font-size:12px;font-weight:700;margin-top:4px">Здоровье</div>
-            </div>
-          </div>
-        </div>
-        <button class="btn-primary" onclick="obNext(1)" style="width:100%;margin:0;padding:16px;font-size:15px">Далее →</button>
-      </div>
-
-      <!-- Шаг 2 -->
-      <div id="ob-step-2" style="display:none">
-        <div style="text-align:center;padding:32px 0 24px">
-          <div style="font-size:48px;margin-bottom:12px">📊</div>
-          <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px">Твои параметры</div>
-          <div style="font-size:13px;color:var(--text-muted)">Нужно для расчёта нормы калорий</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-          <div>
-            <label style="font-size:11px;color:var(--text-muted)">Возраст</label>
-            <input id="ob-age" class="input-field" type="number" placeholder="25" style="margin-top:4px">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted)">Пол</label>
-            <select id="ob-gender" class="input-field" style="margin-top:4px">
-              <option value="male">Мужской</option>
-              <option value="female">Женский</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted)">Рост (см)</label>
-            <input id="ob-height" class="input-field" type="number" placeholder="180" style="margin-top:4px">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted)">Вес (кг)</label>
-            <input id="ob-weight" class="input-field" type="number" placeholder="80" style="margin-top:4px">
-          </div>
-        </div>
-        <div style="margin-bottom:24px">
-          <label style="font-size:12px;color:var(--text-muted);font-weight:600">Активность</label>
-          <select id="ob-activity" class="input-field" style="margin-top:8px">
-            <option value="1.2">Сидячий образ жизни</option>
-            <option value="1.375">1-3 тренировки в неделю</option>
-            <option value="1.55" selected>3-5 тренировок в неделю</option>
-            <option value="1.725">6-7 тренировок в неделю</option>
-            <option value="1.9">Физический труд + тренировки</option>
-          </select>
-        </div>
-        <div id="ob-calories-result" style="background:var(--neon-soft);border:1px solid var(--neon);border-radius:14px;padding:16px;text-align:center;margin-bottom:20px;display:none">
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Норма калорий в день</div>
-          <div style="font-size:36px;font-weight:800;color:var(--neon)" id="ob-calories-num">0</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="ob-calories-sub">ккал</div>
-        </div>
-        <button class="btn-ghost" onclick="calcObCalories()" style="width:100%;margin:0 0 10px">Рассчитать норму</button>
-        <button class="btn-primary" onclick="obNext(2)" style="width:100%;margin:0;padding:16px;font-size:15px">Далее →</button>
-      </div>
-
-      <!-- Шаг 3 -->
-      <div id="ob-step-3" style="display:none">
-        <div style="text-align:center;padding:32px 0 24px">
-          <div style="font-size:48px;margin-bottom:12px">⚙️</div>
-          <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px">Настрой под себя</div>
-          <div style="font-size:13px;color:var(--text-muted)">Выбери что хочешь отслеживать</div>
-        </div>
-        <div style="display:grid;gap:10px;margin-bottom:24px">
-          <div class="ob-module-btn active" id="obm-workout" onclick="toggleObModule(this,'workout')">
-            <span style="font-size:20px">💪</span>
-            <div style="flex:1;margin-left:12px">
-              <div style="font-size:13px;font-weight:700">Тренировки</div>
-              <div style="font-size:11px;color:var(--text-muted)">Силовые, прогресс, 1RM</div>
-            </div>
-            <div class="ob-check">✓</div>
-          </div>
-          <div class="ob-module-btn active" id="obm-food" onclick="toggleObModule(this,'food')">
-            <span style="font-size:20px">🍎</span>
-            <div style="flex:1;margin-left:12px">
-              <div style="font-size:13px;font-weight:700">Питание</div>
-              <div style="font-size:11px;color:var(--text-muted)">КБЖУ, поиск еды</div>
-            </div>
-            <div class="ob-check">✓</div>
-          </div>
-          <div class="ob-module-btn active" id="obm-supps" onclick="toggleObModule(this,'supps')">
-            <span style="font-size:20px">💊</span>
-            <div style="flex:1;margin-left:12px">
-              <div style="font-size:13px;font-weight:700">Добавки</div>
-              <div style="font-size:11px;color:var(--text-muted)">Чеклист приёма</div>
-            </div>
-            <div class="ob-check">✓</div>
-          </div>
-          <div class="ob-module-btn" id="obm-tasks" onclick="toggleObModule(this,'tasks')">
-            <span style="font-size:20px">✅</span>
-            <div style="flex:1;margin-left:12px">
-              <div style="font-size:13px;font-weight:700">Задачи</div>
-              <div style="font-size:11px;color:var(--text-muted)">Планировщик дел</div>
-            </div>
-            <div class="ob-check" style="opacity:0">✓</div>
-          </div>
-        </div>
-        <button class="btn-primary" onclick="finishOnboarding()" style="width:100%;margin:0;padding:16px;font-size:15px">Начать 🚀</button>
-      </div>
-
-      <!-- Прогресс -->
-      <div style="display:flex;justify-content:center;gap:8px;margin-top:24px">
-        <div id="ob-dot-1" style="width:8px;height:8px;border-radius:50%;background:var(--neon)"></div>
-        <div id="ob-dot-2" style="width:8px;height:8px;border-radius:50%;background:var(--border)"></div>
-        <div id="ob-dot-3" style="width:8px;height:8px;border-radius:50%;background:var(--border)"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Модалка редактирования подхода -->
-  <div class="modal-overlay" id="modal-edit-set">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-title">Редактировать подход</div>
-      <div class="modal-body">
-        <div style="background:var(--card2);border-radius:12px;padding:12px;margin-bottom:16px">
-          <div style="font-size:13px;font-weight:700;color:var(--neon)" id="edit-ex-name">—</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
-          <div>
-            <label style="font-size:11px;color:var(--text-muted)">Подходы</label>
-            <input id="edit-sets" class="input-field" type="number" min="1" style="margin-top:4px;text-align:center">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted)">Повторения</label>
-            <input id="edit-reps" class="input-field" type="number" min="1" style="margin-top:4px;text-align:center">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted)">Вес (кг)</label>
-            <input id="edit-weight" class="input-field" type="number" min="0" step="0.5" style="margin-top:4px;text-align:center">
-          </div>
-        </div>
-        <div style="background:var(--neon-soft);border-radius:10px;padding:10px;text-align:center;margin-bottom:16px">
-          <div style="font-size:11px;color:var(--text-muted)">1RM после изменения</div>
-          <div style="font-size:20px;font-weight:800;color:var(--neon)" id="edit-1rm-preview">—</div>
-        </div>
-        <div style="display:flex;gap:10px">
-          <button class="btn-ghost" onclick="closeModal('modal-edit-set')" style="flex:1;margin:0">Отмена</button>
-          <button class="btn-primary" onclick="saveEditSet()" style="flex:2;margin:0">Сохранить</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════ PLAN ════════════════════════════════ -->
-  <div class="screen" id="s-plan">
-    <div class="page-header">
-      <div class="ph-title">Программа тренировок</div>
-      <div class="ph-sub">Настрой свой сплит</div>
-    </div>
-
-    <!-- Текущая неделя -->
-    <div class="section-label">Эта неделя</div>
-    <div id="plan-week-grid" style="margin:0 16px 16px;display:grid;gap:8px"></div>
-
-    <!-- Редактор сплита -->
-    <div class="section-label">Мой сплит</div>
-    <div class="card" style="margin:0 16px 12px"><div class="card-inner" style="padding:8px 4px">
-      <div id="plan-split-list"></div>
-    </div></div>
-
-    <!-- Мышечные группы для быстрого добавления -->
-    <div class="section-label">Типовые программы</div>
-    <div style="margin:0 16px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div onclick="applyTemplate('ppl')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
-        <div style="font-size:20px;margin-bottom:4px">💪</div>
-        <div style="font-size:13px;font-weight:700">Push/Pull/Legs</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">6 дней</div>
-      </div>
-      <div onclick="applyTemplate('upper_lower')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
-        <div style="font-size:20px;margin-bottom:4px">🏋️</div>
-        <div style="font-size:13px;font-weight:700">Верх/Низ</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">4 дня</div>
-      </div>
-      <div onclick="applyTemplate('bro')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
-        <div style="font-size:20px;margin-bottom:4px">🎯</div>
-        <div style="font-size:13px;font-weight:700">Бро-сплит</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">5 дней</div>
-      </div>
-      <div onclick="applyTemplate('fullbody')" style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;text-align:center">
-        <div style="font-size:20px;margin-bottom:4px">⚡</div>
-        <div style="font-size:13px;font-weight:700">Full Body</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">3 дня</div>
-      </div>
-    </div>
-
-    <div style="height:8px"></div>
-  </div>
-
-  <!-- Модалка редактирования дня -->
-  <div class="modal-overlay" id="modal-plan-day">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-title" id="plan-day-title">Понедельник</div>
-      <div class="modal-body">
-        <div style="margin-bottom:12px">
-          <label style="font-size:12px;color:var(--text-muted)">Название тренировки</label>
-          <input id="plan-day-name" class="input-field" placeholder="Например: Грудь + Трицепс" style="margin-top:6px">
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:block">Группы мышц</label>
-          <div style="display:flex;flex-wrap:wrap;gap:8px" id="plan-muscle-chips"></div>
-        </div>
-        <div style="margin-bottom:16px">
-          <div class="settings-row" style="padding:8px 0">
-            <div><div class="settings-row-title">День отдыха</div></div>
-            <div class="stoggle" id="plan-rest-toggle" onclick="togglePlanRest()"></div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px">
-          <button class="btn-ghost" onclick="closeModal('modal-plan-day')" style="flex:1;margin:0">Отмена</button>
-          <button class="btn-primary" onclick="savePlanDay()" style="flex:2;margin:0">Сохранить</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════ MEASUREMENTS ═══════════════════════ -->
-  <div class="screen" id="s-measures">
-    <div class="page-header">
-      <div class="ph-title">Замеры тела</div>
-      <div class="ph-sub" id="measures-date-label">Сегодня</div>
-    </div>
-
-    <!-- Переключатель дат -->
-    <div style="display:flex;gap:8px;align-items:center;padding:0 16px 12px">
-      <button onclick="measuresDateShift(-1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 14px;cursor:pointer">◀</button>
-      <div style="flex:1;text-align:center;font-size:13px;font-weight:600" id="measures-date-display"></div>
-      <button onclick="measuresDateShift(1)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 14px;cursor:pointer">▶</button>
-    </div>
-
-    <!-- Голограмма + замеры -->
-    <div style="display:flex;gap:12px;padding:0 16px 16px;align-items:flex-start">
-      
-      </div>
-
-      <!-- Замеры справа -->
-      <div style="flex:1">
-        <div style="font-size:10px;color:var(--neon);margin-bottom:8px;font-weight:600;letter-spacing:0.05em">ПАРАМЕТРЫ</div>
-        <div id="measures-inputs-list"></div>
-        <button onclick="saveMeasures()" class="btn-primary" style="width:100%;margin-top:12px;padding:12px">Сохранить</button>
-      </div>
-    </div>
-
-    <!-- История и прогресс -->
-    <div class="section-label">Динамика</div>
-    <div class="card" style="margin:0 16px 12px"><div class="card-inner">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap" id="measures-tabs"></div>
-      <div id="measures-chart-area" style="height:120px;position:relative"></div>
-    </div></div>
-
-    <!-- Сравнение -->
-    <div class="section-label">Прогресс</div>
-    <div id="measures-diff-cards" style="margin:0 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
-
-    <div style="height:8px"></div>
-  </div>
 </div><!-- #app -->
 
 <!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
@@ -1592,20 +784,21 @@ if ('serviceWorker' in navigator) {
     <div class="nav-icon">🏠</div><div class="nav-label">Главная</div>
   </div>
   <div class="nav-item" id="nav-workout" onclick="go('workout')">
-    <div class="nav-icon">💪</div><div class="nav-label">Трен.</div>
+    <div class="nav-icon">🏋️</div><div class="nav-label">Трен.</div>
   </div>
-  <div class="nav-item" id="nav-food" onclick="go('food')">
-    <div class="nav-icon">🍎</div><div class="nav-label">Питание</div>
+  <div class="nav-item" id="nav-tasks" onclick="go('tasks')">
+    <div class="nav-icon">✅</div><div class="nav-label">Задачи</div>
   </div>
-  <div class="nav-item" id="nav-charts" onclick="go('charts')">
-    <div class="nav-icon">📊</div><div class="nav-label">Прогресс</div>
+  <div class="nav-item" id="nav-supps" onclick="go('supps')">
+    <div class="nav-icon">💊</div><div class="nav-label">Добавки</div>
   </div>
-  <div class="nav-item" id="nav-more" onclick="openMore()">
-    <div class="nav-icon">☰</div><div class="nav-label">Ещё</div>
+  <div class="nav-item" id="nav-report" onclick="go('report')">
+    <div class="nav-icon">🗓</div><div class="nav-label">Отчёт</div>
+  </div>
+  <div class="nav-item" id="nav-ai" onclick="go('ai')">
+    <div class="nav-icon">🤖</div><div class="nav-label">ИИ</div>
   </div>
 </div>
-  <!-- Шторка "Ещё" -->
-  
 
 <!-- ═══════════════════════ MODALS ═══════════════════════════ -->
 <!-- Add Set Modal -->
@@ -1728,33 +921,6 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <script>
-// ─── ПЕРЕМЕННЫЕ (объявлены первыми во избежание TDZ) ────────────
-var state = null;
-var userId = 0;
-var selectedSuppDate = new Date().toISOString().slice(0,10);
-var offlineQueue = [];
-
-var currentMeasureDate = new Date().toISOString().slice(0,10);
-var selectedFood = null;
-var currentFoodDate = new Date().toISOString().slice(0,10);
-var editSetIdx = -1;
-var editDow = -1;
-var editMuscles = [];
-var editIsRest = false;
-var obGoal = 'sport';
-var obModules = {workout:true, food:true, supps:true, tasks:false};
-
-var isOnline = true;
-var activeMeasureTab = 'waist';
-var barcodeStream = null;
-var barcodeInterval = null;
-
-// ─────────────────────────────────────────────────────────────────
-
-
-
-// Глобальные переменные (до всего остального)
-
 // ════════════════════════════════════════════════════════════════
 // TELEGRAM WEBAPP INIT
 // ════════════════════════════════════════════════════════════════
@@ -1765,13 +931,13 @@ if (tg) {
   tg.setHeaderColor && tg.setHeaderColor('#0a0a12');
   tg.setBackgroundColor && tg.setBackgroundColor('#0a0a12');
   const u = tg.initDataUnsafe?.user;
-  if (u?.first_name) { const greet = document.getElementById('home-greeting'); if (greet) greet.textContent = 'Привет, ' + u.first_name + ' 👋'; }
+  if (u?.first_name) document.getElementById('user-name').textContent = u.first_name + ' 👋';
 }
 
 // ════════════════════════════════════════════════════════════════
 // API CONFIG — поменяй на свой Railway-домен после деплоя бэкенда
 // ════════════════════════════════════════════════════════════════
-const API_BASE = 'https://planner-backend-production-ad6d.up.railway.app';
+const API_BASE = 'https://planner-backend-production-ad6d.up.railway.app';нда
 
 function getUserId() {
   const u = tg?.initDataUnsafe?.user;
@@ -1800,7 +966,7 @@ async function apiCall(method, path, body) {
 // ════════════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════════════
-state = {
+let state = {
   workouts: [],
   tasks: [],
   bodyWeight: [],   // [{date, weight}]
@@ -1819,16 +985,16 @@ state = {
 };
 
 // Твоя реальная история тренировок (Окт 2025 — Апр 2026), 118 подходов из 31 сессии
-var HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":45.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":12,"weight":15.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":17.5},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":65.0},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-10","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":3,"reps":5,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":5,"reps":6,"weight":60.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":40.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":72.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":4,"reps":12,"weight":20.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":35.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":3,"reps":12,"weight":7.5},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":3,"reps":10,"weight":10.0},{"date":"2025-12-16","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":3,"reps":10,"weight":18.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":17.5},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":15,"weight":17.5},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":23.0},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём гантелей на бицепс сидя","sets":4,"reps":10,"weight":10.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":50.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":3,"reps":15,"weight":40.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":10,"weight":20.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":70.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":8,"weight":22.5},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":22.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":22.5},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":60.0},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":25.0},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":7.5},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":70.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":40.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока одной рукой","sets":3,"reps":15,"weight":15.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":30.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":6,"weight":70.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":18,"weight":20.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":100.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":8,"weight":55.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":6,"weight":35.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":3,"weight":80.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":60.0},{"date":"2026-01-20","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":17.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":2,"weight":80.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":15.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":4,"reps":12,"weight":12.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":27.5},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":120.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":2,"reps":8,"weight":80.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":45.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-12","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":6,"weight":60.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":12,"weight":45.0},{"date":"2026-02-12","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":22.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":7.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":5,"reps":12,"weight":45.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":20.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":10,"weight":10.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Разведение в тренажёре (задние дельты)","sets":3,"reps":15,"weight":25.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":105.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга в хаммере","sets":5,"reps":6,"weight":70.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":10,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":5,"reps":6,"weight":20.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":3,"weight":104.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":8,"weight":120.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":15,"weight":45.0},{"date":"2026-02-28","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":2,"reps":10,"weight":40.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":7,"weight":20.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":120.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":65.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":100.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":6,"weight":120.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":10.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":12,"weight":10.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":10,"weight":75.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":140.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":70.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":70.0},{"date":"2026-03-21","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":10,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":12,"weight":17.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":50.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":3,"reps":15,"weight":12.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":6,"weight":20.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":25.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":120.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":100.0}]
+const HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":45.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":12,"weight":15.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":17.5},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":65.0},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-10","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":3,"reps":5,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":5,"reps":6,"weight":60.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":40.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":72.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":4,"reps":12,"weight":20.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":35.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":3,"reps":12,"weight":7.5},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":3,"reps":10,"weight":10.0},{"date":"2025-12-16","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":3,"reps":10,"weight":18.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":17.5},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":15,"weight":17.5},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":23.0},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём гантелей на бицепс сидя","sets":4,"reps":10,"weight":10.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":50.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":3,"reps":15,"weight":40.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":10,"weight":20.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":70.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":8,"weight":22.5},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":22.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":22.5},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":60.0},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":25.0},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":7.5},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":70.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":40.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока одной рукой","sets":3,"reps":15,"weight":15.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":30.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":6,"weight":70.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":18,"weight":20.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":100.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":8,"weight":55.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":6,"weight":35.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":3,"weight":80.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":60.0},{"date":"2026-01-20","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":17.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":2,"weight":80.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":15.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":4,"reps":12,"weight":12.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":27.5},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":120.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":2,"reps":8,"weight":80.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":45.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-12","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":6,"weight":60.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":12,"weight":45.0},{"date":"2026-02-12","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":22.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":7.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":5,"reps":12,"weight":45.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":20.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":10,"weight":10.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Разведение в тренажёре (задние дельты)","sets":3,"reps":15,"weight":25.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":105.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга в хаммере","sets":5,"reps":6,"weight":70.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":10,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":5,"reps":6,"weight":20.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":3,"weight":104.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":8,"weight":120.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":15,"weight":45.0},{"date":"2026-02-28","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":2,"reps":10,"weight":40.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":7,"weight":20.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":120.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":65.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":100.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":6,"weight":120.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":10.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":12,"weight":10.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":10,"weight":75.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":140.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":70.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":70.0},{"date":"2026-03-21","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":10,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":12,"weight":17.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":50.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":3,"reps":15,"weight":12.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":6,"weight":20.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":25.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":120.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":100.0}]
 ;
 
 let currentMuscle = 'Грудь + Трицепс';
 let currentBodyTab = 'weight';
- todayStr();
+let selectedSuppDate = todayStr();
 let reportMonthOffset = 0; // 0 = current month
 let progChart=null, avgChart=null, weightChart=null, calChart=null;
 
-var EXERCISES = {
+const EXERCISES = {
   'Грудь + Трицепс':  ['Жим штанги лёжа','Жим штанги на наклонной скамье','Жим гантелей на наклонной скамье','Разводка гантелей лёжа','Сведение в тренажёре (Бабочка)','Французский жим','Разгибание на трицепс (блок)'],
   'Спина + Бицепс':   ['Становая тяга','Румынская тяга','Тяга штанги в наклоне','Тяга верхнего блока к груди','Тяга нижнего блока к поясу','Тяга нижнего блока одной рукой','Тяга в хаммере','Подъём штанги на бицепс','Подъём EZ-штанги на бицепс','Подъём гантелей на бицепс сидя','Подъём гантелей на бицепс стоя','Сгибание на скамье Скотта','Молотки (Hammer Curl)'],
   'Ноги + Ягодицы':   ['Приседания со штангой','Жим ногами','Разгибание ног (тренажёр)','Сгибание ног (тренажёр)','Выпады с гантелями','Подъём на носки'],
@@ -1845,7 +1011,7 @@ function formatDate(d) {
 function round1(n) { return Math.round(n * 10) / 10; }
 function calc1rm(w, r) { return round1(w * (1 + r/30)); }
 
-var NEON_PALETTE = ['#b026ff','#00e5a0','#ff9d3d','#4dabff','#ff4d6a','#d946ef'];
+const NEON_PALETTE = ['#b026ff','#00e5a0','#ff9d3d','#4dabff','#ff4d6a','#d946ef'];
 
 // ════════════════════════════════════════════════════════════════
 // CHART.JS GLOBAL DARK THEME
@@ -1967,103 +1133,66 @@ function exportData() {
 // ════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
+const SCREENS = ['home','workout','charts','body','tasks','supps','report','ai'];
 function go(name) {
-  try {
-    // Все экраны напрямую без SCREENS массива
-    var allScreens = ['home','workout','charts','body','tasks','supps','report','food','ai','settings','plan'];
-    for (var i = 0; i < allScreens.length; i++) {
-      var scr = document.getElementById('s-' + allScreens[i]);
-      if (scr) {
-        if (allScreens[i] === name) {
-          scr.classList.add('active');
-        } else {
-          scr.classList.remove('active');
-        }
-      }
-    }
-    // Навигация
-    var allNav = ['home','workout','food','charts'];
-    for (var j = 0; j < allNav.length; j++) {
-      var nv = document.getElementById('nav-' + allNav[j]);
-      if (nv) {
-        if (allNav[j] === name) {
-          nv.classList.add('active');
-        } else {
-          nv.classList.remove('active');
-        }
-      }
-    }
-    // Кнопка Ещё
-    var navMore = document.getElementById('nav-more');
-    if (navMore) navMore.classList.remove('active');
-    // Рендер
-    if (name === 'home') { try { renderHome(); } catch(e) {} }
-    if (name === 'workout') { try { renderWorkout(); } catch(e) {} }
-    if (name === 'charts') { try { renderCharts(); } catch(e) {} }
-    if (name === 'body') { try { renderBody(); } catch(e) {} }
-    if (name === 'tasks') { try { renderTasks(); } catch(e) {} }
-    if (name === 'supps') { try { renderSupps(); } catch(e) {} }
-    if (name === 'report') { try { renderReport(); } catch(e) {} }
-    if (name === 'food') { try { renderFoodScreen(); } catch(e) {} }
-    if (name === 'plan') { try { renderPlan(); } catch(e) {} }
-    if (name === 'settings') { try { updateOnlineStatus(); } catch(e) {} }
-  } catch(e) {
-    console.error('go error:', e);
-  }
+  SCREENS.forEach(s => {
+    const scr = document.getElementById('s-'+s);
+    if (scr) scr.classList.toggle('active', s===name);
+  });
+  ['home','workout','tasks','supps','report','ai'].forEach(s => {
+    const nv = document.getElementById('nav-'+s);
+    if (nv) nv.classList.toggle('active', s===name || (s==='workout' && (name==='charts')) );
+  });
+  if (name === 'home') renderHome();
+  if (name === 'workout') renderWorkout();
+  if (name === 'charts') renderCharts();
+  if (name === 'body') renderBody();
+  if (name === 'tasks') renderTasks();
+  if (name === 'supps') renderSupps();
+  if (name === 'report') renderReport();
 }
+
 // ════════════════════════════════════════════════════════════════
 // HOME
 // ════════════════════════════════════════════════════════════════
 function renderHome() {
-  if (!state) return; // ждём загрузки
-  try {
-  // Дата
-  const today = new Date();
-  const dateEl = document.getElementById('home-date-sub');
-  if (dateEl) dateEl.textContent = today.toLocaleDateString('ru', {weekday:'long', day:'numeric', month:'long'});
+  const today = todayStr();
+  document.getElementById('home-date').textContent = formatDate(today);
 
-  // Следующая тренировка из пользовательского плана
-  const dow = today.getDay();
-  const userPlan = loadPlan();
-  const todayPlan = userPlan[dow];
-  const titleEl = document.getElementById('home-workout-title');
-  const subEl = document.getElementById('home-workout-sub');
-  if (titleEl) titleEl.textContent = todayPlan ? (todayPlan.rest ? 'День отдыха' : todayPlan.name) : 'День отдыха';
-  if (subEl) subEl.textContent = todayPlan && !todayPlan.rest ? (todayPlan.muscles||[]).join(' · ') : 'Хорошего восстановления!';
+  const benchSets = state.workouts.filter(w => w.exercise === 'Жим штанги лёжа');
+  if (benchSets.length) {
+    const maxRM = Math.max(...benchSets.map(w => calc1rm(w.weight, w.reps)));
+    document.getElementById('kpi-bench').textContent = maxRM + ' кг';
+    const avgW = round1(benchSets.reduce((a,b)=>a+b.weight,0)/benchSets.length);
+    document.getElementById('kpi-bench-sub').textContent = 'ср. вес ' + avgW + ' кг';
+  }
 
-  if (!state) return;
+  const deadSets = state.workouts.filter(w => w.exercise === 'Становая тяга');
+  if (deadSets.length) {
+    const maxRM = Math.max(...deadSets.map(w => calc1rm(w.weight, w.reps)));
+    document.getElementById('kpi-dead').textContent = maxRM + ' кг';
+    const avgW = round1(deadSets.reduce((a,b)=>a+b.weight,0)/deadSets.length);
+    document.getElementById('kpi-dead-sub').textContent = 'ср. вес ' + avgW + ' кг';
+  }
 
-  // PR жим и становая
-  const bench = state.workouts.filter(w => w.exercise && w.exercise.includes('Жим штанги лёжа'));
-  const deadlift = state.workouts.filter(w => w.exercise && (w.exercise.includes('Становая') || w.exercise.includes('Мёртвая')));
+  const total = state.tasks.length;
+  const done = state.tasks.filter(t=>t.done).length;
+  document.getElementById('kpi-tasks').textContent = done+'/'+total;
+  document.getElementById('kpi-tasks-sub').textContent = total ? Math.round(done/total*100)+'%' : '0%';
+  document.getElementById('q-tasks').textContent = (total-done)+' активных';
 
-  const maxBench = bench.length ? Math.max(...bench.map(w => calc1rm(w.weight, w.reps))) : 0;
-  const maxDead = deadlift.length ? Math.max(...deadlift.map(w => calc1rm(w.weight, w.reps))) : 0;
-
-  const benchEl = document.getElementById('home-bench-pr');
-  const deadEl = document.getElementById('home-deadlift-pr');
-  if (benchEl) benchEl.textContent = maxBench ? maxBench + ' кг' : '—';
-  if (deadEl) deadEl.textContent = maxDead ? maxDead + ' кг' : '—';
-
-  // Добавки
-  const todayStr_ = todayStr();
-  const checks = Object.keys(state.supps.checked || {}).filter(k => k.startsWith(todayStr_) && state.supps.checked[k]).length;
-  const slots = (state.supps.list || []).reduce((a,s) => a + (s.times||[]).length, 0);
-  const suppEl = document.getElementById('home-supps-pct');
-  if (suppEl) suppEl.textContent = slots ? Math.round(checks/slots*100) + '%' : '—';
-
-  // Задачи
-  const done = (state.tasks || []).filter(t => t.done).length;
-  const total = (state.tasks || []).length;
-  const tasksEl = document.getElementById('home-tasks-done');
-  if (tasksEl) tasksEl.textContent = total ? done + '/' + total : '—';
-
-  // Стрик
-  calcStreak();
-
-  // Калории
-  loadHomeFoodStats();
-  } catch(e) { console.warn('renderHome:', e); }
+  if (state.bodyWeight.length) {
+    const sorted = [...state.bodyWeight].sort((a,b)=>a.date.localeCompare(b.date));
+    const last = sorted[sorted.length-1];
+    document.getElementById('kpi-weight').textContent = last.weight + ' кг';
+    if (sorted.length > 1) {
+      const prev = sorted[sorted.length-2];
+      const delta = round1(last.weight - prev.weight);
+      document.getElementById('kpi-weight-sub').textContent = (delta>=0?'+':'')+delta+' кг с прошлого замера';
+    } else {
+      document.getElementById('kpi-weight-sub').textContent = last.date;
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -2099,12 +1228,7 @@ function renderExercises() {
     const chips = sets.map(s => {
       const orm = calc1rm(s.weight, s.reps);
       const isPR = isPRFor(ex, orm);
-      const idx = state.workouts.indexOf(s);
-      return `<div class="set-chip${isPR?' pr':''}" style="display:flex;align-items:center;gap:6px">
-        <span onclick="openEditSet(${idx})" style="flex:1;cursor:pointer">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</span>
-        <span onclick="openEditSet(${idx})" style="color:var(--text-muted);opacity:0.6;cursor:pointer;font-size:12px">✎</span>
-        <span onclick="deleteSet(${idx})" style="color:var(--red);opacity:0.7;cursor:pointer;font-size:15px;line-height:1;padding:0 2px">×</span>
-      </div>`;
+      return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</div>`;
     }).join('');
     const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
     const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
@@ -2161,19 +1285,6 @@ function saveSet() {
   if (apiAvailable) apiCall('POST', '/api/workouts', entry);
   closeModal('modal-set');
   renderExercises();
-}
-
-async function deleteSet(idx) {
-  const w = state.workouts[idx];
-  if (!w) return;
-  // Удаляем на сервере если есть id
-  if (w.id && apiAvailable) {
-    await apiCall('DELETE', '/api/workouts/' + w.id);
-  }
-  state.workouts.splice(idx, 1);
-  saveStateLocal();
-  renderExercises();
-  renderHome();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -2488,47 +1599,23 @@ function renderDayStrip() {
   const strip = document.getElementById('day-strip');
   const today = todayStr();
   const days = [];
-  // 30 дней назад + 365 вперёд
-  for (let i = -30; i <= 365; i++) {
-    const d = new Date(); d.setDate(d.getDate() + i);
-    days.push(d.toISOString().slice(0, 10));
+  for (let i=-3; i<=3; i++) {
+    const d = new Date(); d.setDate(d.getDate()+i);
+    days.push(d.toISOString().slice(0,10));
   }
   const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  strip.innerHTML = days.map(d => {
-    const dt = new Date(d + 'T12:00');
+  strip.innerHTML = days.map(d=>{
+    const dt = new Date(d+'T12:00');
     const isToday = d === today;
     const isSel = d === selectedSuppDate;
-    const isPast = d < today;
-    return `<div class="day-chip${isSel ? ' selected' : (isToday ? ' today' : '')}${isPast && !isSel ? ' past' : ''}" 
-      id="dchip-${d}" onclick="selectSuppDate('${d}')">
+    return `<div class="day-chip${isToday||isSel?' today':''}" onclick="selectSuppDate('${d}')">
       <div class="dc-name">${dayNames[dt.getDay()]}</div>
       <div class="dc-num">${dt.getDate()}</div>
-      ${isToday ? '<div style="width:4px;height:4px;border-radius:50%;background:#fff;margin-top:2px"></div>' : ''}
     </div>`;
   }).join('');
-  // Скролл к выбранной дате
-  setTimeout(() => {
-    const chip = document.getElementById('dchip-' + selectedSuppDate);
-    if (chip) chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }, 50);
 }
 
-function selectSuppDate(d) {
-  selectedSuppDate = d;
-  renderSupps();
-  // Скролл к выбранному дню
-  setTimeout(() => {
-    const chip = document.getElementById('dchip-' + d);
-    if (chip) chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-  }, 50);
-}
-
-function shiftSuppWeek(dir) {
-  const d = new Date(selectedSuppDate + 'T12:00');
-  d.setDate(d.getDate() + dir * 7);
-  selectedSuppDate = d.toISOString().slice(0, 10);
-  renderSupps();
-}
+function selectSuppDate(d) { selectedSuppDate = d; renderSupps(); }
 
 function toggleSupp(key, el) {
   const isOn = el.classList.contains('on');
@@ -2613,8 +1700,8 @@ function shiftReportMonth(delta) {
   renderReport();
 }
 
-var MONTH_NAMES = ['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'];
-var MONTH_NAMES_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTH_NAMES = ['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'];
+const MONTH_NAMES_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 
 function renderReport() {
   const {start, end, year, month} = getReportMonthRange();
@@ -2682,1239 +1769,6 @@ function renderReport() {
     document.getElementById('rep-avg-cal').textContent = '— ккал';
   }
   document.getElementById('rep-cal-count').textContent = monthCals.length;
-}
-
-
-
-
-
-
-
-
-
-
-// ════════════════════════════════════════════════════════════════
-// ЗАМЕРЫ ТЕЛА + ГОЛОГРАММА
-// ════════════════════════════════════════════════════════════════
-var MEASURE_FIELDS = [
-  {key:'neck',   label:'Шея',     unit:'см', color:'var(--neon)',    pt:'sv-pt-neck',  base:38},
-  {key:'chest',  label:'Грудь',   unit:'см', color:'var(--green)',   pt:'sv-pt-chest', base:100},
-  {key:'waist',  label:'Талия',   unit:'см', color:'var(--orange)',  pt:'sv-pt-waist', base:85},
-  {key:'hips',   label:'Бёдра',   unit:'см', color:'var(--blue)',    pt:'sv-pt-hips',  base:100},
-  {key:'bicep',  label:'Бицепс',  unit:'см', color:'var(--neon)',    pt:null,          base:35},
-  {key:'thigh',  label:'Бедро',   unit:'см', color:'var(--green)',   pt:null,          base:58},
-  {key:'weight', label:'Вес',     unit:'кг', color:'var(--text)',    pt:null,          base:80},
-];
-
-let currentMeasureDate = todayStr();
-let measuresData = {};  // {date: {neck:38, chest:100, ...}}
-
-
-function loadMeasures() {
-  measuresData = JSON.parse(localStorage.getItem('planner_measures') || '{}');
-}
-
-function saveMeasuresLocal() {
-  localStorage.setItem('planner_measures', JSON.stringify(measuresData));
-}
-
-function renderMeasures() {
-  loadMeasures();
-  updateMeasuresDateDisplay();
-  renderMeasuresInputs();
-  renderMeasuresTabs();
-  renderMeasuresChart(activeMeasureTab);
-  renderMeasuresDiff();
-  updateSilhouette();
-}
-
-function updateMeasuresDateDisplay() {
-  const d = new Date(currentMeasureDate + 'T00:00:00');
-  const label = currentMeasureDate === todayStr() ? 'Сегодня' :
-    d.toLocaleDateString('ru', {day:'numeric', month:'long', year:'numeric'});
-  const el = document.getElementById('measures-date-display');
-  if (el) el.textContent = label;
-  const lbl = document.getElementById('measures-date-label');
-  if (lbl) lbl.textContent = label;
-}
-
-function measuresDateShift(delta) {
-  const d = new Date(currentMeasureDate + 'T00:00:00');
-  d.setDate(d.getDate() + delta);
-  currentMeasureDate = d.toISOString().slice(0,10);
-  updateMeasuresDateDisplay();
-  renderMeasuresInputs();
-  updateSilhouette();
-}
-
-function renderMeasuresInputs() {
-  const current = measuresData[currentMeasureDate] || {};
-  const el = document.getElementById('measures-inputs-list');
-  if (!el) return;
-  el.innerHTML = MEASURE_FIELDS.map(f => `
-    <div style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-        <label style="font-size:11px;font-weight:600" class="color:${f.color}">${f.label}</label>
-        <span style="font-size:10px;color:var(--text-muted)">${f.unit}</span>
-      </div>
-      <input id="m-${f.key}" class="input-field" type="number" step="0.1" 
-        value="${current[f.key] || ''}" placeholder="${f.base}"
-        style="margin:0;padding:8px 10px;font-size:14px;font-weight:700;border-color:${f.color}30"
-        oninput="onMeasureInput()">
-    </div>
-  `).join('');
-}
-
-function onMeasureInput() {
-  updateSilhouette();
-}
-
-function saveMeasures() {
-  const entry = {};
-  MEASURE_FIELDS.forEach(f => {
-    const val = parseFloat(document.getElementById('m-'+f.key)?.value);
-    if (val) entry[f.key] = val;
-  });
-  if (!measuresData[currentMeasureDate]) measuresData[currentMeasureDate] = {};
-  Object.assign(measuresData[currentMeasureDate], entry);
-  saveMeasuresLocal();
-  renderMeasuresChart(activeMeasureTab);
-  renderMeasuresDiff();
-  updateSilhouette();
-  
-  // Тост
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
-  toast.textContent = 'Замеры сохранены!';
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2000);
-}
-
-function renderMeasuresTabs() {
-  const el = document.getElementById('measures-tabs');
-  if (!el) return;
-  const trackable = MEASURE_FIELDS.filter(f => f.key !== 'weight' || true);
-  el.innerHTML = trackable.map(f => `
-    <div onclick="selectMeasureTab('${f.key}')" 
-      style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;
-      background:${activeMeasureTab===f.key?'var(--neon)':'var(--card2)'};
-      color:${activeMeasureTab===f.key?'#fff':'var(--text-muted)'};
-      border:1px solid ${activeMeasureTab===f.key?'var(--neon)':'var(--border)'}">
-      ${f.label}
-    </div>
-  `).join('');
-}
-
-function selectMeasureTab(key) {
-  activeMeasureTab = key;
-  renderMeasuresTabs();
-  renderMeasuresChart(key);
-}
-
-function renderMeasuresChart(key) {
-  const el = document.getElementById('measures-chart-area');
-  if (!el) return;
-  
-  const field = MEASURE_FIELDS.find(f => f.key === key);
-  const dates = Object.keys(measuresData).sort();
-  const points = dates.map(d => ({date:d, val: measuresData[d]?.[key]})).filter(p => p.val);
-  
-  if (points.length < 2) {
-    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding-top:40px">Добавь замеры в разные дни чтобы увидеть динамику</div>';
-    return;
-  }
-  
-  const vals = points.map(p => p.val);
-  const min = Math.min(...vals) * 0.97;
-  const max = Math.max(...vals) * 1.03;
-  const range = max - min || 1;
-  
-  const W = el.clientWidth || 280, H = 110;
-  const pad = {l:30, r:10, t:10, b:25};
-  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
-  
-  const x = (i) => pad.l + (i / (points.length-1)) * iw;
-  const y = (v) => pad.t + ih - ((v - min) / range) * ih;
-  
-  const pathD = points.map((p,i) => (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(p.val).toFixed(1)).join(' ');
-  const areaD = pathD + ' L' + x(points.length-1).toFixed(1) + ',' + (pad.t+ih) + ' L' + pad.l + ',' + (pad.t+ih) + ' Z';
-  
-  const color = field ? field.color : 'var(--neon)';
-  
-  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <defs>
-      <linearGradient id="mg" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" style="stop-color:${color};stop-opacity:0.3"/>
-        <stop offset="100%" style="stop-color:${color};stop-opacity:0"/>
-      </linearGradient>
-    </defs>
-    <!-- Область -->
-    <path d="${areaD}" fill="url(#mg)"/>
-    <!-- Линия -->
-    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Точки и значения -->
-    ${points.map((p,i) => `
-      <circle cx="${x(i)}" cy="${y(p.val)}" r="3" fill="${color}"/>
-      ${i === 0 || i === points.length-1 || points.length <= 5 ? 
-        `<text x="${x(i)}" y="${y(p.val)-7}" text-anchor="middle" font-size="9" fill="${color}" font-weight="700">${p.val}</text>` : ''}
-    `).join('')}
-    <!-- Даты -->
-    ${[0, points.length-1].map(i => `
-      <text x="${x(i)}" y="${H-5}" text-anchor="middle" font-size="8" fill="var(--text-muted)">
-        ${points[i].date.slice(5)}
-      </text>
-    `).join('')}
-    <!-- Ось Y -->
-    <text x="${pad.l-3}" y="${pad.t+ih/2}" text-anchor="end" font-size="8" fill="var(--text-muted)">${field?.unit||'см'}</text>
-  </svg>`;
-}
-
-function renderMeasuresDiff() {
-  const el = document.getElementById('measures-diff-cards');
-  if (!el) return;
-  
-  const dates = Object.keys(measuresData).sort();
-  if (dates.length < 2) {
-    el.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);font-size:12px;text-align:center;padding:12px">Нужно минимум 2 даты для сравнения</div>';
-    return;
-  }
-  
-  const first = measuresData[dates[0]] || {};
-  const last = measuresData[dates[dates.length-1]] || {};
-  
-  el.innerHTML = MEASURE_FIELDS.filter(f => first[f.key] && last[f.key]).map(f => {
-    const diff = (last[f.key] - first[f.key]).toFixed(1);
-    const isGood = (f.key === 'waist') ? parseFloat(diff) <= 0 : parseFloat(diff) >= 0;
-    const color = parseFloat(diff) === 0 ? 'var(--text-muted)' : (isGood ? 'var(--green)' : 'var(--red)');
-    const arrow = parseFloat(diff) > 0 ? '↑' : parseFloat(diff) < 0 ? '↓' : '→';
-    return `<div class="card" style="margin:0 0 8px">
-      <div class="card-inner" style="padding:10px">
-        <div style="font-size:11px;color:var(--text-muted)">${f.label}</div>
-        <div style="font-size:18px;font-weight:800;color:var(--text);margin:2px 0">${last[f.key]} ${f.unit}</div>
-        <div style="font-size:12px;font-weight:700;color:${color}">${arrow} ${diff > 0 ? '+' : ''}${diff} ${f.unit}</div>
-        <div style="font-size:10px;color:var(--text-muted)">с ${dates[0]}</div>
-      </div>
-    </div>`;
-  }).join('') || '<div style="grid-column:1/-1;color:var(--text-muted);font-size:12px;text-align:center;padding:12px">Введи замеры для сравнения</div>';
-}
-
-// ════════════════════════════════════════════════════════════════
-// ГОЛОГРАММА (изолирована в iframe)
-// ════════════════════════════════════════════════════════════════
-function initHologram() {
-  updateSilhouette();
-}
-
-function updateSilhouette() {
-  const current = measuresData[currentMeasureDate] || {};
-  const inputs = {};
-  MEASURE_FIELDS.forEach(f => {
-    const el = document.getElementById('m-'+f.key);
-    inputs[f.key] = parseFloat((el && el.value) || current[f.key] || f.base);
-  });
-
-  // HUD
-  const l = document.getElementById('holo-hud-l');
-  const r = document.getElementById('holo-hud-r');
-  if (l) l.innerHTML = `CHEST ${inputs.chest||'--'}cm<br>WAIST ${inputs.waist||'--'}cm<br>HIPS  ${inputs.hips||'--'}cm`;
-  if (r) r.innerHTML = `NECK ${inputs.neck||'--'}cm<br>ARM  ${inputs.bicep||'--'}cm<br>LEG  ${inputs.thigh||'--'}cm`;
-
-  // Передаём замеры в iframe
-  const frame = document.getElementById('holo-frame');
-  if (frame && frame.contentWindow) {
-    frame.contentWindow.postMessage({type:'measures', data: inputs}, '*');
-  }
-}
-
-function buildBodyPath() {}
-function animateHoloScan() {}
-
-// ════════════════════════════════════════════════════════════════
-// ПЛАН ТРЕНИРОВОК
-// ════════════════════════════════════════════════════════════════
-var DAY_NAMES = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
-var DAY_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-var MUSCLES_LIST = ['Грудь','Спина','Ноги','Плечи','Бицепс','Трицепс','Пресс','Икры','Ягодицы','Предплечья'];
-
-var TEMPLATES = {
-  ppl: {
-    1:{name:'Толчок (Push)',muscles:['Грудь','Плечи','Трицепс'],rest:false},
-    2:{name:'Тяга (Pull)',muscles:['Спина','Бицепс'],rest:false},
-    3:{name:'Ноги',muscles:['Ноги','Икры','Ягодицы'],rest:false},
-    4:{name:'Толчок (Push)',muscles:['Грудь','Плечи','Трицепс'],rest:false},
-    5:{name:'Тяга (Pull)',muscles:['Спина','Бицепс'],rest:false},
-    6:{name:'Ноги',muscles:['Ноги','Икры'],rest:false},
-    0:{name:'Отдых',muscles:[],rest:true},
-  },
-  upper_lower: {
-    1:{name:'Верх тела',muscles:['Грудь','Спина','Плечи'],rest:false},
-    2:{name:'Низ тела',muscles:['Ноги','Ягодицы','Икры'],rest:false},
-    3:{name:'Отдых',muscles:[],rest:true},
-    4:{name:'Верх тела',muscles:['Бицепс','Трицепс','Плечи'],rest:false},
-    5:{name:'Низ тела',muscles:['Ноги','Пресс'],rest:false},
-    6:{name:'Отдых',muscles:[],rest:true},
-    0:{name:'Отдых',muscles:[],rest:true},
-  },
-  bro: {
-    1:{name:'Грудь',muscles:['Грудь','Трицепс'],rest:false},
-    2:{name:'Спина',muscles:['Спина','Бицепс'],rest:false},
-    3:{name:'Плечи',muscles:['Плечи','Трицепс'],rest:false},
-    4:{name:'Ноги',muscles:['Ноги','Икры'],rest:false},
-    5:{name:'Руки',muscles:['Бицепс','Трицепс','Предплечья'],rest:false},
-    6:{name:'Отдых',muscles:[],rest:true},
-    0:{name:'Отдых',muscles:[],rest:true},
-  },
-  fullbody: {
-    1:{name:'Full Body A',muscles:['Грудь','Спина','Ноги'],rest:false},
-    2:{name:'Отдых',muscles:[],rest:true},
-    3:{name:'Full Body B',muscles:['Плечи','Бицепс','Трицепс','Ноги'],rest:false},
-    4:{name:'Отдых',muscles:[],rest:true},
-    5:{name:'Full Body C',muscles:['Грудь','Спина','Пресс'],rest:false},
-    6:{name:'Отдых',muscles:[],rest:true},
-    0:{name:'Отдых',muscles:[],rest:true},
-  },
-};
-
-// Загружаем план из localStorage
-function loadPlan() {
-  return JSON.parse(localStorage.getItem('planner_split') || 'null') || {
-    1:{name:'Грудь + Трицепс',muscles:['Грудь','Трицепс'],rest:false},
-    2:{name:'Спина + Бицепс',muscles:['Спина','Бицепс'],rest:false},
-    3:{name:'Ноги',muscles:['Ноги','Икры'],rest:false},
-    4:{name:'Плечи',muscles:['Плечи'],rest:false},
-    5:{name:'Грудь + Трицепс',muscles:['Грудь','Трицепс'],rest:false},
-    6:{name:'Отдых',muscles:[],rest:true},
-    0:{name:'Отдых',muscles:[],rest:true},
-  };
-}
-
-function savePlan(plan) {
-  localStorage.setItem('planner_split', JSON.stringify(plan));
-}
-
-function renderPlan() {
-  const plan = loadPlan();
-  const today = new Date().getDay();
-  
-  // Сетка недели
-  const grid = document.getElementById('plan-week-grid');
-  if (!grid) return;
-  
-  grid.innerHTML = [1,2,3,4,5,6,0].map(dow => {
-    const day = plan[dow] || {name:'Отдых',muscles:[],rest:true};
-    const isToday = dow === today;
-    const muscles = day.muscles && day.muscles.length ? day.muscles.join(' · ') : '';
-    return `<div class="plan-day-card${isToday?' today':''}${day.rest?' rest':''}" onclick="openPlanDay(${dow})">
-      <div style="width:36px;height:36px;border-radius:10px;background:${isToday?'var(--neon)':'var(--card)'};
-        display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;
-        color:${isToday?'#fff':'var(--text-muted)'};flex-shrink:0">${DAY_SHORT[dow]}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:${isToday?'var(--neon)':'var(--text)'}">${day.name}</div>
-        ${muscles ? '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+muscles+'</div>' : ''}
-      </div>
-      ${isToday ? '<div style="font-size:11px;color:var(--neon);font-weight:700">Сегодня</div>' : ''}
-      <div style="color:var(--text-muted);font-size:16px">›</div>
-    </div>`;
-  }).join('');
-
-  // Обновляем главную с актуальным планом
-  updateHomeFromPlan(plan, today);
-}
-
-function updateHomeFromPlan(plan, today) {
-  const day = plan[today];
-  if (!day) return;
-  const titleEl = document.getElementById('home-workout-title');
-  const subEl = document.getElementById('home-workout-sub');
-  if (titleEl) titleEl.textContent = day.rest ? 'День отдыха' : day.name;
-  if (subEl) subEl.textContent = day.rest ? 'Хорошего восстановления!' : (day.muscles||[]).join(' · ');
-}
-
-
-
-
-
-function openPlanDay(dow) {
-  const plan = loadPlan();
-  const day = plan[dow] || {name:'Отдых',muscles:[],rest:true};
-  editDow = dow;
-  editMuscles = [...(day.muscles||[])];
-  editIsRest = day.rest || false;
-
-  document.getElementById('plan-day-title').textContent = DAY_NAMES[dow];
-  document.getElementById('plan-day-name').value = day.name || '';
-
-  const tog = document.getElementById('plan-rest-toggle');
-  if (tog) { if (editIsRest) tog.classList.add('on'); else tog.classList.remove('on'); }
-
-  // Чипы мышц
-  const chipsEl = document.getElementById('plan-muscle-chips');
-  if (chipsEl) {
-    chipsEl.innerHTML = MUSCLES_LIST.map(m => 
-      `<div class="muscle-chip-sel${editMuscles.includes(m)?' active':''}" onclick="togglePlanMuscle('${m}',this)">${m}</div>`
-    ).join('');
-  }
-
-  document.getElementById('modal-plan-day').classList.add('open');
-}
-
-function togglePlanMuscle(muscle, el) {
-  el.classList.toggle('active');
-  if (editMuscles.includes(muscle)) {
-    editMuscles = editMuscles.filter(m => m !== muscle);
-  } else {
-    editMuscles.push(muscle);
-  }
-}
-
-function togglePlanRest() {
-  editIsRest = !editIsRest;
-  const tog = document.getElementById('plan-rest-toggle');
-  if (tog) { if (editIsRest) tog.classList.add('on'); else tog.classList.remove('on'); }
-}
-
-function savePlanDay() {
-  const plan = loadPlan();
-  const name = document.getElementById('plan-day-name').value.trim() || (editIsRest ? 'Отдых' : 'Тренировка');
-  plan[editDow] = {name, muscles: editIsRest ? [] : editMuscles, rest: editIsRest};
-  savePlan(plan);
-  closeModal('modal-plan-day');
-  renderPlan();
-  renderHome();
-}
-
-function applyTemplate(key) {
-  const tmpl = TEMPLATES[key];
-  if (!tmpl) return;
-  savePlan(tmpl);
-  renderPlan();
-  renderHome();
-  // Показываем тост
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
-  toast.textContent = 'Программа применена!';
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2500);
-}
-
-// ════════════════════════════════════════════════════════════════
-// РЕДАКТИРОВАНИЕ ПОДХОДА
-// ════════════════════════════════════════════════════════════════
-
-
-function openEditSet(idx) {
-  const w = state.workouts[idx];
-  if (!w) return;
-  editSetIdx = idx;
-  
-  document.getElementById('edit-ex-name').textContent = w.exercise;
-  document.getElementById('edit-sets').value = w.sets;
-  document.getElementById('edit-reps').value = w.reps;
-  document.getElementById('edit-weight').value = w.weight;
-  updateEdit1RM();
-  
-  document.getElementById('modal-edit-set').classList.add('open');
-  
-  // Обновляем 1RM при вводе
-  ['edit-sets','edit-reps','edit-weight'].forEach(id => {
-    document.getElementById(id).oninput = updateEdit1RM;
-  });
-}
-
-function updateEdit1RM() {
-  const reps = parseFloat(document.getElementById('edit-reps').value) || 0;
-  const weight = parseFloat(document.getElementById('edit-weight').value) || 0;
-  const orm = calc1rm(weight, reps);
-  document.getElementById('edit-1rm-preview').textContent = orm + ' кг';
-}
-
-async function saveEditSet() {
-  const w = state.workouts[editSetIdx];
-  if (!w) return;
-  
-  const newSets = parseInt(document.getElementById('edit-sets').value) || w.sets;
-  const newReps = parseInt(document.getElementById('edit-reps').value) || w.reps;
-  const newWeight = parseFloat(document.getElementById('edit-weight').value) || w.weight;
-  
-  // Обновляем локально
-  state.workouts[editSetIdx] = {...w, sets: newSets, reps: newReps, weight: newWeight};
-  
-  // Удаляем старую запись и создаём новую на сервере
-  if (w.id && apiAvailable) {
-    await apiCall('DELETE', '/api/workouts/' + w.id);
-    const result = await apiCall('POST', '/api/workouts', {
-      date: w.date,
-      muscle: w.muscle,
-      exercise: w.exercise,
-      sets: newSets,
-      reps: newReps,
-      weight: newWeight
-    });
-    if (result && result.id) state.workouts[editSetIdx].id = result.id;
-  }
-  
-  saveStateLocal();
-  closeModal('modal-edit-set');
-  renderExercises();
-  renderHome();
-}
-
-// ════════════════════════════════════════════════════════════════
-// ГЛАВНАЯ — ДАШБОРД
-// ════════════════════════════════════════════════════════════════
-const WEEK_SPLITS = {
-  1: {name:'День ног', muscles:'Квадрицепс · Бицепс бедра · Икры'},
-  2: {name:'Грудь + Трицепс', muscles:'Жим · Разводка · Трицепс'},
-  3: {name:'День отдыха', muscles:'Восстановление'},
-  4: {name:'Спина + Бицепс', muscles:'Тяга · Подтягивания · Бицепс'},
-  5: {name:'Плечи', muscles:'Жим стоя · Махи · Задние дельты'},
-  6: {name:'Грудь + Трицепс', muscles:'Жим · Разводка · Трицепс'},
-  0: {name:'День отдыха', muscles:'Восстановление и отдых'},
-};
-
-
-
-async function loadHomeFoodStats() {
-  try {
-    const data = await apiCall('GET', '/api/food/log?log_date=' + todayStr());
-    const entries = data || [];
-    const cal = entries.reduce((a,e) => a + (parseFloat(e.calories)||0), 0);
-    const prot = entries.reduce((a,e) => a + (parseFloat(e.protein)||0), 0);
-    const fat = entries.reduce((a,e) => a + (parseFloat(e.fat)||0), 0);
-    const carbs = entries.reduce((a,e) => a + (parseFloat(e.carbs)||0), 0);
-    
-    const goal = window.CALORIE_GOAL || 2500;
-    const pct = Math.min(100, Math.round(cal/goal*100));
-    
-    const calEl = document.getElementById('home-cal-eaten');
-    if (calEl) calEl.textContent = Math.round(cal);
-    const goalEl = document.getElementById('home-cal-goal');
-    if (goalEl) goalEl.textContent = goal;
-    const barEl = document.getElementById('home-cal-bar');
-    if (barEl) { barEl.style.width = pct + '%'; barEl.style.background = pct > 100 ? 'var(--red)' : 'var(--neon)'; }
-    
-    // SVG кольцо
-    const ring = document.getElementById('cal-ring');
-    if (ring) {
-      const circumference = 239;
-      const offset = circumference - (pct / 100) * circumference;
-      ring.setAttribute('stroke-dashoffset', offset);
-      ring.setAttribute('stroke', pct > 100 ? 'var(--red)' : 'var(--neon)');
-    }
-    
-    const protEl = document.getElementById('home-protein');
-    if (protEl) protEl.textContent = Math.round(prot);
-    const fatEl = document.getElementById('home-fat');
-    if (fatEl) fatEl.textContent = Math.round(fat);
-    const carbsEl = document.getElementById('home-carbs');
-    if (carbsEl) carbsEl.textContent = Math.round(carbs);
-  } catch(e) {}
-}
-
-function goWorkoutRecord() {
-  go('workout');
-  setTimeout(() => openAddSet(), 400);
-}
-
-function calcStreak() {
-  if (!state || !state.workouts) return;
-  // Считаем дни подряд с тренировками
-  const dates = [...new Set(state.workouts.map(w => w.date))].sort().reverse();
-  if (!dates.length) return;
-  
-  let streak = 0;
-  let current = new Date();
-  current.setHours(0,0,0,0);
-  
-  for (const d of dates) {
-    const wd = new Date(d + 'T00:00:00');
-    const diff = Math.round((current - wd) / 86400000);
-    if (diff <= 1) { streak++; current = wd; }
-    else break;
-  }
-  
-  const block = document.getElementById('home-streak-block');
-  const num = document.getElementById('home-streak-num');
-  const sub = document.getElementById('home-streak-sub');
-  if (streak >= 2 && block) {
-    block.style.display = 'block';
-    if (num) num.textContent = streak;
-    if (sub) sub.textContent = streak >= 7 ? 'Отличная серия! 🏆' : 'Продолжай в том же духе!';
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// ОНБОРДИНГ
-// ════════════════════════════════════════════════════════════════
-
-
-
-function checkOnboarding() {
-  const done = localStorage.getItem('planner_onboarding_done');
-  if (!done) {
-    document.getElementById('onboarding-overlay').style.display = 'block';
-  }
-}
-
-function selectObGoal(goal, el) {
-  obGoal = goal;
-  document.querySelectorAll('.ob-goal-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function toggleObModule(el, mod) {
-  el.classList.toggle('active');
-  obModules[mod] = el.classList.contains('active');
-  const check = el.querySelector('.ob-check');
-  if (check) check.style.opacity = obModules[mod] ? '1' : '0';
-}
-
-function calcObCalories() {
-  const age = parseFloat(document.getElementById('ob-age').value) || 25;
-  const gender = document.getElementById('ob-gender').value;
-  const height = parseFloat(document.getElementById('ob-height').value) || 175;
-  const weight = parseFloat(document.getElementById('ob-weight').value) || 75;
-  const activity = parseFloat(document.getElementById('ob-activity').value) || 1.55;
-  
-  // Формула Миффлина-Сан Жеора
-  let bmr = gender === 'male'
-    ? 10*weight + 6.25*height - 5*age + 5
-    : 10*weight + 6.25*height - 5*age - 161;
-  
-  let tdee = Math.round(bmr * activity);
-  
-  // Корректируем под цель
-  const adjustments = {sport:0, loss:-300, mass:+300, health:0};
-  tdee += adjustments[obGoal] || 0;
-  
-  document.getElementById('ob-calories-result').style.display = 'block';
-  document.getElementById('ob-calories-num').textContent = tdee;
-  document.getElementById('ob-calories-sub').textContent = 
-    obGoal === 'loss' ? 'ккал (дефицит -300)' :
-    obGoal === 'mass' ? 'ккал (профицит +300)' : 'ккал (поддержание)';
-  
-  window._obCalories = tdee;
-}
-
-function obNext(step) {
-  document.getElementById('ob-step-' + step).style.display = 'none';
-  document.getElementById('ob-step-' + (step+1)).style.display = 'block';
-  document.getElementById('ob-dot-' + step).style.background = 'var(--border)';
-  document.getElementById('ob-dot-' + (step+1)).style.background = 'var(--neon)';
-  
-  if (step === 1) {
-    const name = document.getElementById('ob-name').value.trim();
-    if (!name) { document.getElementById('ob-name').focus(); document.getElementById('ob-step-1').style.display = 'block'; document.getElementById('ob-step-2').style.display = 'none'; return; }
-  }
-}
-
-function finishOnboarding() {
-  const name = document.getElementById('ob-name').value.trim() || 'Пользователь';
-  const s = JSON.parse(localStorage.getItem('planner_settings') || '{}');
-  s.name = name;
-  s.goal = obGoal;
-  if (window._obCalories) s.calGoal = window._obCalories;
-  
-  const age = document.getElementById('ob-age').value;
-  const height = document.getElementById('ob-height').value;
-  const weight = document.getElementById('ob-weight').value;
-  if (age) s.age = age;
-  if (height) s.height = height;
-  if (weight) s.weightStart = weight;
-  
-  // Сохраняем модули
-  s.modules = obModules;
-  
-  localStorage.setItem('planner_settings', JSON.stringify(s));
-  localStorage.setItem('planner_onboarding_done', '1');
-  
-  // Применяем настройки
-  loadSettings();
-  
-  // Скрываем онбординг
-  document.getElementById('onboarding-overlay').style.display = 'none';
-  
-  // Показываем приветствие
-  const greet = document.getElementById('home-greeting');
-  if (greet) greet.textContent = 'Привет, ' + name + ' 👋';
-  
-  window.CALORIE_GOAL = window._obCalories || 2500;
-}
-
-// ════════════════════════════════════════════════════════════════
-// ОФЛАЙН / ОНЛАЙН
-// ════════════════════════════════════════════════════════════════
-
-let offlineQueue = JSON.parse(localStorage.getItem('planner_offline_queue') || '[]');
-
-function updateOnlineStatus() {
-  isOnline = navigator.onLine;
-  const dot = document.getElementById('online-dot');
-  const lbl = document.getElementById('online-label');
-  if (dot) {
-    dot.style.background = isOnline ? 'var(--green)' : 'var(--orange)';
-    dot.style.boxShadow = isOnline ? '0 0 6px var(--green)' : '0 0 6px var(--orange)';
-  }
-  if (lbl) lbl.textContent = isOnline ? 'Онлайн' : 'Офлайн — данные сохранены локально';
-  
-  if (isOnline && offlineQueue.length > 0) {
-    syncOfflineQueue();
-  }
-}
-
-async function syncOfflineQueue() {
-  if (!offlineQueue.length || !isOnline) return;
-  const queue = [...offlineQueue];
-  offlineQueue = [];
-  localStorage.setItem('planner_offline_queue', '[]');
-  
-  let synced = 0;
-  for (const item of queue) {
-    try {
-      await fetch(item.url, {
-        method: item.method,
-        headers: item.headers,
-        body: item.body,
-      });
-      synced++;
-    } catch {
-      offlineQueue.push(item);
-    }
-  }
-  localStorage.setItem('planner_offline_queue', JSON.stringify(offlineQueue));
-  
-  if (synced > 0) {
-    showSyncBadge(synced);
-    loadState(() => { renderHome(); });
-  }
-}
-
-function showSyncBadge(count) {
-  const toast = document.createElement('div');
-  toast.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-    background:var(--green);color:#000;padding:8px 20px;border-radius:20px;
-    font-size:13px;font-weight:700;z-index:9999;opacity:1;transition:opacity .5s`;
-  toast.textContent = count ? `✓ Синхронизировано ${count} действий` : '✓ Данные синхронизированы';
-  document.body.appendChild(toast);
-  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 3000);
-}
-
-window.addEventListener('online', () => { isOnline = true; updateOnlineStatus(); });
-window.addEventListener('offline', () => { isOnline = false; updateOnlineStatus(); });
-
-// Переопределяем apiCall для офлайн-поддержки
-
-
-// ════════════════════════════════════════════════════════════════
-// НАСТРОЙКИ
-// ════════════════════════════════════════════════════════════════
-var THEMES = ['violet','blue','green','light','gray','orange'];
-var MODES = ['sport','planner','diet','all'];
-
-function loadSettings() {
-  const s = JSON.parse(localStorage.getItem('planner_settings') || '{}');
-  
-  // Применяем тему
-  const theme = s.theme || 'violet';
-  document.documentElement.setAttribute('data-theme', theme);
-  
-  // Применяем имя
-  if (s.name) {
-    const el = document.getElementById('settings-name');
-    if (el) el.value = s.name;
-    const greet = document.getElementById('home-greeting');
-    if (greet) greet.textContent = 'Привет, ' + s.name + ' 👋';
-  }
-  
-  // Цель калорий
-  if (s.calGoal) {
-    const el = document.getElementById('settings-cal-goal');
-    if (el) el.value = s.calGoal;
-    window.CALORIE_GOAL = parseInt(s.calGoal) || 2500;
-  }
-
-  // Режим
-  if (s.mode) applyMode(s.mode, false);
-  
-  // Модули
-  if (s.modules) {
-    Object.keys(s.modules).forEach(mod => {
-      const el = document.getElementById('mod-' + mod);
-      if (el) {
-        if (s.modules[mod]) el.classList.add('on');
-        else el.classList.remove('on');
-      }
-    });
-  }
-
-  // Уведомления
-  if (s.notifMorning) { const el = document.getElementById('notif-morning'); if(el) el.value = s.notifMorning; }
-  if (s.notifWorkout) { const el = document.getElementById('notif-workout'); if(el) el.value = s.notifWorkout; }
-  if (s.notifEvening) { const el = document.getElementById('notif-evening'); if(el) el.value = s.notifEvening; }
-
-  // Активная тема кнопка
-  THEMES.forEach(t => {
-    const btn = document.getElementById('theme-' + t);
-    if (btn) btn.classList.toggle('active', t === theme);
-  });
-  
-  // Активный режим кнопка
-  const mode = s.mode || 'sport';
-  MODES.forEach(m => {
-    const btn = document.getElementById('mode-' + m);
-    if (btn) btn.classList.toggle('active', m === mode);
-  });
-}
-
-function saveSettings() {
-  const s = JSON.parse(localStorage.getItem('planner_settings') || '{}');
-  const nameEl = document.getElementById('settings-name');
-  if (nameEl) {
-    s.name = nameEl.value;
-    const greet = document.getElementById('home-greeting');
-    if (greet && s.name) greet.textContent = 'Привет, ' + s.name + ' 👋';
-  }
-  const calEl = document.getElementById('settings-cal-goal');
-  if (calEl && calEl.value) { s.calGoal = calEl.value; window.CALORIE_GOAL = parseInt(calEl.value); }
-  const notifM = document.getElementById('notif-morning');
-  if (notifM) s.notifMorning = notifM.value;
-  const notifW = document.getElementById('notif-workout');
-  if (notifW) s.notifWorkout = notifW.value;
-  const notifE = document.getElementById('notif-evening');
-  if (notifE) s.notifEvening = notifE.value;
-  localStorage.setItem('planner_settings', JSON.stringify(s));
-}
-
-function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  THEMES.forEach(t => {
-    const btn = document.getElementById('theme-' + t);
-    if (btn) btn.classList.toggle('active', t === theme);
-  });
-  const s = JSON.parse(localStorage.getItem('planner_settings') || '{}');
-  s.theme = theme;
-  localStorage.setItem('planner_settings', JSON.stringify(s));
-}
-
-function setMode(mode) {
-  applyMode(mode, true);
-  MODES.forEach(m => {
-    const btn = document.getElementById('mode-' + m);
-    if (btn) btn.classList.toggle('active', m === mode);
-  });
-  const s = JSON.parse(localStorage.getItem('planner_settings') || '{}');
-  s.mode = mode;
-  localStorage.setItem('planner_settings', JSON.stringify(s));
-}
-
-function applyMode(mode, save) {
-  // Определяем какие модули включены по режиму
-  const modeModules = {
-    sport:   {workout:1,food:1,supps:1,body:1,tasks:0,ai:1},
-    planner: {workout:0,food:0,supps:1,body:0,tasks:1,ai:0},
-    diet:    {workout:0,food:1,supps:1,body:1,tasks:0,ai:1},
-    all:     {workout:1,food:1,supps:1,body:1,tasks:1,ai:1},
-  };
-  const mods = modeModules[mode] || modeModules.all;
-  Object.keys(mods).forEach(mod => {
-    const el = document.getElementById('mod-' + mod);
-    if (el) { if (mods[mod]) el.classList.add('on'); else el.classList.remove('on'); }
-  });
-}
-
-function toggleModule(el, mod) {
-  el.classList.toggle('on');
-  const s = JSON.parse(localStorage.getItem('planner_settings') || '{}');
-  if (!s.modules) s.modules = {};
-  s.modules[mod] = el.classList.contains('on');
-  localStorage.setItem('planner_settings', JSON.stringify(s));
-}
-
-function toggleThis(el) {
-  el.classList.toggle('on');
-  saveSettings();
-}
-
-// ════════════════════════════════════════════════════════════════
-// ПИТАНИЕ
-// ════════════════════════════════════════════════════════════════
-
-
-
-
-
-
-var MEAL_ORDER = ['завтрак','обед','ужин','перекус'];
-var MEAL_EMOJI = {завтрак:'🌅',обед:'☀️',ужин:'🌙',перекус:'🍪'};
-
-function renderFoodScreen() {
-  updateFoodDateDisplay();
-  loadFoodLog();
-}
-
-function updateFoodDateDisplay() {
-  const d = new Date(currentFoodDate + 'T00:00:00');
-  const today = todayStr();
-  const label = currentFoodDate === today ? 'Сегодня' :
-    d.toLocaleDateString('ru', {weekday:'short', day:'numeric', month:'long'});
-  document.getElementById('food-date-display').textContent = label;
-  document.getElementById('food-date-label').textContent = label;
-}
-
-function foodDateShift(delta) {
-  const d = new Date(currentFoodDate + 'T00:00:00');
-  d.setDate(d.getDate() + delta);
-  currentFoodDate = d.toISOString().slice(0,10);
-  updateFoodDateDisplay();
-  loadFoodLog();
-}
-
-async function loadFoodLog() {
-  try {
-    const data = await apiCall('GET', '/api/food/log?log_date=' + currentFoodDate);
-    renderFoodLog(data || []);
-  } catch(e) {
-    renderFoodLog([]);
-  }
-}
-
-function renderFoodLog(entries) {
-  // Итоги
-  const totCal  = entries.reduce((a,e) => a+(parseFloat(e.calories)||0)*((parseFloat(e.amount)||1)), 0);
-  const totProt = entries.reduce((a,e) => a+(parseFloat(e.protein)||0)*((parseFloat(e.amount)||1)), 0);
-  const totFat  = entries.reduce((a,e) => a+(parseFloat(e.fat)||0)*((parseFloat(e.amount)||1)), 0);
-  const totCarb = entries.reduce((a,e) => a+(parseFloat(e.carbs)||0)*((parseFloat(e.amount)||1)), 0);
-
-  document.getElementById('fd-cal').textContent    = Math.round(totCal);
-  document.getElementById('fd-protein').textContent = totProt.toFixed(1);
-  document.getElementById('fd-fat').textContent     = totFat.toFixed(1);
-  document.getElementById('fd-carbs').textContent   = totCarb.toFixed(1);
-  const pct = Math.min(100, Math.round(totCal/CALORIE_GOAL*100));
-  document.getElementById('fd-cal-bar').style.width = pct + '%';
-  document.getElementById('fd-cal-bar').style.background = pct>100 ? 'var(--red)' : 'var(--neon)';
-
-  // По приёмам пищи
-  const byMeal = {};
-  MEAL_ORDER.forEach(m => byMeal[m] = []);
-  entries.forEach(e => {
-    const m = e.meal_type || 'перекус';
-    if (!byMeal[m]) byMeal[m] = [];
-    byMeal[m].push(e);
-  });
-
-  const container = document.getElementById('food-meals-container');
-  container.innerHTML = MEAL_ORDER.map(meal => {
-    const items = byMeal[meal] || [];
-    const mealCal = items.reduce((a,e) => a+(parseFloat(e.calories)||0)*(parseFloat(e.amount)||1), 0);
-    return `<div class="card" style="margin:0 16px 10px">
-      <div class="card-inner">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${items.length?'10px':'0'}">
-          <div style="font-size:14px;font-weight:700">${MEAL_EMOJI[meal]} ${meal.charAt(0).toUpperCase()+meal.slice(1)}</div>
-          <div style="font-size:12px;color:var(--text-muted)">${items.length ? Math.round(mealCal)+' ккал' : 'пусто'}</div>
-        </div>
-        ${items.map(e => {
-          const cal = Math.round((parseFloat(e.calories)||0)*(parseFloat(e.amount)||1));
-          const prot = ((parseFloat(e.protein)||0)*(parseFloat(e.amount)||1)).toFixed(1);
-          const fat  = ((parseFloat(e.fat)||0)*(parseFloat(e.amount)||1)).toFixed(1);
-          const carb = ((parseFloat(e.carbs)||0)*(parseFloat(e.amount)||1)).toFixed(1);
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--border)">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:600">${e.food_name}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${e.amount||1}г · Б:${prot} Ж:${fat} У:${carb}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="font-size:13px;font-weight:700;color:var(--neon)">${cal}</div>
-              <span onclick="deleteFoodLog(${e.id})" style="color:var(--red);cursor:pointer;font-size:18px;opacity:0.7;line-height:1">×</span>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function renderFoodResults(items) {
-  const resultsEl = document.getElementById('food-search-results');
-  if (!items.length) {
-    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">Ничего не найдено. Попробуй по-английски или отсканируй штрихкод.</div></div>';
-    return;
-  }
-  window._foodResults = items;
-  resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="padding:4px 0">' +
-    items.map((f,i) => `
-      <div onclick="openFoodModal(${i})" style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600">${f.food_name}${f.brand_name?' <span style="color:var(--text-muted);font-weight:400">('+f.brand_name+')</span>':''}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-            ${f.calories||0} ккал · Б:${f.protein||0}г · Ж:${f.fat||0}г · У:${f.carbs||0}г · на 100г
-          </div>
-        </div>
-        <div style="color:var(--neon);font-size:20px;padding-left:10px">+</div>
-      </div>`).join('') +
-  '</div></div>';
-}
-
-function parseOFFProduct(p) {
-  const n = p.nutriments || {};
-  const name = (p.product_name_ru || p.product_name || p.product_name_en || '').trim();
-  const brand = (p.brands || '').split(',')[0].trim();
-  // energy-kcal_100g — ккал, energy_100g может быть кДж (делим на 4.184)
-  let cal = parseFloat(n['energy-kcal_100g'] || 0);
-  if (!cal && n['energy_100g']) {
-    cal = parseFloat(n['energy_100g']) / 4.184; // кДж → ккал
-  }
-  return {
-    food_id: p.id || p._id || '',
-    food_name: name || 'Неизвестный продукт',
-    brand_name: brand,
-    serving_desc: 'на 100г',
-    calories: Math.round(cal),
-    protein:  parseFloat((parseFloat(n.proteins_100g) || 0).toFixed(1)),
-    fat:      parseFloat((parseFloat(n.fat_100g) || 0).toFixed(1)),
-    carbs:    parseFloat((parseFloat(n.carbohydrates_100g) || 0).toFixed(1)),
-  };
-}
-
-async function searchFoodDirect(q) {
-  // Прямой запрос к Open Food Facts из браузера (CORS разрешён)
-  const resp = await fetch(
-    `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=15&fields=id,product_name,product_name_ru,product_name_en,brands,nutriments&sort_by=unique_scans_n`,
-    { headers: { 'User-Agent': 'PlannerApp/1.0' } }
-  );
-  if (!resp.ok) throw new Error('OFF ' + resp.status);
-  const data = await resp.json();
-  return (data.products || [])
-    .map(parseOFFProduct)
-    .filter(p => p.food_name && p.food_name !== 'Неизвестный продукт');
-}
-
-async function searchFood() {
-  const q = document.getElementById('food-search-input').value.trim();
-  if (!q) return;
-  const resultsEl = document.getElementById('food-search-results');
-  resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">⏳ Поиск…</div></div>';
-  try {
-    // Сначала пробуем через бэкенд
-    let items = [];
-    try {
-      const data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
-      items = data.results || [];
-    } catch(e) {
-      // Фоллбек — напрямую из браузера
-      console.warn('Backend search failed, trying direct:', e.message);
-      items = await searchFoodDirect(q);
-    }
-    renderFoodResults(items);
-  } catch(e) {
-    resultsEl.innerHTML = '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--red);font-size:13px">Ошибка поиска: ' + e.message + '</div></div>';
-  }
-}
-
-function openFoodModal(idx) {
-  selectedFood = (window._foodResults || [])[idx];
-  if (!selectedFood) return;
-  document.getElementById('mf-food-name').textContent = selectedFood.food_name + (selectedFood.brand_name ? ' ('+selectedFood.brand_name+')' : '');
-  document.getElementById('mf-food-desc').textContent = selectedFood.serving_desc || 'на 100г';
-  document.getElementById('mf-amount').value = 100;
-  updateFoodModalNutrition();
-  document.getElementById('modal-food-add').classList.add('open');
-}
-
-function updateFoodModalNutrition() {
-  if (!selectedFood) return;
-  const amount = parseFloat(document.getElementById('mf-amount').value) || 100;
-  const ratio = amount / 100;
-  document.getElementById('mf-cal').textContent  = Math.round((selectedFood.calories||0)*ratio);
-  document.getElementById('mf-prot').textContent = ((selectedFood.protein||0)*ratio).toFixed(1);
-  document.getElementById('mf-fat').textContent  = ((selectedFood.fat||0)*ratio).toFixed(1);
-  document.getElementById('mf-carb').textContent = ((selectedFood.carbs||0)*ratio).toFixed(1);
-  document.getElementById('mf-per100').textContent = 
-    `на 100г: ${selectedFood.calories||0} ккал · Б:${selectedFood.protein||0}г · Ж:${selectedFood.fat||0}г · У:${selectedFood.carbs||0}г`;
-}
-
-function changeAmount(delta) {
-  const input = document.getElementById('mf-amount');
-  const current = parseFloat(input.value) || 100;
-  input.value = Math.max(1, current + delta);
-  updateFoodModalNutrition();
-}
-
-function setAmount(val) {
-  document.getElementById('mf-amount').value = val;
-  updateFoodModalNutrition();
-}
-
-async function confirmAddFood() {
-  if (!selectedFood) return;
-  const amount = parseFloat(document.getElementById('mf-amount').value) || 100;
-  const meal   = document.getElementById('mf-meal-type').value;
-  const ratio  = amount / 100;
-  const entry = {
-    date: currentFoodDate,
-    meal_type: meal,
-    food_id: selectedFood.food_id || 'manual',
-    food_name: selectedFood.food_name,
-    serving_desc: selectedFood.serving_desc || '',
-    calories: parseFloat(((selectedFood.calories||0)*ratio).toFixed(1)),
-    protein:  parseFloat(((selectedFood.protein||0)*ratio).toFixed(1)),
-    fat:      parseFloat(((selectedFood.fat||0)*ratio).toFixed(1)),
-    carbs:    parseFloat(((selectedFood.carbs||0)*ratio).toFixed(1)),
-    amount: amount,
-  };
-  await apiCall('POST', '/api/food/log', entry);
-  closeModal('modal-food-add');
-  document.getElementById('food-search-results').innerHTML = '';
-  document.getElementById('food-search-input').value = '';
-  loadFoodLog();
-}
-
-async function deleteFoodLog(id) {
-  await apiCall('DELETE', '/api/food/log/' + id);
-  loadFoodLog();
-}
-
-// ─── СКАНЕР ШТРИХКОДА ──────────────────────────────────────────
-async function openBarcodeScanner() {
-  document.getElementById('modal-barcode').classList.add('open');
-  try {
-    barcodeStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: {ideal:1280}, height: {ideal:720} }
-    });
-    const video = document.getElementById('barcode-video');
-    video.srcObject = barcodeStream;
-    await video.play();
-
-    // Используем BarcodeDetector если доступен
-    if ('BarcodeDetector' in window) {
-      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'] });
-      document.getElementById('barcode-status').textContent = 'Наведи камеру на штрихкод…';
-      barcodeInterval = setInterval(async () => {
-        try {
-          const barcodes = await detector.detect(video);
-          if (barcodes.length > 0) {
-            const code = barcodes[0].rawValue;
-            clearInterval(barcodeInterval);
-            closeBarcodeScanner();
-            await searchByBarcode(code);
-          }
-        } catch(e) {}
-      }, 500);
-    } else {
-      // Фоллбек — ручной ввод
-      document.getElementById('barcode-status').innerHTML =
-        '<div style="margin-top:8px">Автосканирование недоступно в этом браузере.<br><input id="barcode-manual-input" class="input-field" placeholder="Введи код вручную" style="margin-top:8px;text-align:center"><button onclick="manualBarcode()" class="btn-primary" style="width:100%;margin-top:8px">Найти</button></div>';
-    }
-  } catch(e) {
-    document.getElementById('barcode-status').textContent = 'Нет доступа к камере: ' + e.message;
-  }
-}
-
-function closeBarcodeScanner() {
-  if (barcodeStream) { barcodeStream.getTracks().forEach(t=>t.stop()); barcodeStream = null; }
-  if (barcodeInterval) { clearInterval(barcodeInterval); barcodeInterval = null; }
-  document.getElementById('barcode-video').srcObject = null;
-  document.getElementById('modal-barcode').classList.remove('open');
-}
-
-function manualBarcode() {
-  const code = document.getElementById('barcode-manual-input')?.value?.trim();
-  if (code) { closeBarcodeScanner(); searchByBarcode(code); }
-}
-
-async function searchByBarcode(code) {
-  document.getElementById('food-search-results').innerHTML =
-    '<div class="card" style="margin:0 16px"><div class="card-inner" style="text-align:center;padding:16px;color:var(--text-muted)">⏳ Ищу продукт по коду ' + code + '…</div></div>';
-  try {
-    const data = await apiCall('GET', '/api/food/barcode?barcode=' + encodeURIComponent(code));
-    const items = data.results || [];
-    if (!items.length) {
-      document.getElementById('food-search-results').innerHTML =
-        '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--text-muted);font-size:13px">Продукт не найден в базе FatSecret</div></div>';
-      return;
-    }
-    window._foodResults = items;
-    openFoodModal(0);
-  } catch(e) {
-    document.getElementById('food-search-results').innerHTML =
-      '<div class="card" style="margin:0 16px"><div class="card-inner" style="color:var(--red);font-size:13px">Ошибка: ' + e.message + '</div></div>';
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// ИИ АНАЛИЗ
-// ════════════════════════════════════════════════════════════════
-async function runAiAnalysis() {
-  document.getElementById('ai-btn').disabled = true;
-  document.getElementById('ai-loading').style.display = 'block';
-  document.getElementById('ai-result').style.display = 'none';
-  document.getElementById('ai-error').style.display = 'none';
-
-  try {
-    const data = await apiCall('GET', '/api/ai/analysis');
-    document.getElementById('ai-loading').style.display = 'none';
-    document.getElementById('ai-result').style.display = 'block';
-
-    document.getElementById('ai-summary').textContent = data.summary || '—';
-    document.getElementById('ai-weekly').textContent = data.weekly_recommendation || '—';
-    document.getElementById('ai-recovery').textContent = data.recovery_note || '—';
-
-    document.getElementById('ai-achievements').innerHTML = (data.top_achievements || [])
-      .map(a => `<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--neon)">✦</span><span style="font-size:13px">${a}</span></div>`).join('');
-
-    document.getElementById('ai-progress').innerHTML = (data.progress || [])
-      .map(p => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:12.5px">${p.exercise}</div>
-        <div style="font-size:12px;color:var(--green)">+${p.growth_percent}% · ${p.current_1rm} кг</div>
-      </div>`).join('');
-
-    const plateauHTML = (data.plateau || []);
-    document.getElementById('ai-plateau').innerHTML = plateauHTML.length
-      ? plateauHTML.map(p => `<div style="margin-bottom:10px;padding:10px;background:var(--red-soft);border-radius:10px">
-          <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:4px">${p.exercise} — ${p.sessions_stuck} сессий без роста</div>
-          <div style="font-size:12px;color:var(--text-sub)">${p.recommendation}</div>
-        </div>`).join('')
-      : '<div style="color:var(--green);font-size:13px">Плато не обнаружено 🎉</div>';
-
-  } catch(e) {
-    document.getElementById('ai-loading').style.display = 'none';
-    document.getElementById('ai-error').style.display = 'block';
-    document.getElementById('ai-error-msg').textContent = 'Ошибка: ' + e.message;
-  }
-  document.getElementById('ai-btn').disabled = false;
-}
-
-// ════════════════════════════════════════════════════════════════
-// FATSECRET — поиск и лог питания
-// ════════════════════════════════════════════════════════════════
-
-
-
-
-
-
-// ════════════════════════════════════════════════════════════════
-// МЕНЮ ЕЩЁ
-// ════════════════════════════════════════════════════════════════
-function openMore() {
-  // Защита от незагруженного state
-  const tasks = (state && state.tasks) || [];
-  const suppChecks = (state && state.suppChecks) || [];
-  const supplements = (state && state.supplements) || [];
-
-  const done = tasks.filter(t=>t.done).length;
-  const total = tasks.length;
-  const el1 = document.getElementById('more-tasks-count');
-  if (el1) el1.textContent = total ? `${done}/${total} выполнено` : 'нет задач';
-
-  const todayChecks = suppChecks.filter(c => c.date === todayStr() && c.checked).length;
-  const suppSlots = supplements.reduce((a,s) => a + (s.times||[]).length, 0);
-  const el2 = document.getElementById('more-supps-pct');
-  if (el2) el2.textContent = suppSlots ? `${Math.round(todayChecks/suppSlots*100)}% сегодня` : '';
-
-  document.getElementById('modal-more').classList.add('open');
-}
-function closeMore() {
-  document.getElementById('modal-more').classList.remove('open');
 }
 
 // ════════════════════════════════════════════════════════════════
