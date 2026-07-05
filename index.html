@@ -86,7 +86,7 @@ body { background: var(--bg); color: var(--text); }
 .screen::-webkit-scrollbar { display: none; }
 
 /* ── Bottom nav ── */
-.bottom-nav {
+.bottom-nav { pointer-events: auto; z-index: 1000; /* FIXED */
   height: 60px;
   background: var(--bg-deep);
   border-top: 1px solid var(--border);
@@ -96,7 +96,7 @@ body { background: var(--bg); color: var(--text); }
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
 }
-.nav-item {
+.nav-item { cursor: pointer; touch-action: manipulation; user-select: none;
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 3px; cursor: pointer; padding: 6px 0;
@@ -1751,22 +1751,7 @@ var barcodeInterval = null;
 
 // ─────────────────────────────────────────────────────────────────
 
-// Глобальный перехват ошибок
-window.onerror = function(msg, src, line, col, err) {
-  const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff4d6a;color:#fff;padding:10px;font-size:12px;z-index:99999;font-family:monospace;word-break:break-all';
-  div.textContent = 'ERR line ' + line + ': ' + msg;
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 8000);
-  return false;
-};
-window.addEventListener('unhandledrejection', function(e) {
-  const div = document.createElement('div');
-  div.style.cssText = 'position:fixed;top:40px;left:0;right:0;background:#ff9d3d;color:#fff;padding:10px;font-size:12px;z-index:99999;font-family:monospace;word-break:break-all';
-  div.textContent = 'PROMISE ERR: ' + (e.reason?.message || e.reason || 'unknown');
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 8000);
-});
+
 
 // Глобальные переменные (до всего остального)
 
@@ -1983,28 +1968,34 @@ function exportData() {
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
 function go(name) {
-  SCREENS.forEach(s => {
-    const scr = document.getElementById('s-'+s);
-    if (scr) scr.classList.toggle('active', s===name);
-  });
-  ['home','workout','food','charts','tasks','supps','report','ai','body'].forEach(s => {
-    const nv = document.getElementById('nav-'+s);
-    if (nv) nv.classList.toggle('active', s===name || (s==='workout' && (name==='charts')) );
-  });
-  if (name === 'home') renderHome();
-  if (name === 'workout') renderWorkout();
-  if (name === 'charts') renderCharts();
-  if (name === 'body') renderBody();
-  if (name === 'tasks') renderTasks();
-  if (name === 'supps') renderSupps();
-  if (name === 'report') renderReport();
-  if (name === 'food') renderFoodScreen();
-  if (name === 'plan') renderPlan();
-
-  if (name === 'settings') {
-    updateOnlineStatus();
-    const qc = document.getElementById('queue-count');
-    if (qc) qc.textContent = offlineQueue.length;
+  try {
+    // Переключаем экраны
+    (SCREENS || []).forEach(function(s) {
+      var scr = document.getElementById('s-'+s);
+      if (scr) scr.classList.toggle('active', s===name);
+    });
+    // Активная кнопка навигации
+    ['home','workout','food','charts','tasks','supps','report','ai','body','more'].forEach(function(s) {
+      var nv = document.getElementById('nav-'+s);
+      if (nv) nv.classList.toggle('active', s===name);
+    });
+    // Рендеринг экрана
+    try { if (name === 'home') renderHome(); } catch(e) { console.warn('renderHome err:', e); }
+    try { if (name === 'workout') renderWorkout(); } catch(e) { console.warn('renderWorkout err:', e); }
+    try { if (name === 'charts') renderCharts(); } catch(e) { console.warn('renderCharts err:', e); }
+    try { if (name === 'body') renderBody(); } catch(e) { console.warn('renderBody err:', e); }
+    try { if (name === 'tasks') renderTasks(); } catch(e) { console.warn('renderTasks err:', e); }
+    try { if (name === 'supps') renderSupps(); } catch(e) { console.warn('renderSupps err:', e); }
+    try { if (name === 'report') renderReport(); } catch(e) { console.warn('renderReport err:', e); }
+    try { if (name === 'food') renderFoodScreen(); } catch(e) { console.warn('renderFood err:', e); }
+    try { if (name === 'plan') renderPlan(); } catch(e) { console.warn('renderPlan err:', e); }
+    if (name === 'settings') {
+      try { updateOnlineStatus(); } catch(e) {}
+      var qc = document.getElementById('queue-count');
+      if (qc) qc.textContent = (offlineQueue||[]).length;
+    }
+  } catch(e) {
+    console.error('go() error:', e);
   }
 }
 
@@ -2012,6 +2003,8 @@ function go(name) {
 // HOME
 // ════════════════════════════════════════════════════════════════
 function renderHome() {
+  if (!state) return; // ждём загрузки
+  try {
   // Дата
   const today = new Date();
   const dateEl = document.getElementById('home-date-sub');
@@ -2058,6 +2051,7 @@ function renderHome() {
 
   // Калории
   loadHomeFoodStats();
+  } catch(e) { console.warn('renderHome:', e); }
 }
 
 // ════════════════════════════════════════════════════════════════
