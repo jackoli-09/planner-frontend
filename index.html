@@ -63,7 +63,7 @@ body { background: var(--bg); color: var(--text); }
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
 }
-.nav-item {
+.nav-item { background:none; border:none; font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent;
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 3px; cursor: pointer; padding: 6px 0;
@@ -780,24 +780,24 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 
 <!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
 <div class="bottom-nav">
-  <div class="nav-item active" id="nav-home" onclick="go('home')">
+  <button class="nav-item active" id="nav-home" onclick="go('home')">
     <div class="nav-icon">🏠</div><div class="nav-label">Главная</div>
-  </div>
-  <div class="nav-item" id="nav-workout" onclick="go('workout')">
+  </button>
+  <button class="nav-item" id="nav-workout" onclick="go('workout')">
     <div class="nav-icon">🏋️</div><div class="nav-label">Трен.</div>
-  </div>
-  <div class="nav-item" id="nav-tasks" onclick="go('tasks')">
+  </button>
+  <button class="nav-item" id="nav-tasks" onclick="go('tasks')">
     <div class="nav-icon">✅</div><div class="nav-label">Задачи</div>
-  </div>
-  <div class="nav-item" id="nav-supps" onclick="go('supps')">
+  </button>
+  <button class="nav-item" id="nav-supps" onclick="go('supps')">
     <div class="nav-icon">💊</div><div class="nav-label">Добавки</div>
-  </div>
-  <div class="nav-item" id="nav-report" onclick="go('report')">
+  </button>
+  <button class="nav-item" id="nav-report" onclick="go('report')">
     <div class="nav-icon">🗓</div><div class="nav-label">Отчёт</div>
-  </div>
-  <div class="nav-item" id="nav-ai" onclick="go('ai')">
+  </button>
+  <button class="nav-item" id="nav-ai" onclick="go('ai')">
     <div class="nav-icon">🤖</div><div class="nav-label">ИИ</div>
-  </div>
+  </button>
 </div>
 
 <!-- ═══════════════════════ MODALS ═══════════════════════════ -->
