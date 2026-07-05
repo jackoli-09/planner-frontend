@@ -1288,13 +1288,7 @@ if ('serviceWorker' in navigator) {
           <span style="font-size:20px">⚖️</span>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Вес и калории</div>
         </div>
-        <div onclick="closeMore();go('measures')" style="background:var(--card2);border:1px solid var(--neon);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">🫀</span>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--neon)">Замеры тела</div>
-            <div style="font-size:11px;color:var(--text-muted)">Голограмма + динамика</div>
-          </div>
-        </div>
+
         <div onclick="closeMore();go('plan')" style="background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px">
           <span style="font-size:20px">📅</span>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Программа тренировок</div>
@@ -1567,31 +1561,7 @@ if ('serviceWorker' in navigator) {
     <!-- Голограмма + замеры -->
     <div style="display:flex;gap:12px;padding:0 16px 16px;align-items:flex-start">
       
-      <!-- Голограмма (изолирована в iframe) -->
-      <div style="flex-shrink:0;width:155px;position:relative">
-        <div style="font-size:9px;color:#00d4ff;text-align:center;margin-bottom:4px;font-weight:700;letter-spacing:0.12em;text-shadow:0 0 8px #00d4ff">◈ ГОЛОГРАММА ◈</div>
-        <div style="width:155px;height:310px;border-radius:10px;overflow:hidden;position:relative;background:#000510">
-          <iframe id="holo-frame" src="/hologram.html" 
-            style="width:155px;height:310px;border:none;display:block"
-            loading="lazy">
-          </iframe>
-          <!-- HUD поверх -->
-          <div style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">
-            <svg width="155" height="310" viewBox="0 0 155 310" style="position:absolute;top:0;left:0">
-              <g stroke="#0088bb" stroke-width="1" fill="none" opacity="0.5">
-                <path d="M3,3 L3,12 M3,3 L12,3"/>
-                <path d="M152,3 L152,12 M152,3 L143,3"/>
-                <path d="M3,307 L3,298 M3,307 L12,307"/>
-                <path d="M152,307 L152,298 M152,307 L143,307"/>
-              </g>
-            </svg>
-            <div style="position:absolute;top:6px;left:5px;font-size:7px;color:rgba(0,210,255,0.7);font-family:monospace;line-height:1.7" id="holo-hud-l">CHEST --<br>WAIST --<br>HIPS  --</div>
-            <div style="position:absolute;top:6px;right:5px;font-size:7px;color:rgba(0,210,255,0.7);font-family:monospace;line-height:1.7;text-align:right" id="holo-hud-r">NECK --<br>ARM  --<br>LEG  --</div>
-          </div>
-        </div>
       </div>
-
-            </div>
 
       <!-- Замеры справа -->
       <div style="flex:1">
@@ -1970,7 +1940,7 @@ function exportData() {
 // ════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
-const SCREENS = ['home','workout','charts','body','tasks','supps','report','food','ai','settings','plan','measures'];
+const SCREENS = ['home','workout','charts','body','tasks','supps','report','food','ai','settings','plan'];
 function go(name) {
   SCREENS.forEach(s => {
     const scr = document.getElementById('s-'+s);
@@ -1989,7 +1959,7 @@ function go(name) {
   if (name === 'report') renderReport();
   if (name === 'food') renderFoodScreen();
   if (name === 'plan') renderPlan();
-  if (name === 'measures') { renderMeasures(); setTimeout(initHologram, 100); }
+
   if (name === 'settings') {
     updateOnlineStatus();
     const qc = document.getElementById('queue-count');
