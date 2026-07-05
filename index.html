@@ -1728,6 +1728,23 @@ if ('serviceWorker' in navigator) {
 </div>
 
 <script>
+// Глобальный перехват ошибок
+window.onerror = function(msg, src, line, col, err) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff4d6a;color:#fff;padding:10px;font-size:12px;z-index:99999;font-family:monospace;word-break:break-all';
+  div.textContent = 'ERR line ' + line + ': ' + msg;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 8000);
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;top:40px;left:0;right:0;background:#ff9d3d;color:#fff;padding:10px;font-size:12px;z-index:99999;font-family:monospace;word-break:break-all';
+  div.textContent = 'PROMISE ERR: ' + (e.reason?.message || e.reason || 'unknown');
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 8000);
+});
+
 // ════════════════════════════════════════════════════════════════
 // TELEGRAM WEBAPP INIT
 // ════════════════════════════════════════════════════════════════
