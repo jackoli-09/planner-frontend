@@ -4069,33 +4069,9 @@ async function runAiAnalysis() {
 // ════════════════════════════════════════════════════════════════
 
 
-async function loadFoodLog() {
-  const today = todayStr();
-  try {
-    const data = await apiCall('GET', '/api/food/log?log_date=' + today);
-    const el = document.getElementById('food-log-today');
-    const totEl = document.getElementById('food-totals');
-    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px">Пусто</div>'; totEl.textContent = ''; return; }
-    el.innerHTML = data.map(e => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:12.5px">${e.food_name}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${e.calories} ккал</div>
-        </div>
-        <span onclick="deleteFoodLog(${e.id})" style="color:var(--red);cursor:pointer;font-size:16px;opacity:0.7">×</span>
-      </div>`).join('');
-    const totalCal = data.reduce((a,e) => a + (parseFloat(e.calories)||0), 0);
-    const totalP = data.reduce((a,e) => a + (parseFloat(e.protein)||0), 0);
-    const totalF = data.reduce((a,e) => a + (parseFloat(e.fat)||0), 0);
-    const totalC = data.reduce((a,e) => a + (parseFloat(e.carbs)||0), 0);
-    totEl.textContent = `Итого: ${Math.round(totalCal)} ккал · Б: ${totalP.toFixed(1)}г · Ж: ${totalF.toFixed(1)}г · У: ${totalC.toFixed(1)}г`;
-  } catch(e) {}
-}
 
-async function deleteFoodLog(id) {
-  await apiCall('DELETE', '/api/food/log/' + id);
-  loadFoodLog();
-}
+
+
 
 // ════════════════════════════════════════════════════════════════
 // МЕНЮ ЕЩЁ
