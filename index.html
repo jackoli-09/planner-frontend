@@ -2891,8 +2891,24 @@ let holoTime = 0;
 
 const HOLO_MODEL_URL = 'https://planner-frontend-sable.vercel.app/human_body_base_mesh.glb';
 
+function checkWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl') || c.getContext('experimental-webgl'));
+  } catch(e) { return false; }
+}
+
 function initHologram() {
   if (holoInited) { updateSilhouette(); return; }
+  
+  // Проверяем WebGL
+  if (!checkWebGL()) {
+    const st = document.getElementById('holo-status');
+    if (st) st.textContent = '◈ WebGL недоступен ◈';
+    holoInited = true;
+    return;
+  }
+  
   if (!window.THREE || !window.THREE.GLTFLoader) {
     setTimeout(initHologram, 500); return;
   }
@@ -2908,8 +2924,8 @@ function initHologram() {
 
   // Камера
   holoCamera = new THREE.PerspectiveCamera(40, W/H, 0.01, 50);
-  holoCamera.position.set(0, 1.0, 4.5);
-  holoCamera.lookAt(0, 1.0, 0);
+  holoCamera.position.set(0, 1.0, 7.5);
+  holoCamera.lookAt(0, 1.2, 0);
 
   // Рендерер
   holoRenderer = new THREE.WebGLRenderer({
@@ -3037,9 +3053,8 @@ function animateHologram() {
   if (!holoRenderer) return;
   holoTime += 0.016;
 
-  // Вращение модели
-  holoRotY += 0.004;
-  if (holoModel) holoModel.rotation.y = holoRotY;
+  // Вращение отключено — статичная поза
+  if (holoModel) holoModel.rotation.y = 0.15; // лёгкий поворот для объёма
 
   // Пульсация свечения
   if (holoModel) {
