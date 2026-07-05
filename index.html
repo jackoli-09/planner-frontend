@@ -53,7 +53,7 @@ async function runAiAnalysis() {
 }
 
 // ════ ПИТАНИЕ ════
-var currentFoodDate = todayStr();
+var currentFoodDate = new Date().toISOString().slice(0,10);
 var selectedFood = null;
 var CALORIE_GOAL = 2500;
 var MEAL_ORDER = ['завтрак','обед','ужин','перекус'];
@@ -1369,7 +1369,7 @@ var HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","e
 
 let currentMuscle = 'Грудь + Трицепс';
 let currentBodyTab = 'weight';
-let selectedSuppDate = todayStr();
+let selectedSuppDate = new Date().toISOString().slice(0,10);
 let reportMonthOffset = 0; // 0 = current month
 let progChart=null, avgChart=null, weightChart=null, calChart=null;
 
