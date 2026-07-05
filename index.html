@@ -445,6 +445,23 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   background: var(--neon-soft); padding: 3px 9px; border-radius: 8px;
   margin-left: auto;
 }
+
+/* Принудительная светлая тема — переопределяем всё */
+html, body, #app, .screen, .screen.active {
+  background: #f5f4f0 !important;
+  background-color: #f5f4f0 !important;
+  color: #1a1a1a !important;
+}
+.page-header {
+  background: #f5f4f0 !important;
+}
+.bottom-nav, .nav {
+  background: #ffffff !important;
+}
+.card {
+  background: #ffffff !important;
+  border-color: #e8e4dc !important;
+}
 </style>
 </head>
 <body>
