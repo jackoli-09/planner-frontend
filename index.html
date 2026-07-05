@@ -38,15 +38,22 @@ html, body {
 body { background: var(--bg); color: var(--text); }
 
 #app {
-  height: 100vh;
   display: flex;
   flex-direction: column;
+  height: 100vh;
   background: var(--bg);
   overflow: hidden;
 }
 
-.screen { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 70px; }
-.screen.active { display: block; }
+.screen {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 70px;
+  background: var(--bg);
+}
+.screen.active { display: block; background: var(--bg); }
 .screen::-webkit-scrollbar { display: none; }
 
 /* ── Bottom nav ── */
@@ -105,11 +112,8 @@ body { background: var(--bg); color: var(--text); }
 
 /* ── Headers ── */
 .page-header {
-  padding: 20px 16px 22px;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(160deg, #1a0a2e 0%, #0a0a12 100%);
-  border-bottom: 1px solid var(--border);
+  padding: 16px 16px 10px;
+  background: var(--bg);
 }
 .page-header::after {
   content: '';
@@ -291,7 +295,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; transition: all .15s;
 }
-.task-cb.done { background: var(--green); border-color: var(--green); color: #04261c; }
+.task-cb.done { background: var(--green); border-color: var(--green); color: var(--bg); }
 .task-body { flex: 1; }
 .task-text { font-size: 13px; color: var(--text); line-height: 1.4; }
 .task-text.done { text-decoration: line-through; color: var(--text-muted); }
