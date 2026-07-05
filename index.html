@@ -509,8 +509,6 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   margin-left: auto;
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1569,31 +1567,28 @@ if ('serviceWorker' in navigator) {
     <!-- Голограмма + замеры -->
     <div style="display:flex;gap:12px;padding:0 16px 16px;align-items:flex-start">
       
-      <!-- Голограмма GLB + Three.js -->
-      <div style="flex-shrink:0;width:160px;position:relative">
+      <!-- Голограмма (изолирована в iframe) -->
+      <div style="flex-shrink:0;width:155px;position:relative">
         <div style="font-size:9px;color:#00d4ff;text-align:center;margin-bottom:4px;font-weight:700;letter-spacing:0.12em;text-shadow:0 0 8px #00d4ff">◈ ГОЛОГРАММА ◈</div>
-        <div id="holo-3d" style="width:160px;height:320px;border-radius:10px;overflow:hidden;background:radial-gradient(ellipse at 50% 35%, #001428 0%, #000510 100%);position:relative">
-          <canvas id="holo-canvas" width="160" height="320" style="width:160px;height:320px;display:block"></canvas>
-          <!-- HUD -->
-          <div style="position:absolute;top:6px;left:5px;font-size:7px;color:rgba(0,210,255,0.6);font-family:monospace;line-height:1.7;pointer-events:none" id="holo-hud-l">
-            CHEST --cm<br>WAIST --cm<br>HIPS  --cm
+        <div style="width:155px;height:310px;border-radius:10px;overflow:hidden;position:relative;background:#000510">
+          <iframe id="holo-frame" src="/hologram.html" 
+            style="width:155px;height:310px;border:none;display:block"
+            sandbox="allow-scripts allow-same-origin"
+            loading="lazy">
+          </iframe>
+          <!-- HUD поверх -->
+          <div style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">
+            <svg width="155" height="310" viewBox="0 0 155 310" style="position:absolute;top:0;left:0">
+              <g stroke="#0088bb" stroke-width="1" fill="none" opacity="0.5">
+                <path d="M3,3 L3,12 M3,3 L12,3"/>
+                <path d="M152,3 L152,12 M152,3 L143,3"/>
+                <path d="M3,307 L3,298 M3,307 L12,307"/>
+                <path d="M152,307 L152,298 M152,307 L143,307"/>
+              </g>
+            </svg>
+            <div style="position:absolute;top:6px;left:5px;font-size:7px;color:rgba(0,210,255,0.7);font-family:monospace;line-height:1.7" id="holo-hud-l">CHEST --<br>WAIST --<br>HIPS  --</div>
+            <div style="position:absolute;top:6px;right:5px;font-size:7px;color:rgba(0,210,255,0.7);font-family:monospace;line-height:1.7;text-align:right" id="holo-hud-r">NECK --<br>ARM  --<br>LEG  --</div>
           </div>
-          <div style="position:absolute;top:6px;right:5px;font-size:7px;color:rgba(0,210,255,0.6);font-family:monospace;line-height:1.7;text-align:right;pointer-events:none" id="holo-hud-r">
-            NECK --cm<br>ARM  --cm<br>LEG  --cm
-          </div>
-          <!-- Угловые рамки -->
-          <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" viewBox="0 0 160 320">
-            <g stroke="#0088bb" stroke-width="1" fill="none" opacity="0.5">
-              <path d="M3,3 L3,14 M3,3 L14,3"/>
-              <path d="M157,3 L157,14 M157,3 L146,3"/>
-              <path d="M3,317 L3,306 M3,317 L14,317"/>
-              <path d="M157,317 L157,306 M157,317 L146,317"/>
-            </g>
-            <!-- Сканирующая линия -->
-            <line id="hs-line" x1="8" y1="160" x2="152" y2="160" stroke="#00eeff" stroke-width="0.8" opacity="0.7"/>
-            <rect id="hs-rect" x="8" y="150" width="144" height="20" fill="none" opacity="0"/>
-          </svg>
-          <div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:7px;color:rgba(0,200,255,0.45);font-family:monospace;white-space:nowrap" id="holo-status">◈ LOADING ◈</div>
         </div>
       </div>
 
@@ -2879,219 +2874,11 @@ function renderMeasuresDiff() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// THREE.JS GLB ГОЛОГРАММА
+// ГОЛОГРАММА (изолирована в iframe)
 // ════════════════════════════════════════════════════════════════
-let holoScene, holoCamera, holoRenderer, holoModel;
-let holoAnimFrame = null;
-let holoInited = false;
-let holoRotY = 0;
-let holoScanPos = 0;
-let holoScanDir = 1;
-let holoTime = 0;
-
-const HOLO_MODEL_URL = 'https://planner-frontend-sable.vercel.app/human_body_base_mesh.glb';
-
-function checkWebGL() {
-  try {
-    const c = document.createElement('canvas');
-    return !!(c.getContext('webgl') || c.getContext('experimental-webgl'));
-  } catch(e) { return false; }
-}
-
 function initHologram() {
-  if (holoInited) { updateSilhouette(); return; }
-  
-  // Проверяем WebGL
-  if (!checkWebGL()) {
-    const st = document.getElementById('holo-status');
-    if (st) st.textContent = '◈ WebGL недоступен ◈';
-    holoInited = true;
-    return;
-  }
-  
-  if (!window.THREE || !window.THREE.GLTFLoader) {
-    setTimeout(initHologram, 500); return;
-  }
-
-  const canvas = document.getElementById('holo-canvas');
-  if (!canvas) return;
-
-  const W = 160, H = 320;
-
-  // Сцена
-  holoScene = new THREE.Scene();
-  holoScene.fog = new THREE.FogExp2(0x000510, 0.4);
-
-  // Камера
-  holoCamera = new THREE.PerspectiveCamera(40, W/H, 0.01, 50);
-  holoCamera.position.set(0, 1.0, 7.5);
-  holoCamera.lookAt(0, 1.2, 0);
-
-  // Рендерер
-  holoRenderer = new THREE.WebGLRenderer({
-    canvas, antialias: true, alpha: false
-  });
-  holoRenderer.setSize(W, H);
-  holoRenderer.setClearColor(0x000510, 1);
-  holoRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-  // Освещение (мягкое голубое)
-  holoScene.add(new THREE.AmbientLight(0x001133, 2));
-  const pt1 = new THREE.PointLight(0x00aaff, 3, 10);
-  pt1.position.set(0, 2, 2);
-  holoScene.add(pt1);
-  const pt2 = new THREE.PointLight(0x0044cc, 1.5, 8);
-  pt2.position.set(-2, 0, 1);
-  holoScene.add(pt2);
-
-  // Сетка пола
-  const grid = new THREE.GridHelper(3, 8, 0x003366, 0x001133);
-  grid.position.y = 0;
-  grid.material.opacity = 0.4;
-  grid.material.transparent = true;
-  holoScene.add(grid);
-
-  // Частицы
-  const pGeo = new THREE.BufferGeometry();
-  const pPos = new Float32Array(120 * 3);
-  for (let i = 0; i < 120; i++) {
-    pPos[i*3]   = (Math.random()-0.5)*3;
-    pPos[i*3+1] = Math.random()*4;
-    pPos[i*3+2] = (Math.random()-0.5)*2;
-  }
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos,3));
-  const pMesh = new THREE.Points(pGeo, new THREE.PointsMaterial({
-    color:0x0088cc, size:0.012, transparent:true, opacity:0.6, sizeAttenuation:true
-  }));
-  holoScene.add(pMesh);
-  holoScene.userData.particles = pMesh;
-
-  // Загружаем GLB модель
-  const loader = new THREE.GLTFLoader();
-  const statusEl = document.getElementById('holo-status');
-
-  loader.load(
-    HOLO_MODEL_URL,
-    (gltf) => {
-      const model = gltf.scene;
-
-      // Центрируем модель
-      const box = new THREE.Box3().setFromObject(model);
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 2.8 / maxDim;
-
-      model.position.sub(center);
-      model.scale.setScalar(scale);
-      model.position.y += size.y * scale * 0.5;
-
-      // Применяем голографический материал
-      model.traverse(child => {
-        if (child.isMesh) {
-          // Wireframe поверх
-          const wireMat = new THREE.MeshBasicMaterial({
-            color: 0x004466,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.15,
-          });
-          const wireClone = child.clone();
-          wireClone.material = wireMat;
-          model.add(wireClone);
-
-          // Основной материал — голографический
-          child.material = new THREE.MeshPhongMaterial({
-            color: 0x002244,
-            emissive: 0x0055aa,
-            emissiveIntensity: 0.6,
-            specular: 0x00ccff,
-            shininess: 120,
-            transparent: true,
-            opacity: 0.55,
-            side: THREE.FrontSide,
-          });
-
-          // Контурный материал (backface trick)
-          const outlineMat = new THREE.MeshBasicMaterial({
-            color: 0x00ccff,
-            side: THREE.BackSide,
-            transparent: true,
-            opacity: 0.9,
-          });
-          const outline = child.clone();
-          outline.material = outlineMat;
-          outline.scale.multiplyScalar(1.025);
-          model.add(outline);
-        }
-      });
-
-      holoScene.add(model);
-      holoModel = model;
-      holoInited = true;
-
-      if (statusEl) statusEl.textContent = '◈ SCANNING ◈';
-      updateSilhouette();
-      animateHologram();
-    },
-    (progress) => {
-      const pct = Math.round(progress.loaded / (progress.total||1) * 100);
-      if (statusEl) statusEl.textContent = `◈ LOADING ${pct}% ◈`;
-    },
-    (err) => {
-      console.error('GLB load error:', err);
-      if (statusEl) statusEl.textContent = '◈ ERROR ◈';
-      // Фоллбек — запускаем анимацию без модели
-      holoInited = true;
-      animateHologram();
-    }
-  );
+  updateSilhouette();
 }
-
-function animateHologram() {
-  holoAnimFrame = requestAnimationFrame(animateHologram);
-  if (!holoRenderer) return;
-  holoTime += 0.016;
-
-  // Вращение отключено — статичная поза
-  if (holoModel) holoModel.rotation.y = 0.15; // лёгкий поворот для объёма
-
-  // Пульсация свечения
-  if (holoModel) {
-    holoModel.traverse(child => {
-      if (child.isMesh && child.material.emissive) {
-        child.material.emissiveIntensity = 0.5 + Math.sin(holoTime*1.5)*0.2;
-      }
-    });
-  }
-
-  // Частицы дрейфуют
-  const particles = holoScene && holoScene.userData.particles;
-  if (particles) {
-    const pos = particles.geometry.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) + 0.006;
-      pos.setY(i, y > 4.2 ? -0.2 : y);
-    }
-    pos.needsUpdate = true;
-    particles.material.opacity = 0.4 + Math.sin(holoTime)*0.15;
-  }
-
-  // Сканирующая линия SVG
-  holoScanPos += holoScanDir * 1.5;
-  if (holoScanPos > 310) holoScanDir = -1;
-  if (holoScanPos < 10)  holoScanDir = 1;
-  const hl = document.getElementById('hs-line');
-  const hr = document.getElementById('hs-rect');
-  if (hl) { hl.setAttribute('y1', holoScanPos); hl.setAttribute('y2', holoScanPos); hl.setAttribute('opacity', 0.5+Math.sin(holoTime*3)*0.3); }
-  if (hr) { hr.setAttribute('y', holoScanPos-10); hr.setAttribute('fill', `rgba(0,200,255,${0.06+Math.sin(holoTime*3)*0.04})`); }
-
-  holoRenderer.render(holoScene, holoCamera);
-}
-
-function buildBodyPath() {}  // заглушка — больше не нужна
-
-function animateHoloScan() {}  // заглушка
 
 function updateSilhouette() {
   const current = measuresData[currentMeasureDate] || {};
@@ -3101,29 +2888,21 @@ function updateSilhouette() {
     inputs[f.key] = parseFloat((el && el.value) || current[f.key] || f.base);
   });
 
-  // HUD данные
-  const setHUD = (id, val) => { const e=document.getElementById(id); if(e) e.innerHTML=val; };
-  setHUD('holo-hud-l',
-    `CHEST ${inputs.chest||'--'}cm<br>WAIST ${inputs.waist||'--'}cm<br>HIPS  ${inputs.hips||'--'}cm`);
-  setHUD('holo-hud-r',
-    `NECK ${inputs.neck||'--'}cm<br>ARM  ${inputs.bicep||'--'}cm<br>LEG  ${inputs.thigh||'--'}cm`);
+  // HUD
+  const l = document.getElementById('holo-hud-l');
+  const r = document.getElementById('holo-hud-r');
+  if (l) l.innerHTML = `CHEST ${inputs.chest||'--'}cm<br>WAIST ${inputs.waist||'--'}cm<br>HIPS  ${inputs.hips||'--'}cm`;
+  if (r) r.innerHTML = `NECK ${inputs.neck||'--'}cm<br>ARM  ${inputs.bicep||'--'}cm<br>LEG  ${inputs.thigh||'--'}cm`;
 
-  // Масштабируем модель по замерам
-  if (holoModel) {
-    const cN = inputs.chest / 100;
-    const wN = inputs.waist / 85;
-    const hN = inputs.hips  / 100;
-    const baseScale = 2.8;
-    // Масштабируем по осям: X = ширина (грудь/бёдра среднее), Y = высота (фиксировано), Z = глубина
-    holoModel.scale.set(
-      baseScale * (cN*0.6 + hN*0.4),
-      baseScale,
-      baseScale * (cN*0.5 + wN*0.5)
-    );
+  // Передаём замеры в iframe
+  const frame = document.getElementById('holo-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({type:'measures', data: inputs}, '*');
   }
-
-  if (!holoInited) initHologram();
 }
+
+function buildBodyPath() {}
+function animateHoloScan() {}
 
 // ════════════════════════════════════════════════════════════════
 // ПЛАН ТРЕНИРОВОК
