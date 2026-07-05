@@ -14,6 +14,226 @@ if ('serviceWorker' in navigator) {
     });
   }
 }
+
+// ════ ИИ АНАЛИЗ ════
+async function runAiAnalysis() {
+  var btn = document.getElementById('ai-btn');
+  var loading = document.getElementById('ai-loading');
+  var result = document.getElementById('ai-result');
+  var errDiv = document.getElementById('ai-error');
+  if(btn) btn.disabled = true;
+  if(loading) loading.style.display = 'block';
+  if(result) result.style.display = 'none';
+  if(errDiv) errDiv.style.display = 'none';
+  try {
+    var data = await apiCall('GET', '/api/ai/analysis');
+    if(loading) loading.style.display = 'none';
+    if(result) result.style.display = 'block';
+    var s = document.getElementById('ai-summary');
+    if(s) s.textContent = data.summary || '—';
+    var w = document.getElementById('ai-weekly');
+    if(w) w.textContent = data.weekly_recommendation || '—';
+    var ach = document.getElementById('ai-achievements');
+    if(ach) ach.innerHTML = (data.top_achievements||[]).map(function(a){
+      return '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:13px;color:var(--text)"><span style="color:var(--text-muted)">✦</span>'+a+'</div>';
+    }).join('');
+    var pl = document.getElementById('ai-plateau');
+    if(pl) pl.innerHTML = (data.plateau||[]).length ?
+      (data.plateau||[]).map(function(p){
+        return '<div style="margin-bottom:8px;padding:10px;background:var(--red-soft);border-radius:10px"><div style="font-size:12px;font-weight:600;color:var(--red)">'+p.exercise+' — '+p.sessions_stuck+' сессий без роста</div><div style="font-size:11px;color:var(--text-sub);margin-top:3px">'+p.recommendation+'</div></div>';
+      }).join('') :
+      '<div style="font-size:13px;color:var(--green)">Плато не обнаружено</div>';
+  } catch(e) {
+    if(loading) loading.style.display = 'none';
+    if(errDiv) errDiv.style.display = 'block';
+    var em = document.getElementById('ai-error-msg');
+    if(em) em.textContent = 'Ошибка: ' + e.message;
+  }
+  if(btn) btn.disabled = false;
+}
+
+// ════ ПИТАНИЕ ════
+var currentFoodDate = todayStr();
+var selectedFood = null;
+var CALORIE_GOAL = 2500;
+var MEAL_ORDER = ['завтрак','обед','ужин','перекус'];
+var MEAL_NAMES = {завтрак:'Завтрак',обед:'Обед',ужин:'Ужин',перекус:'Перекус'};
+
+function renderFoodScreen() {
+  var d = new Date(currentFoodDate + 'T00:00:00');
+  var isToday = currentFoodDate === todayStr();
+  var label = isToday ? 'Сегодня' : d.toLocaleDateString('ru',{day:'numeric',month:'long'});
+  var el = document.getElementById('food-date-display');
+  if(el) el.textContent = label;
+  var lbl = document.getElementById('food-date-label');
+  if(lbl) lbl.textContent = label;
+  loadFoodLog();
+}
+
+function foodDateShift(delta) {
+  var d = new Date(currentFoodDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  currentFoodDate = d.toISOString().slice(0,10);
+  renderFoodScreen();
+}
+
+async function loadFoodLog() {
+  try {
+    var data = await apiCall('GET', '/api/food/log?log_date=' + currentFoodDate);
+    renderFoodLog(data || []);
+  } catch(e) { renderFoodLog([]); }
+}
+
+function renderFoodLog(entries) {
+  var totCal = entries.reduce(function(a,e){return a+(parseFloat(e.calories)||0);},0);
+  var totProt = entries.reduce(function(a,e){return a+(parseFloat(e.protein)||0);},0);
+  var totFat = entries.reduce(function(a,e){return a+(parseFloat(e.fat)||0);},0);
+  var totCarb = entries.reduce(function(a,e){return a+(parseFloat(e.carbs)||0);},0);
+
+  var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
+  setEl('fd-cal', Math.round(totCal));
+  setEl('fd-protein', Math.round(totProt));
+  setEl('fd-fat', Math.round(totFat));
+  setEl('fd-carbs', Math.round(totCarb));
+  var bar = document.getElementById('fd-cal-bar');
+  if(bar) bar.style.width = Math.min(100,Math.round(totCal/CALORIE_GOAL*100)) + '%';
+
+  var byMeal = {};
+  MEAL_ORDER.forEach(function(m){byMeal[m]=[];});
+  entries.forEach(function(e){
+    var m = e.meal_type||'перекус';
+    if(!byMeal[m]) byMeal[m]=[];
+    byMeal[m].push(e);
+  });
+
+  var container = document.getElementById('food-meals-container');
+  if(!container) return;
+  container.innerHTML = MEAL_ORDER.map(function(meal){
+    var items = byMeal[meal]||[];
+    var mealCal = items.reduce(function(a,e){return a+(parseFloat(e.calories)||0);},0);
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;overflow:hidden">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:'+(items.length?'1px solid var(--border)':'none')+'">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text)">'+MEAL_NAMES[meal]+'</div>' +
+        '<div style="font-size:12px;color:var(--text-muted)">'+(items.length?Math.round(mealCal)+' ккал':'пусто')+'</div>' +
+      '</div>' +
+      items.map(function(e){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">' +
+          '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+e.food_name+'</div>' +
+          '<div style="font-size:10px;color:var(--text-muted)">'+(e.amount||100)+'г</div></div>' +
+          '<div style="display:flex;align-items:center;gap:10px">' +
+            '<div style="font-size:12px;font-weight:600;color:var(--text)">'+Math.round(parseFloat(e.calories)||0)+'</div>' +
+            '<span onclick="deleteFoodLog('+e.id+')" style="color:var(--red);cursor:pointer;font-size:18px;line-height:1">×</span>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }).join('');
+}
+
+async function searchFood() {
+  var q = document.getElementById('food-search-input').value.trim();
+  if(!q) return;
+  var resultsEl = document.getElementById('food-search-results');
+  if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Поиск...</div>';
+  try {
+    var items = [];
+    try {
+      var data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
+      items = data.results || [];
+    } catch(e) {
+      var resp = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=10&fields=id,product_name,product_name_ru,brands,nutriments');
+      var d2 = await resp.json();
+      items = (d2.products||[]).map(function(p){
+        var n=p.nutriments||{};
+        return {
+          food_id: p.id||'',
+          food_name: p.product_name_ru||p.product_name||'',
+          brand_name: (p.brands||'').split(',')[0],
+          calories: Math.round(parseFloat(n['energy-kcal_100g']||0)),
+          protein: parseFloat((n.proteins_100g||0).toFixed(1)),
+          fat: parseFloat((n.fat_100g||0).toFixed(1)),
+          carbs: parseFloat((n.carbohydrates_100g||0).toFixed(1)),
+        };
+      }).filter(function(p){return p.food_name;});
+    }
+    window._foodResults = items;
+    if(!items.length) {
+      if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Ничего не найдено</div>';
+      return;
+    }
+    if(resultsEl) resultsEl.innerHTML = items.map(function(f,i){
+      return '<div onclick="openFoodModal('+i+')" style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+f.food_name+'</div>' +
+        '<div style="font-size:10px;color:var(--text-muted)">'+(f.calories||0)+' ккал · Б:'+(f.protein||0)+' Ж:'+(f.fat||0)+' У:'+(f.carbs||0)+'</div></div>' +
+        '<div style="font-size:18px;color:var(--text-muted);padding-left:8px">+</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--red);padding:8px 0">Ошибка поиска</div>';
+  }
+}
+
+function openFoodModal(idx) {
+  selectedFood = (window._foodResults||[])[idx];
+  if(!selectedFood) return;
+  var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
+  setEl('mf-food-name', selectedFood.food_name+(selectedFood.brand_name?' ('+selectedFood.brand_name+')':''));
+  document.getElementById('mf-amount').value = 100;
+  updateFoodModalNutrition();
+  document.getElementById('modal-food-add').classList.add('open');
+}
+
+function updateFoodModalNutrition() {
+  if(!selectedFood) return;
+  var amount = parseFloat(document.getElementById('mf-amount').value)||100;
+  var r = amount/100;
+  var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
+  setEl('mf-cal', Math.round((selectedFood.calories||0)*r));
+  setEl('mf-prot', ((selectedFood.protein||0)*r).toFixed(1));
+  setEl('mf-fat', ((selectedFood.fat||0)*r).toFixed(1));
+  setEl('mf-carb', ((selectedFood.carbs||0)*r).toFixed(1));
+  setEl('mf-per100', 'на 100г: '+(selectedFood.calories||0)+' ккал');
+}
+
+function changeAmount(delta) {
+  var inp = document.getElementById('mf-amount');
+  inp.value = Math.max(1,(parseFloat(inp.value)||100)+delta);
+  updateFoodModalNutrition();
+}
+
+function setAmount(val) {
+  document.getElementById('mf-amount').value = val;
+  updateFoodModalNutrition();
+}
+
+async function confirmAddFood() {
+  if(!selectedFood) return;
+  var amount = parseFloat(document.getElementById('mf-amount').value)||100;
+  var meal = document.getElementById('mf-meal-type').value;
+  var r = amount/100;
+  await apiCall('POST','/api/food/log',{
+    date: currentFoodDate,
+    meal_type: meal,
+    food_id: selectedFood.food_id||'manual',
+    food_name: selectedFood.food_name,
+    calories: parseFloat(((selectedFood.calories||0)*r).toFixed(1)),
+    protein: parseFloat(((selectedFood.protein||0)*r).toFixed(1)),
+    fat: parseFloat(((selectedFood.fat||0)*r).toFixed(1)),
+    carbs: parseFloat(((selectedFood.carbs||0)*r).toFixed(1)),
+    amount: amount,
+  });
+  closeModal('modal-food-add');
+  document.getElementById('food-search-results').innerHTML = '';
+  document.getElementById('food-search-input').value = '';
+  loadFoodLog();
+}
+
+async function deleteFoodLog(id) {
+  await apiCall('DELETE','/api/food/log/'+id);
+  loadFoodLog();
+}
+
+
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -826,6 +1046,87 @@ html, body, #app, .screen, .screen.active {
     <div style="height:8px"></div>
   </div>
 
+
+  <!-- Food Screen -->
+  <div class="screen" id="s-food">
+    <div class="page-header">
+      <div style="font-size:20px;font-weight:700;color:var(--text)">Питание</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="food-date-label">Сегодня</div>
+    </div>
+    <!-- Дата -->
+    <div style="display:flex;gap:8px;align-items:center;padding:0 12px 10px">
+      <button onclick="foodDateShift(-1)" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer;font-family:inherit">◀</button>
+      <div style="flex:1;text-align:center;font-size:13px;font-weight:600;color:var(--text)" id="food-date-display">Сегодня</div>
+      <button onclick="foodDateShift(1)" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer;font-family:inherit">▶</button>
+    </div>
+    <!-- Итоги -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin:0 12px 10px;padding:14px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:10px">
+        <div><div style="font-size:20px;font-weight:800;color:var(--text)" id="fd-cal">0</div><div style="font-size:9px;color:var(--text-muted)">ккал</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--green)" id="fd-protein">0</div><div style="font-size:9px;color:var(--text-muted)">белки</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--orange)" id="fd-fat">0</div><div style="font-size:9px;color:var(--text-muted)">жиры</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--blue)" id="fd-carbs">0</div><div style="font-size:9px;color:var(--text-muted)">углев</div></div>
+      </div>
+      <div style="height:4px;background:var(--border);border-radius:2px">
+        <div id="fd-cal-bar" style="height:100%;border-radius:2px;background:var(--text);width:0%;transition:width .3s"></div>
+      </div>
+    </div>
+    <!-- Поиск -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin:0 12px 10px;padding:12px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="food-search-input" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text)" placeholder="Поиск продукта..." onkeydown="if(event.key==='Enter')searchFood()">
+        <button onclick="searchFood()" style="padding:10px 14px;background:var(--text);color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-size:13px">Найти</button>
+      </div>
+      <div id="food-search-results"></div>
+    </div>
+    <!-- Приёмы пищи -->
+    <div id="food-meals-container" style="padding:0 12px"></div>
+    <div style="height:80px"></div>
+  </div>
+
+  <!-- Модалка добавления еды -->
+  <div class="modal-overlay" id="modal-food-add">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Добавить продукт</div>
+      <div class="modal-body">
+        <div style="background:var(--card2);border-radius:12px;padding:12px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:700;color:var(--text)" id="mf-food-name">—</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;text-align:center">
+            <div><div style="font-size:16px;font-weight:700;color:var(--text)" id="mf-cal">0</div><div style="font-size:9px;color:var(--text-muted)">ккал</div></div>
+            <div><div style="font-size:16px;font-weight:700;color:var(--green)" id="mf-prot">0</div><div style="font-size:9px;color:var(--text-muted)">белки</div></div>
+            <div><div style="font-size:16px;font-weight:700;color:var(--orange)" id="mf-fat">0</div><div style="font-size:9px;color:var(--text-muted)">жиры</div></div>
+            <div><div style="font-size:16px;font-weight:700;color:var(--blue)" id="mf-carb">0</div><div style="font-size:9px;color:var(--text-muted)">углев</div></div>
+          </div>
+          <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-top:6px" id="mf-per100">на 100г</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:var(--text-muted)">Количество (г)</label>
+          <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+            <button onclick="changeAmount(-10)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:16px;font-family:inherit">−</button>
+            <input id="mf-amount" type="number" value="100" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;text-align:center;font-size:16px;font-weight:700;font-family:inherit;background:var(--bg);color:var(--text)" oninput="updateFoodModalNutrition()">
+            <button onclick="changeAmount(10)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:16px;font-family:inherit">+</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button onclick="setAmount(50)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">50г</button>
+            <button onclick="setAmount(100)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">100г</button>
+            <button onclick="setAmount(150)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">150г</button>
+            <button onclick="setAmount(200)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">200г</button>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:var(--text-muted)">Приём пищи</label>
+          <select id="mf-meal-type" style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text)">
+            <option value="завтрак">Завтрак</option>
+            <option value="обед" selected>Обед</option>
+            <option value="ужин">Ужин</option>
+            <option value="перекус">Перекус</option>
+          </select>
+        </div>
+        <button onclick="confirmAddFood()" style="width:100%;padding:14px;background:var(--text);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Добавить</button>
+      </div>
+    </div>
+  </div>
 </div><!-- #app -->
 
 <!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
@@ -1212,9 +1513,7 @@ function exportData() {
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
 function go(name) {
-  var allScreens = ['home','workout','charts','body','tasks','supps','report','ai'];
-  // Если есть food — добавляем
-  allScreens.push('food');
+  var allScreens = ['home','workout','charts','body','tasks','supps','report','ai','food'];
   for (var i = 0; i < allScreens.length; i++) {
     var scr = document.getElementById('s-' + allScreens[i]);
     if (scr) {
@@ -1238,6 +1537,8 @@ function go(name) {
   if (moreInd) moreInd.classList.remove('on');
 
   try { if (name === 'home') renderHome(); } catch(e) {}
+  try { if (name === 'food') renderFoodScreen(); } catch(e) {}
+  if (name === 'ai') { var aiBtn=document.getElementById('ai-btn'); }
   try { if (name === 'workout') renderWorkout(); } catch(e) {}
   try { if (name === 'charts') renderCharts(); } catch(e) {}
   try { if (name === 'body') renderBody(); } catch(e) {}
