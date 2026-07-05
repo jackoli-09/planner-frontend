@@ -1147,8 +1147,8 @@ function exportData() {
 // ════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
-var SCREENS = ['home','workout','charts','body','tasks','supps','report','ai'];
 function go(name) {
+  var SCREENS = ['home','workout','charts','body','tasks','supps','report','ai'];
   SCREENS.forEach(s => {
     const scr = document.getElementById('s-'+s);
     if (scr) scr.classList.toggle('active', s===name);
