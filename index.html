@@ -242,8 +242,31 @@ async function deleteFoodLog(id) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+:root {
+  --bg: #f5f4f0;
+  --card: #ffffff;
+  --card2: #f0eee8;
+  --text: #1a1a1a;
+  --text-sub: #56534d;
+  --text-muted: #8a867d;
+  --border: #e8e4dc;
+  --border-light: #d9d3c8;
+  --neon: #6f45e8;
+  --neon2: #4b7bec;
+  --neon-soft: rgba(75, 123, 236, 0.18);
+  --neon-soft2: rgba(75, 123, 236, 0.08);
+  --neon-glow: rgba(75, 123, 236, 0.24);
+  --green: #168a5a;
+  --green-soft: rgba(22, 138, 90, 0.12);
+  --orange: #c26a17;
+  --orange-soft: rgba(194, 106, 23, 0.12);
+  --blue: #2f6fb7;
+  --blue-soft: rgba(47, 111, 183, 0.12);
+  --red: #c0392b;
+  --red-soft: rgba(192, 57, 43, 0.12);
+}
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0;
@@ -666,6 +689,52 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   margin-left: auto;
 }
 
+/* ── MORE MENU ── */
+.more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.more-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.more-action:active { transform: scale(0.99); }
+.more-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.more-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+.more-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 /* Принудительная светлая тема — переопределяем всё */
 html, body, #app, .screen, .screen.active {
   background: #f5f4f0 !important;
@@ -990,44 +1059,38 @@ html, body, #app, .screen, .screen.active {
   <div class="screen" id="s-ai">
     <div class="page-header">
       <div class="ph-title">ИИ-агент</div>
-      <div class="ph-sub">Скоро — анализ и рекомендации</div>
+      <div class="ph-sub">Анализ прогресса и рекомендации</div>
     </div>
 
     <div class="card card-glow">
       <div class="ai-hero">
-        <div class="ai-icon-big">🤖</div>
-        <div class="ai-title">Раздел в разработке</div>
-        <div class="ai-desc">Здесь появится ИИ-агент, который будет анализировать твои данные и давать персональные рекомендации</div>
+        <div class="ai-icon-big">AI</div>
+        <div class="ai-title">Персональный разбор</div>
+        <div class="ai-desc">Анализирует тренировки, динамику веса, плато и подсказывает фокус на следующую неделю</div>
       </div>
+      <button class="btn-primary" id="ai-btn" onclick="runAiAnalysis()" style="margin-bottom:14px">Запустить анализ</button>
     </div>
 
-    <div class="section-label">Что будет уметь</div>
-    <div class="card">
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">📊</div>
-        <div class="ai-feature-text">Анализ плато в силовых — подскажет когда менять программу</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">🍽</div>
-        <div class="ai-feature-text">Рекомендации по калориям на основе цели (набор/сушка)</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">💊</div>
-        <div class="ai-feature-text">Напоминания о пропущенных добавках и взаимодействиях</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">📈</div>
-        <div class="ai-feature-text">Прогноз 1RM и предложения по программе на след. месяц</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
-      <div class="ai-feature-row">
-        <div class="ai-feature-icon">💬</div>
-        <div class="ai-feature-text">Чат с ИИ по твоим данным — задавай вопросы напрямую</div>
-        <div class="ai-badge-soon">Скоро</div>
-      </div>
+    <div class="card" id="ai-loading" style="display:none">
+      <div class="card-inner" style="font-size:13px;color:var(--text-sub)">Собираю данные и готовлю рекомендации...</div>
+    </div>
+
+    <div class="card" id="ai-error" style="display:none">
+      <div class="card-inner" style="font-size:13px;color:var(--red)" id="ai-error-msg">Ошибка анализа</div>
+    </div>
+
+    <div id="ai-result" style="display:none">
+      <div class="section-label">Резюме</div>
+      <div class="card"><div class="card-inner" id="ai-summary" style="font-size:13px;line-height:1.5;color:var(--text-sub)">—</div></div>
+
+      <div class="section-label">Фокус недели</div>
+      <div class="card"><div class="card-inner" id="ai-weekly" style="font-size:13px;line-height:1.5;color:var(--text-sub)">—</div></div>
+
+      <div class="section-label">Достижения</div>
+      <div class="card"><div class="card-inner" id="ai-achievements"></div></div>
+
+      <div class="section-label">Плато</div>
+      <div class="card"><div class="card-inner" id="ai-plateau"></div></div>
     </div>
 
     <div class="section-label">Данные и синхронизация</div>
@@ -1139,44 +1202,56 @@ html, body, #app, .screen, .screen.active {
     <div class="nav-ind-seg" id="nind-more"></div>
   </div>
   <div class="nav-buttons">
-    <button class="nav-item active" id="nav-home" onclick="go('home')">
-      <i class="ti ti-home nav-icon"></i>
+    <button class="nav-item active" id="nav-home" onclick="go('home')" title="Главная">
+      <div class="nav-icon">⌂</div>
       <div class="nav-label">Главная</div>
     </button>
-    <button class="nav-item" id="nav-tasks" onclick="go('tasks')">
-      <i class="ti ti-checkbox nav-icon"></i>
+    <button class="nav-item" id="nav-tasks" onclick="go('tasks')" title="Задачи">
+      <div class="nav-icon">✓</div>
       <div class="nav-label">Задачи</div>
     </button>
-    <button class="nav-item" id="nav-food" onclick="go('food')">
-      <i class="ti ti-salad nav-icon"></i>
+    <button class="nav-item" id="nav-food" onclick="go('food')" title="Питание">
+      <div class="nav-icon">◐</div>
       <div class="nav-label">Питание</div>
     </button>
-    <button class="nav-item" id="nav-workout" onclick="go('workout')">
-      <i class="ti ti-barbell nav-icon"></i>
+    <button class="nav-item" id="nav-workout" onclick="go('workout')" title="Тренировки">
+      <div class="nav-icon">▥</div>
       <div class="nav-label">Трен.</div>
     </button>
-    <button class="nav-item" id="nav-more" onclick="openMore()">
-      <i class="ti ti-dots nav-icon"></i>
+    <button class="nav-item" id="nav-more" onclick="openMore()" title="Еще">
+      <div class="nav-icon">⋯</div>
       <div class="nav-label">Ещё</div>
     </button>
   </div>
-</div><div class="nav-label">Главная</div>
-  </button>
-  <button class="nav-item" id="nav-workout" onclick="go('workout')">
-    <div class="nav-icon">🏋️</div><div class="nav-label">Трен.</div>
-  </button>
-  <button class="nav-item" id="nav-tasks" onclick="go('tasks')">
-    <div class="nav-icon">✅</div><div class="nav-label">Задачи</div>
-  </button>
-  <button class="nav-item" id="nav-supps" onclick="go('supps')">
-    <div class="nav-icon">💊</div><div class="nav-label">Добавки</div>
-  </button>
-  <button class="nav-item" id="nav-report" onclick="go('report')">
-    <div class="nav-icon">🗓</div><div class="nav-label">Отчёт</div>
-  </button>
-  <button class="nav-item" id="nav-ai" onclick="go('ai')">
-    <div class="nav-icon">🤖</div><div class="nav-label">ИИ</div>
-  </button>
+</div>
+
+<div class="modal-overlay" id="modal-more">
+  <div class="modal-sheet">
+    <div class="modal-title">Еще</div>
+    <div class="more-grid">
+      <button class="more-action" onclick="goFromMore('charts')">
+        <span class="more-icon">↗</span>
+        <span><span class="more-title">Прогресс</span><span class="more-sub">Графики и рекорды</span></span>
+      </button>
+      <button class="more-action" onclick="goFromMore('body')">
+        <span class="more-icon">kg</span>
+        <span><span class="more-title">Вес</span><span class="more-sub">Замеры и калории</span></span>
+      </button>
+      <button class="more-action" onclick="goFromMore('supps')">
+        <span class="more-icon">+</span>
+        <span><span class="more-title">Добавки</span><span class="more-sub">Приемы и отметки</span></span>
+      </button>
+      <button class="more-action" onclick="goFromMore('report')">
+        <span class="more-icon">□</span>
+        <span><span class="more-title">Отчет</span><span class="more-sub">Сводка месяца</span></span>
+      </button>
+      <button class="more-action" onclick="goFromMore('ai')" style="grid-column:1 / -1">
+        <span class="more-icon">AI</span>
+        <span><span class="more-title">ИИ-анализ</span><span class="more-sub">Плато, достижения и фокус недели</span></span>
+      </button>
+    </div>
+    <button class="modal-close-btn" onclick="closeModal('modal-more')">Закрыть</button>
+  </div>
 </div>
 
 <!-- ═══════════════════════ MODALS ═══════════════════════════ -->
@@ -1307,10 +1382,11 @@ var tg = window.Telegram?.WebApp;
 if (tg) {
   tg.ready();
   tg.expand();
-  tg.setHeaderColor && tg.setHeaderColor('#0a0a12');
-  tg.setBackgroundColor && tg.setBackgroundColor('#0a0a12');
+  tg.setHeaderColor && tg.setHeaderColor('#f5f4f0');
+  tg.setBackgroundColor && tg.setBackgroundColor('#f5f4f0');
   const u = tg.initDataUnsafe?.user;
-  if (u?.first_name) document.getElementById('user-name').textContent = u.first_name + ' 👋';
+  var userNameEl = document.getElementById('user-name');
+  if (u?.first_name && userNameEl) userNameEl.textContent = u.first_name;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1325,20 +1401,25 @@ function getUserId() {
   if (!demoId) { demoId = String(Date.now()); localStorage.setItem('demo_user_id', demoId); }
   return parseInt(demoId);
 }
-var USER_ID = 0; // инициализируется позже
+var USER_ID = getUserId();
 
 async function apiCall(method, path, body) {
+  var controller = new AbortController();
+  var timeout = setTimeout(function() { controller.abort(); }, 7000);
   try {
     const res = await fetch(API_BASE + path, {
       method,
       headers: { 'Content-Type': 'application/json', 'X-User-Id': String(USER_ID || getUserId() || 0) },
       body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
     if (!res.ok) throw new Error('API error ' + res.status);
     return await res.json();
   } catch (e) {
     console.error('API недоступен, работаем в офлайн-режиме (localStorage):', e);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -1389,6 +1470,41 @@ function formatDate(d) {
 }
 function round1(n) { return Math.round(n * 10) / 10; }
 function calc1rm(w, r) { return round1(w * (1 + r/30)); }
+function asDateStr(value) {
+  if (!value) return '';
+  return String(value).slice(0, 10);
+}
+function asNumber(value, fallback) {
+  var n = parseFloat(value);
+  return Number.isFinite(n) ? n : (fallback || 0);
+}
+function normalizeWorkout(w) {
+  return {
+    ...w,
+    date: asDateStr(w.date),
+    sets: parseInt(w.sets) || 1,
+    reps: parseInt(w.reps) || 1,
+    weight: asNumber(w.weight)
+  };
+}
+function normalizeTask(t) {
+  var prio = t.prio || 'm';
+  if (prio === 'high') prio = 'h';
+  if (prio === 'medium') prio = 'm';
+  if (prio === 'low') prio = 'l';
+  return {...t, prio, dl: asDateStr(t.dl), done: !!t.done};
+}
+function normalizeSupplement(s) {
+  var times = Array.isArray(s.times) ? s.times : [];
+  return {...s, times};
+}
+function normalizeChecks(checks) {
+  var result = {};
+  (checks || []).forEach(c => {
+    if (c.checked !== false) result[`${asDateStr(c.date)}_${c.supp_name}_${c.time_slot}`] = true;
+  });
+  return result;
+}
 
 var NEON_PALETTE = ['#b026ff','#00e5a0','#ff9d3d','#4dabff','#ff4d6a','#d946ef'];
 
@@ -1429,12 +1545,12 @@ function loadStateLocal() {
 }
 
 function applyLoaded(vals) {
-  if (vals.workouts) state.workouts = JSON.parse(vals.workouts);
-  if (vals.tasks) state.tasks = JSON.parse(vals.tasks);
-  if (vals.supps_list) state.supps.list = JSON.parse(vals.supps_list);
+  if (vals.workouts) state.workouts = JSON.parse(vals.workouts).map(normalizeWorkout);
+  if (vals.tasks) state.tasks = JSON.parse(vals.tasks).map(normalizeTask);
+  if (vals.supps_list) state.supps.list = JSON.parse(vals.supps_list).map(normalizeSupplement);
   if (vals.supps_checked) state.supps.checked = JSON.parse(vals.supps_checked);
-  if (vals.body_weight) state.bodyWeight = JSON.parse(vals.body_weight);
-  if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal);
+  if (vals.body_weight) state.bodyWeight = JSON.parse(vals.body_weight).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
+  if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal).map(c => ({date: asDateStr(c.date), cal: parseInt(c.cal || c.calories) || 0}));
 }
 
 // Общая функция сохранения — пишет в localStorage всегда (мгновенный отклик UI),
@@ -1457,15 +1573,12 @@ async function loadState(cb) {
 
   if (workouts !== null) {
     apiAvailable = true;
-    state.workouts = workouts.map(w => ({...w, date: w.date, weight: parseFloat(w.weight)}));
-    state.tasks = tasks.map(t => ({...t, dl: t.dl || ''}));
-    if (supps && supps.length) state.supps.list = supps;
-    state.supps.checked = {};
-    (checks || []).forEach(c => {
-      state.supps.checked[`${c.date}_${c.supp_name}_${c.time_slot}`] = true;
-    });
-    state.bodyWeight = (weight || []).map(w => ({date: w.date, weight: parseFloat(w.weight)}));
-    state.bodyCal = (cal || []).map(c => ({date: c.date, cal: c.calories}));
+    state.workouts = (workouts || []).map(normalizeWorkout);
+    state.tasks = (tasks || []).map(normalizeTask);
+    if (supps && supps.length) state.supps.list = supps.map(normalizeSupplement);
+    state.supps.checked = normalizeChecks(checks);
+    state.bodyWeight = (weight || []).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
+    state.bodyCal = (cal || []).map(c => ({date: asDateStr(c.date), cal: parseInt(c.calories) || 0}));
   } else {
     apiAvailable = false;
     loadStateLocal();
@@ -1483,9 +1596,9 @@ async function maybeImportHistory() {
 
   if (apiAvailable) {
     const result = await apiCall('POST', '/api/workouts/bulk', { workouts: HISTORY_SEED });
-    if (result) state.workouts = HISTORY_SEED.map(w => ({...w}));
+    if (result) state.workouts = HISTORY_SEED.map(normalizeWorkout);
   } else {
-    state.workouts = HISTORY_SEED.map(w => ({...w}));
+    state.workouts = HISTORY_SEED.map(normalizeWorkout);
     saveStateLocal();
   }
   localStorage.setItem(flagKey, '1');
@@ -1533,8 +1646,10 @@ function go(name) {
   // Сбрасываем кнопку Ещё
   var moreBtn = document.getElementById('nav-more');
   var moreInd = document.getElementById('nind-more');
-  if (moreBtn) moreBtn.classList.remove('active');
-  if (moreInd) moreInd.classList.remove('on');
+  var isMoreSection = ['supps','report','charts','body','ai'].includes(name);
+  if (moreBtn) { if (isMoreSection) moreBtn.classList.add('active'); else moreBtn.classList.remove('active'); }
+  if (moreInd) { if (isMoreSection) moreInd.classList.add('on'); else moreInd.classList.remove('on'); }
+  closeMoreMenu();
 
   try { if (name === 'home') renderHome(); } catch(e) {}
   try { if (name === 'food') renderFoodScreen(); } catch(e) {}
@@ -1548,12 +1663,18 @@ function go(name) {
 }
 
 function openMore() {
-  var moreBtn = document.getElementById('nav-more');
-  var moreInd = document.getElementById('nind-more');
-  if (moreBtn) moreBtn.classList.add('active');
-  if (moreInd) moreInd.classList.add('on');
-  // Показываем шторку (если есть) или переходим на supps
-  try { go('supps'); } catch(e) {}
+  var modal = document.getElementById('modal-more');
+  if (modal) modal.classList.add('open');
+}
+
+function closeMoreMenu() {
+  var modal = document.getElementById('modal-more');
+  if (modal) modal.classList.remove('open');
+}
+
+function goFromMore(name) {
+  closeMoreMenu();
+  go(name);
 }
 
 
@@ -1608,7 +1729,7 @@ function renderHome() {
     } else {
       var html_ = '';
       pending.forEach(function(t) {
-        var isPrio = t.prio === 'high';
+        var isPrio = t.prio === 'h';
         html_ += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
           '<div style="width:15px;height:15px;border-radius:50%;border:1.5px solid ' + (isPrio ? '#c0392b' : 'var(--border-light)') + ';flex-shrink:0;"></div>' +
           '<div style="flex:1;">' +
@@ -1649,6 +1770,15 @@ function renderHome() {
   var strkEl = document.getElementById('home-streak');
   if (strkEl) strkEl.textContent = streak ? streak + 'д' : '—';
 
+  var todayCal = (state.bodyCal || []).find(function(e) { return e.date === todayStr_; });
+  var calValue = todayCal ? todayCal.cal : 0;
+  var homeCalToday = document.getElementById('home-cal-today');
+  var homeCalCard = document.getElementById('home-cal-card');
+  var homeCalBar = document.getElementById('home-cal-bar');
+  if (homeCalToday) homeCalToday.textContent = calValue || '—';
+  if (homeCalCard) homeCalCard.textContent = calValue || '—';
+  if (homeCalBar) homeCalBar.style.width = Math.min(100, Math.round(calValue / CALORIE_GOAL * 100)) + '%';
+
   // Тренировка сегодня
   var workoutNameEl = document.getElementById('home-workout-name');
   if (workoutNameEl) {
@@ -1684,19 +1814,21 @@ function renderExercises() {
   const exNames = EXERCISES[currentMuscle] || [];
   const container = document.getElementById('exercise-list');
 
-  const todaySets = state.workouts.filter(w => w.date === today && w.muscle === currentMuscle);
+  const todaySets = state.workouts
+    .map((w, idx) => ({...w, _idx: idx}))
+    .filter(w => w.date === today && w.muscle === currentMuscle);
   const byEx = {};
   todaySets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
 
   const exToShow = [...new Set([...Object.keys(byEx), ...exNames])];
 
-  container.innerHTML = exToShow.map(ex => {
+  var html = exToShow.map(ex => {
     const sets = byEx[ex] || [];
     if (!sets.length) return '';
     const chips = sets.map(s => {
       const orm = calc1rm(s.weight, s.reps);
       const isPR = isPRFor(ex, orm);
-      return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' 🏆':''}</div>`;
+      return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' ★':''} <button onclick="deleteWorkout(${s._idx},${s.id||0})" style="margin-left:6px;border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></div>`;
     }).join('');
     const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
     const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
@@ -1706,6 +1838,13 @@ function renderExercises() {
       <div class="ex-stats">1RM: <strong>${maxRM} кг</strong> · Ср. вес сессии: <strong>${avgW} кг</strong></div>
     </div></div>`;
   }).join('');
+
+  container.innerHTML = html || `<div class="card">
+    <div class="card-inner" style="text-align:center;padding:28px 18px">
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">Сегодня подходов пока нет</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Выбери группу мышц и добавь первый подход. Рекорды и графики обновятся автоматически.</div>
+    </div>
+  </div>`;
 }
 
 function isPRFor(exercise, orm) {
@@ -1740,7 +1879,7 @@ function updateRMPreview() {
   document.getElementById(id)?.addEventListener('input', updateRMPreview);
 });
 
-function saveSet() {
+async function saveSet() {
   const entry = {
     date: todayStr(), muscle: currentMuscle,
     exercise: document.getElementById('m-exercise').value,
@@ -1750,9 +1889,24 @@ function saveSet() {
   };
   state.workouts.push(entry);
   saveState();
-  if (apiAvailable) apiCall('POST', '/api/workouts', entry);
+  if (apiAvailable) {
+    var saved = await apiCall('POST', '/api/workouts', entry);
+    if (saved && saved.id) {
+      entry.id = saved.id;
+      saveState();
+    }
+  }
   closeModal('modal-set');
   renderExercises();
+}
+
+async function deleteWorkout(index, id) {
+  if (index < 0 || index >= state.workouts.length) return;
+  state.workouts.splice(index, 1);
+  saveState();
+  if (apiAvailable && id) await apiCall('DELETE', '/api/workouts/' + id);
+  renderExercises();
+  renderHome();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1993,10 +2147,20 @@ function renderTasks() {
             ${t.cat?`<span class="task-cat">${t.cat}</span>`:''}
           </div>
         </div>
+        <button onclick="deleteTask('${t.id}', event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-weight:800">×</button>
       </div>`).join('');
   }
   renderList(active, 'task-list-active');
   renderList(completed, 'task-list-done');
+}
+
+async function deleteTask(id, event) {
+  if (event) event.stopPropagation();
+  state.tasks = state.tasks.filter(t=>t.id!==id);
+  saveState();
+  if (apiAvailable) await apiCall('DELETE', '/api/tasks/' + encodeURIComponent(id));
+  renderTasks();
+  renderHome();
 }
 
 function toggleTask(id) {
@@ -2250,6 +2414,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 // ════════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════════
+renderHome();
 loadState(() => {
   renderHome();
   renderSupps();
