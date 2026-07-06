@@ -1288,7 +1288,7 @@ html, body, #app, .screen, .screen.active {
 <!-- Add Task Modal -->
 <div class="modal-overlay" id="modal-task">
   <div class="modal-sheet">
-    <div class="modal-title">Новая задача</div>
+    <div class="modal-title" id="m-task-title">Новая задача</div>
     <div class="modal-row">
       <div class="modal-label">Задача</div>
       <input class="modal-input" type="text" id="m-task-text" placeholder="Что нужно сделать?">
@@ -1311,7 +1311,7 @@ html, body, #app, .screen, .screen.active {
         <input class="modal-input" type="text" id="m-task-cat" placeholder="SEO, Личное…">
       </div>
     </div>
-    <button class="btn-primary" onclick="saveTask()">Добавить задачу</button>
+    <button class="btn-primary" id="m-task-submit" onclick="saveTask()">Добавить задачу</button>
     <button class="modal-close-btn" onclick="closeModal('modal-task')">Отмена</button>
   </div>
 </div>
@@ -1416,7 +1416,7 @@ async function apiCall(method, path, body) {
     if (!res.ok) throw new Error('API error ' + res.status);
     return await res.json();
   } catch (e) {
-    console.error('API недоступен, работаем в офлайн-режиме (localStorage):', e);
+    console.warn('API недоступен, работаем в офлайн-режиме (localStorage):', e);
     return null;
   } finally {
     clearTimeout(timeout);
@@ -2069,6 +2069,10 @@ function renderWeightHistory() {
       <span class="be-date">${e.date}</span>
       <span class="be-val">${e.weight} кг</span>
       ${deltaHTML}
+      <span style="display:flex;gap:6px">
+        <button onclick="openEditBody('weight','${e.date}')" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:11px;font-weight:700">Изм.</button>
+        <button onclick="deleteBodyEntry('weight','${e.date}')" style="border:0;background:var(--card2);color:var(--red);border-radius:8px;width:28px;height:28px;cursor:pointer;font-weight:800">×</button>
+      </span>
     </div>`;
   }).join('');
 }
@@ -2080,16 +2084,43 @@ function renderCalHistory() {
   cont.innerHTML = sorted.map(e=>`<div class="body-entry-row">
     <span class="be-date">${e.date}</span>
     <span class="be-val">${e.cal} ккал</span>
+    <span style="display:flex;gap:6px">
+      <button onclick="openEditBody('cal','${e.date}')" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:11px;font-weight:700">Изм.</button>
+      <button onclick="deleteBodyEntry('cal','${e.date}')" style="border:0;background:var(--card2);color:var(--red);border-radius:8px;width:28px;height:28px;cursor:pointer;font-weight:800">×</button>
+    </span>
   </div>`).join('');
 }
 
 function openAddBody(type) {
   document.getElementById('m-body-date').value = todayStr();
+  document.getElementById('m-body-date').disabled = false;
+  document.getElementById('m-body-weight').value = '';
+  document.getElementById('m-body-cal').value = '';
   document.getElementById('m-body-title').textContent = type==='weight' ? 'Добавить замер веса' : 'Добавить калории за день';
   document.getElementById('m-body-weight-row').style.display = type==='weight' ? 'block' : 'none';
   document.getElementById('m-body-cal-row').style.display = type==='cal' ? 'block' : 'none';
   document.getElementById('modal-body').dataset.type = type;
+  document.getElementById('modal-body').dataset.mode = 'add';
   document.getElementById('modal-body').classList.add('open');
+}
+
+function openEditBody(type, date) {
+  const modal = document.getElementById('modal-body');
+  document.getElementById('m-body-date').value = date;
+  document.getElementById('m-body-date').disabled = true;
+  document.getElementById('m-body-title').textContent = type==='weight' ? 'Изменить вес' : 'Изменить калории';
+  document.getElementById('m-body-weight-row').style.display = type==='weight' ? 'block' : 'none';
+  document.getElementById('m-body-cal-row').style.display = type==='cal' ? 'block' : 'none';
+  if (type === 'weight') {
+    const entry = state.bodyWeight.find(e=>e.date===date);
+    document.getElementById('m-body-weight').value = entry ? entry.weight : '';
+  } else {
+    const entry = state.bodyCal.find(e=>e.date===date);
+    document.getElementById('m-body-cal').value = entry ? entry.cal : '';
+  }
+  modal.dataset.type = type;
+  modal.dataset.mode = 'edit';
+  modal.classList.add('open');
 }
 
 function saveBody() {
@@ -2110,7 +2141,22 @@ function saveBody() {
   }
   saveState();
   closeModal('modal-body');
+  document.getElementById('m-body-date').disabled = false;
   renderBody();
+  renderHome();
+}
+
+async function deleteBodyEntry(type, date) {
+  if (type === 'weight') {
+    state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
+    if (apiAvailable) await apiCall('DELETE', '/api/body/weight/' + encodeURIComponent(date));
+  } else {
+    state.bodyCal = state.bodyCal.filter(e=>e.date!==date);
+    if (apiAvailable) await apiCall('DELETE', '/api/body/calories/' + encodeURIComponent(date));
+  }
+  saveState();
+  renderBody();
+  renderHome();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -2147,7 +2193,10 @@ function renderTasks() {
             ${t.cat?`<span class="task-cat">${t.cat}</span>`:''}
           </div>
         </div>
-        <button onclick="deleteTask('${t.id}', event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-weight:800">×</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button onclick="openEditTask('${t.id}', event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;padding:0 9px;height:30px;cursor:pointer;font-size:11px;font-weight:700">Изм.</button>
+          <button onclick="deleteTask('${t.id}', event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-weight:800">×</button>
+        </div>
       </div>`).join('');
   }
   renderList(active, 'task-list-active');
@@ -2174,27 +2223,55 @@ function toggleTask(id) {
 }
 
 function openAddTask() {
+  document.getElementById('modal-task').dataset.mode = 'add';
+  document.getElementById('modal-task').dataset.taskId = '';
+  document.getElementById('m-task-title').textContent = 'Новая задача';
+  document.getElementById('m-task-submit').textContent = 'Добавить задачу';
+  document.getElementById('m-task-text').value = '';
+  document.getElementById('m-task-prio').value = 'm';
   document.getElementById('m-task-dl').value = todayStr();
+  document.getElementById('m-task-cat').value = '';
   document.getElementById('modal-task').classList.add('open');
+}
+
+function openEditTask(id, event) {
+  if (event) event.stopPropagation();
+  const task = state.tasks.find(t=>t.id===id);
+  if (!task) return;
+  const modal = document.getElementById('modal-task');
+  modal.dataset.mode = 'edit';
+  modal.dataset.taskId = id;
+  document.getElementById('m-task-title').textContent = 'Изменить задачу';
+  document.getElementById('m-task-submit').textContent = 'Сохранить изменения';
+  document.getElementById('m-task-text').value = task.text || '';
+  document.getElementById('m-task-prio').value = task.prio || 'm';
+  document.getElementById('m-task-dl').value = task.dl || '';
+  document.getElementById('m-task-cat').value = task.cat || '';
+  modal.classList.add('open');
 }
 
 function saveTask() {
   const text = document.getElementById('m-task-text').value.trim();
   if (!text) return;
-  const newTask = {
-    id: Date.now().toString(), text,
-    prio: document.getElementById('m-task-prio').value,
-    dl: document.getElementById('m-task-dl').value,
-    cat: document.getElementById('m-task-cat').value.trim(),
-    done: false,
-  };
-  state.tasks.push(newTask);
+  const modal = document.getElementById('modal-task');
+  const mode = modal.dataset.mode || 'add';
+  const id = mode === 'edit' ? modal.dataset.taskId : Date.now().toString();
+  let task = state.tasks.find(t=>t.id===id);
+  if (!task) {
+    task = { id, done: false };
+    state.tasks.push(task);
+  }
+  task.text = text;
+  task.prio = document.getElementById('m-task-prio').value;
+  task.dl = document.getElementById('m-task-dl').value;
+  task.cat = document.getElementById('m-task-cat').value.trim();
   saveState();
-  if (apiAvailable) apiCall('POST', '/api/tasks', newTask);
+  if (apiAvailable) apiCall('POST', '/api/tasks', task);
   closeModal('modal-task');
   document.getElementById('m-task-text').value = '';
   document.getElementById('m-task-cat').value = '';
   renderTasks();
+  renderHome();
 }
 
 // ════════════════════════════════════════════════════════════════
