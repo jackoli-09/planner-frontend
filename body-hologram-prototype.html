@@ -3,352 +3,676 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Прототип голограммы тела</title>
+<title>Body Visualizer Prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #101115;
-  --panel: #181a20;
-  --panel-2: #22242b;
-  --text: #f4f1ea;
-  --sub: #bdb7ac;
-  --muted: #858078;
-  --line: #2d313b;
-  --cyan: #69d6ff;
-  --blue: #6d8cff;
-  --green: #45d08d;
-  --orange: #f2a84d;
-  --pink: #ff7a72;
+  --bg: #0f1116;
+  --panel: #171a21;
+  --panel-2: #20242d;
+  --line: #2a2f3a;
+  --text: #f3f5fb;
+  --sub: #a8afbd;
+  --muted: #747c8d;
+  --blue: #4f7cff;
+  --cyan: #78d7ff;
+  --green: #66d38c;
+  --shadow: rgba(0,0,0,.34);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body {
   min-height: 100vh;
   font-family: Manrope, sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at 10% 0%, rgba(105, 214, 255, 0.14), transparent 32%),
-    radial-gradient(circle at 92% 4%, rgba(255, 122, 114, 0.12), transparent 30%),
-    var(--bg);
+  background: var(--bg);
 }
-.app { max-width: 430px; min-height: 100vh; margin: 0 auto; padding: 18px 12px 28px; }
-.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 4px 4px 14px; }
-.eyebrow { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-h1 { margin-top: 5px; font-size: 25px; line-height: 1.08; letter-spacing: 0; }
-.score {
-  min-width: 74px;
-  padding: 9px 10px;
-  border: 1px solid rgba(105,214,255,.24);
-  border-radius: 16px;
-  background: rgba(105,214,255,.08);
-  text-align: center;
+.app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
 }
-.score strong { display: block; font-size: 20px; line-height: 1; }
-.score span { display: block; margin-top: 4px; color: var(--sub); font-size: 9px; font-weight: 700; }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 0 0 12px; }
-.tab {
-  min-height: 38px;
-  border: 1px solid var(--line);
-  border-radius: 13px;
+.topbar {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  color: #171b25;
+}
+.topbar h1 {
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+.lang {
+  border: 1px solid #e2e5ec;
+  border-radius: 14px;
+  padding: 10px 13px;
+  color: #667085;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.workbench {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: calc(100vh - 74px);
+}
+.sidebar {
+  border-right: 1px solid var(--line);
   background: var(--panel);
+  overflow-y: auto;
+}
+.side-inner { padding: 26px 28px 32px; }
+.eyebrow { color: var(--muted); font-size: 13px; font-weight: 800; letter-spacing: .04em; }
+.side-title { margin-top: 4px; font-size: 24px; font-weight: 800; line-height: 1.1; }
+.side-copy { margin-top: 8px; max-width: 290px; color: var(--sub); font-size: 13px; line-height: 1.45; }
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 26px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #12151b;
+}
+.segmented button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 13px;
   color: var(--sub);
+  background: transparent;
   font: inherit;
-  font-size: 11px;
   font-weight: 800;
   cursor: pointer;
 }
-.tab.active { color: #071015; background: linear-gradient(135deg, var(--cyan), #d9f6ff); border-color: transparent; }
-.prototype { display: none; animation: rise .32s both; }
-.prototype.active { display: block; }
-@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.hero-card {
-  position: relative;
-  overflow: hidden;
-  min-height: 440px;
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(24,26,32,.95), rgba(16,17,21,.98)),
-    radial-gradient(circle at 50% 20%, rgba(105,214,255,.18), transparent 34%);
-  box-shadow: 0 20px 60px rgba(0,0,0,.28);
+.segmented button.active { color: var(--text); background: #303542; }
+.section {
+  margin: 24px -28px 0;
+  padding: 22px 28px 0;
+  border-top: 1px solid var(--line);
 }
-.scan-lines {
-  position: absolute;
-  inset: 0;
-  opacity: .2;
-  background: repeating-linear-gradient(180deg, transparent 0 12px, rgba(105,214,255,.2) 13px, transparent 14px);
-  pointer-events: none;
-}
-.holo-zone { position: relative; height: 342px; display: flex; align-items: center; justify-content: center; padding-top: 20px; }
-.halo {
-  position: absolute;
-  width: 230px;
-  height: 230px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(105,214,255,.18), transparent 68%);
-  filter: blur(2px);
-}
-.grid-floor {
-  position: absolute;
-  bottom: 18px;
-  width: 250px;
-  height: 72px;
-  border-radius: 50%;
-  border: 1px solid rgba(105,214,255,.28);
-  background: repeating-radial-gradient(ellipse at center, transparent 0 12px, rgba(105,214,255,.22) 13px 14px);
-  transform: perspective(240px) rotateX(64deg);
-}
-.body-svg { position: relative; width: 190px; height: 296px; filter: drop-shadow(0 0 18px rgba(105,214,255,.38)); }
-.body-part { fill: rgba(105,214,255,.16); stroke: rgba(158,232,255,.9); stroke-width: 2.2; transition: transform .35s ease, fill .35s ease; transform-box: fill-box; transform-origin: center; }
-.body-core { transform: scaleX(var(--core-scale)); fill: rgba(105,214,255,.22); }
-.body-hip { transform: scaleX(var(--hip-scale)); fill: rgba(109,140,255,.18); }
-.body-arm-left { transform: translateX(calc(var(--arm-shift) * -1px)); }
-.body-arm-right { transform: translateX(calc(var(--arm-shift) * 1px)); }
-.target-line {
-  position: absolute;
-  top: 62px;
-  height: 226px;
-  width: calc(118px * var(--target-scale));
-  border: 1px dashed rgba(69,208,141,.72);
-  border-radius: 999px 999px 34px 34px;
-  opacity: .8;
-}
-.marker {
-  position: absolute;
+.control { margin-bottom: 22px; }
+.label-row {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 9px;
-  border: 1px solid rgba(255,255,255,.08);
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.label-row label { font-size: 15px; font-weight: 800; }
+.label-row output { color: #dbe2ee; font-size: 17px; font-weight: 800; }
+.label-row small { color: var(--muted); font-size: 12px; font-weight: 800; }
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--blue);
+}
+.hint {
+  margin-top: -8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.scene {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(86, 117, 255, .08), transparent 30%),
+    #101319;
+}
+.scene-tip {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 3;
+  padding: 14px 18px;
+  border: 1px solid rgba(92,133,255,.65);
   border-radius: 999px;
-  background: rgba(16,17,21,.74);
-  color: var(--sub);
-  font-size: 10px;
+  background: rgba(49, 77, 150, .42);
+  box-shadow: 0 0 28px rgba(79,124,255,.34);
+  color: #f3f6ff;
   font-weight: 800;
   backdrop-filter: blur(10px);
 }
-.marker::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
-.m1 { top: 78px; left: 18px; }
-.m2 { right: 18px; top: 178px; }
-.m3 { left: 24px; bottom: 42px; }
-.summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  padding: 0 12px 12px;
+.canvas-wrap {
+  position: absolute;
+  inset: 0;
 }
-.metric {
-  min-height: 72px;
-  padding: 12px 8px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255,255,255,.035);
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-.metric strong { display: block; font-size: 18px; line-height: 1; }
-.metric span { display: block; margin-top: 7px; color: var(--muted); font-size: 9px; font-weight: 800; }
-.panel { margin-top: 10px; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); overflow: hidden; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-bottom: 1px solid var(--line); }
-.panel-title { font-size: 13px; font-weight: 800; }
-.panel-sub { color: var(--muted); font-size: 10px; font-weight: 700; }
-.controls { padding: 14px; display: grid; gap: 13px; }
-.control-row { display: grid; grid-template-columns: 76px 1fr 44px; align-items: center; gap: 10px; }
-.control-row label { color: var(--sub); font-size: 11px; font-weight: 800; }
-.control-row output { color: var(--text); font-size: 12px; font-weight: 800; text-align: right; }
-input[type="range"] { width: 100%; accent-color: var(--cyan); }
-.timeline { padding: 14px; display: grid; gap: 10px; }
-.week {
-  display: grid;
-  grid-template-columns: 54px 1fr 42px;
-  gap: 10px;
-  align-items: center;
-  color: var(--sub);
-  font-size: 11px;
+.height-ruler {
+  position: absolute;
+  right: 34px;
+  top: 116px;
+  bottom: 86px;
+  width: 98px;
+  border-right: 1px solid rgba(172,181,197,.42);
+  color: #cbd2de;
+  pointer-events: none;
+}
+.ruler-line {
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(172,181,197,.38);
+}
+.ruler-line::after {
+  content: attr(data-label);
+  position: absolute;
+  right: -70px;
+  top: -11px;
+  width: 58px;
+  font-size: 15px;
+  font-weight: 800;
+  color: rgba(223,230,240,.78);
+}
+.ruler-height {
+  position: absolute;
+  right: -84px;
+  top: 22%;
+  font-size: 26px;
   font-weight: 800;
 }
-.bar { height: 9px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
-.fill { height: 100%; width: var(--w); border-radius: inherit; background: linear-gradient(90deg, var(--pink), var(--cyan)); }
-.compare {
+.stats {
+  position: absolute;
+  left: 28px;
+  right: 162px;
+  bottom: 24px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  padding: 12px;
 }
-.mini-holo {
-  min-height: 250px;
-  border: 1px solid var(--line);
+.stat {
+  min-height: 82px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.07);
   border-radius: 18px;
-  background: radial-gradient(circle at 50% 30%, rgba(105,214,255,.13), transparent 38%), rgba(255,255,255,.025);
-  display: grid;
-  place-items: center;
-  position: relative;
-  overflow: hidden;
+  background: rgba(23,26,33,.76);
+  box-shadow: 0 12px 34px rgba(0,0,0,.16);
+  backdrop-filter: blur(10px);
 }
-.mini-holo h3 { position: absolute; top: 12px; left: 12px; font-size: 12px; }
-.mini-holo p { position: absolute; bottom: 12px; left: 12px; right: 12px; color: var(--muted); font-size: 10px; font-weight: 700; }
-.mini-shape {
-  width: var(--mw);
-  height: 168px;
-  border-radius: 52px 52px 34px 34px;
-  border: 2px solid rgba(105,214,255,.8);
-  background: rgba(105,214,255,.14);
-  box-shadow: 0 0 22px rgba(105,214,255,.28);
+.stat strong { display: block; font-size: 22px; line-height: 1; }
+.stat span { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; font-weight: 800; }
+.mode-tabs {
+  position: absolute;
+  left: 28px;
+  top: 24px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
 }
-.cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-.btn {
-  min-height: 44px;
-  border: 0;
-  border-radius: 15px;
+.mode-tabs button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(23,26,33,.8);
+  color: var(--sub);
   font: inherit;
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
 }
-.btn.primary { color: #071015; background: linear-gradient(135deg, var(--cyan), #e0f8ff); }
-.btn.ghost { color: var(--text); background: var(--panel-2); border: 1px solid var(--line); }
-.note { margin: 14px 4px 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-@media (max-width: 360px) {
-  h1 { font-size: 22px; }
-  .hero-card { min-height: 420px; }
-  .holo-zone { height: 320px; }
-  .marker { font-size: 9px; }
+.mode-tabs button.active { color: #091118; background: linear-gradient(135deg, var(--cyan), #e4f9ff); border-color: transparent; }
+.compare-panel {
+  position: absolute;
+  left: 28px;
+  top: 78px;
+  z-index: 3;
+  width: min(320px, calc(100% - 56px));
+  display: none;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(23,26,33,.86);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.compare-panel.active { display: block; }
+.compare-row {
+  display: grid;
+  grid-template-columns: 64px 1fr 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 800;
+}
+.compare-row:last-child { border-bottom: 0; }
+.bar { height: 9px; border-radius: 999px; background: #2a303b; overflow: hidden; }
+.fill { height: 100%; width: var(--w); border-radius: inherit; background: linear-gradient(90deg, #ff8279, var(--cyan)); }
+@media (max-width: 900px) {
+  .topbar { min-height: auto; padding: 14px 16px; }
+  .lang { display: none; }
+  .workbench { display: flex; flex-direction: column; min-height: 0; }
+  .sidebar { order: 2; border-right: 0; border-top: 1px solid var(--line); }
+  .side-inner { padding: 18px 16px 28px; }
+  .scene { order: 1; height: 620px; }
+  .scene-tip { left: 16px; right: 16px; top: 16px; text-align: center; font-size: 13px; }
+  .mode-tabs { left: 16px; top: 76px; }
+  .height-ruler { right: 20px; top: 150px; bottom: 90px; transform: scale(.82); transform-origin: right center; }
+  .stats { left: 12px; right: 12px; bottom: 12px; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .stat { min-height: 64px; padding: 10px 8px; border-radius: 14px; }
+  .stat strong { font-size: 16px; }
+  .stat span { font-size: 9px; }
+  .compare-panel { top: auto; bottom: 90px; left: 16px; }
+}
+@media (max-width: 420px) {
+  .topbar h1 { font-size: 22px; }
+  .scene { height: 590px; }
+  .height-ruler { display: none; }
 }
 </style>
 </head>
 <body>
 <main class="app">
-  <header class="top">
-    <div>
-      <div class="eyebrow">Body hologram concept</div>
-      <h1>Тело как понятный прогресс</h1>
-    </div>
-    <div class="score"><strong id="score">72</strong><span>индекс формы</span></div>
+  <header class="topbar">
+    <h1>3D-модель тела по параметрам</h1>
+    <div class="lang">Русский</div>
   </header>
 
-  <nav class="tabs" aria-label="Прототипы">
-    <button class="tab active" data-target="p1">Главный</button>
-    <button class="tab" data-target="p2">Сравнение</button>
-    <button class="tab" data-target="p3">Ввод</button>
-  </nav>
+  <div class="workbench">
+    <aside class="sidebar">
+      <div class="side-inner">
+        <div class="side-title">Body Visualizer</div>
+        <p class="side-copy">Фигура меняется в реальном времени по росту, весу, проценту жира и мышечной массе.</p>
 
-  <section class="prototype active" id="p1">
-    <div class="hero-card">
-      <div class="scan-lines"></div>
-      <div class="holo-zone" id="holo">
-        <div class="halo"></div>
-        <div class="target-line"></div>
-        <div class="grid-floor"></div>
-        <svg class="body-svg" viewBox="0 0 190 296" role="img" aria-label="Голограмма тела">
-          <circle class="body-part" cx="95" cy="34" r="24"/>
-          <path class="body-part body-core" d="M67 65 C56 84 54 122 61 154 C66 180 124 180 129 154 C136 122 134 84 123 65 C111 56 79 56 67 65 Z"/>
-          <path class="body-part body-hip" d="M64 158 C62 178 66 195 78 207 L112 207 C124 195 128 178 126 158 C113 166 77 166 64 158 Z"/>
-          <path class="body-part body-arm-left" d="M60 75 C40 92 31 125 28 162 C27 174 43 176 47 164 C54 143 56 116 70 93 Z"/>
-          <path class="body-part body-arm-right" d="M130 75 C150 92 159 125 162 162 C163 174 147 176 143 164 C136 143 134 116 120 93 Z"/>
-          <path class="body-part" d="M80 207 C73 229 67 250 65 279 C64 291 83 292 86 281 C92 255 96 234 95 208 Z"/>
-          <path class="body-part" d="M110 207 C117 229 123 250 125 279 C126 291 107 292 104 281 C98 255 94 234 95 208 Z"/>
-        </svg>
-        <div class="marker m1">грудь <span id="chestOut">102</span></div>
-        <div class="marker m2">талия <span id="waistOut">86</span></div>
-        <div class="marker m3">вес <span id="weightOut">82.4</span></div>
-      </div>
-      <div class="summary">
-        <div class="metric"><strong id="deltaWeight">-4.8</strong><span>кг за период</span></div>
-        <div class="metric"><strong id="deltaWaist">-7</strong><span>см талия</span></div>
-        <div class="metric"><strong id="targetPct">58%</strong><span>до цели</span></div>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-head">
-        <div><div class="panel-title">Живая модель</div><div class="panel-sub">двигай параметры и смотри, как меняется силуэт</div></div>
-      </div>
-      <div class="controls">
-        <div class="control-row"><label for="weight">Вес</label><input id="weight" type="range" min="65" max="105" value="82"><output id="weightVal">82 кг</output></div>
-        <div class="control-row"><label for="waist">Талия</label><input id="waist" type="range" min="68" max="112" value="86"><output id="waistVal">86 см</output></div>
-        <div class="control-row"><label for="hip">Бедра</label><input id="hip" type="range" min="82" max="122" value="101"><output id="hipVal">101 см</output></div>
-      </div>
-    </div>
-  </section>
+        <div class="segmented" aria-label="Пол">
+          <button class="active" data-sex="male">Мужчина</button>
+          <button data-sex="female">Женщина</button>
+        </div>
+        <div class="segmented" aria-label="Единицы">
+          <button class="active">Метрика (см/кг)</button>
+          <button>Дюймы/фунты</button>
+        </div>
 
-  <section class="prototype" id="p2">
-    <div class="panel">
-      <div class="panel-head">
-        <div><div class="panel-title">До / сейчас / цель</div><div class="panel-sub">понятная визуализация снижения</div></div>
-      </div>
-      <div class="compare">
-        <div class="mini-holo"><h3>Старт</h3><div class="mini-shape" style="--mw:108px"></div><p>87.2 кг · талия 93 см</p></div>
-        <div class="mini-holo"><h3>Сейчас</h3><div class="mini-shape" style="--mw:92px"></div><p>82.4 кг · талия 86 см</p></div>
-      </div>
-      <div class="timeline">
-        <div class="week"><span>Нед. 1</span><div class="bar"><div class="fill" style="--w:22%"></div></div><span>-0.8</span></div>
-        <div class="week"><span>Нед. 2</span><div class="bar"><div class="fill" style="--w:38%"></div></div><span>-1.7</span></div>
-        <div class="week"><span>Нед. 3</span><div class="bar"><div class="fill" style="--w:61%"></div></div><span>-3.1</span></div>
-        <div class="week"><span>Нед. 4</span><div class="bar"><div class="fill" style="--w:76%"></div></div><span>-4.8</span></div>
-      </div>
-    </div>
-    <p class="note">Этот вариант хорош для удержания: пользователь видит не только текущий вес, а накопленный путь. Можно добавить еженедельный снимок силуэта.</p>
-  </section>
+        <div class="section">
+          <div class="control">
+            <div class="label-row"><label for="hue">Цвет тела</label><output id="hueOut">210°</output></div>
+            <input id="hue" type="range" min="0" max="360" value="210">
+          </div>
+        </div>
 
-  <section class="prototype" id="p3">
-    <div class="panel">
-      <div class="panel-head">
-        <div><div class="panel-title">Быстрый замер тела</div><div class="panel-sub">минимум полей, максимум пользы</div></div>
+        <div class="section">
+          <div class="control">
+            <div class="label-row"><label for="height">Рост</label><output id="heightOut">175 <small>см</small></output></div>
+            <input id="height" type="range" min="145" max="205" value="175">
+          </div>
+          <div class="control">
+            <div class="label-row"><label for="weight">Вес</label><output id="weightOut">72 <small>кг</small></output></div>
+            <input id="weight" type="range" min="45" max="145" value="72">
+          </div>
+          <div class="control">
+            <div class="label-row"><label for="fat">Жир</label><output id="fatOut">18 <small>%</small></output></div>
+            <input id="fat" type="range" min="6" max="45" value="18">
+          </div>
+          <p class="hint">При увеличении жира растет объем талии, бедер и груди, а рельеф мышц сглаживается.</p>
+          <div class="control" style="margin-top:24px">
+            <div class="label-row"><label for="muscle">Скелетные мышцы</label><output id="muscleOut">32.0 <small>кг</small></output></div>
+            <input id="muscle" type="range" min="18" max="52" value="32">
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="control">
+            <div class="label-row"><label for="chest">Грудь</label><output id="chestOut">98 <small>см</small></output></div>
+            <input id="chest" type="range" min="72" max="140" value="98">
+          </div>
+          <div class="control">
+            <div class="label-row"><label for="waist">Талия</label><output id="waistOut">82 <small>см</small></output></div>
+            <input id="waist" type="range" min="58" max="140" value="82">
+          </div>
+          <div class="control">
+            <div class="label-row"><label for="hips">Бедра</label><output id="hipsOut">96 <small>см</small></output></div>
+            <input id="hips" type="range" min="72" max="150" value="96">
+          </div>
+        </div>
       </div>
-      <div class="controls">
-        <div class="control-row"><label>Дата</label><input type="range" min="1" max="31" value="10"><output>10 июл</output></div>
-        <div class="control-row"><label>Вес</label><input type="range" min="65" max="105" value="82"><output>82.4</output></div>
-        <div class="control-row"><label>Талия</label><input type="range" min="68" max="112" value="86"><output>86</output></div>
-        <div class="control-row"><label>Грудь</label><input type="range" min="86" max="122" value="102"><output>102</output></div>
-        <div class="control-row"><label>Бедра</label><input type="range" min="82" max="122" value="101"><output>101</output></div>
+    </aside>
+
+    <section class="scene">
+      <div class="scene-tip">Тяните для вращения · колесо для масштаба</div>
+      <div class="mode-tabs">
+        <button class="active" data-view="model">Модель</button>
+        <button data-view="compare">Прогресс</button>
       </div>
-    </div>
-    <div class="cta-row">
-      <button class="btn primary">Сохранить замер</button>
-      <button class="btn ghost">Сравнить с целью</button>
-    </div>
-    <p class="note">MVP можно сделать без камеры: пользователь вводит вес, талию, грудь, бедра, шею. Позже добавить фото/скан и расчет процента жира.</p>
-  </section>
+      <div class="compare-panel" id="comparePanel">
+        <div class="compare-row"><span>Старт</span><div class="bar"><div class="fill" style="--w:100%"></div></div><span>87.2</span></div>
+        <div class="compare-row"><span>Сейчас</span><div class="bar"><div class="fill" id="nowBar" style="--w:62%"></div></div><span id="nowWeight">72</span></div>
+        <div class="compare-row"><span>Цель</span><div class="bar"><div class="fill" style="--w:38%"></div></div><span>68.0</span></div>
+      </div>
+      <div class="canvas-wrap"><canvas id="bodyCanvas"></canvas></div>
+      <div class="height-ruler">
+        <div class="ruler-line" style="top:0" data-label="200"></div>
+        <div class="ruler-line" style="top:25%" data-label="150"></div>
+        <div class="ruler-line" style="top:50%" data-label="100"></div>
+        <div class="ruler-line" style="top:75%" data-label="50"></div>
+        <div class="ruler-line" style="top:100%" data-label="0"></div>
+        <div class="ruler-height" id="rulerHeight">175см</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong id="bmiOut">23.5</strong><span>ИМТ</span></div>
+        <div class="stat"><strong id="deltaOut">-15.2</strong><span>кг до старта</span></div>
+        <div class="stat"><strong id="formOut">78</strong><span>индекс формы</span></div>
+        <div class="stat"><strong id="goalOut">79%</strong><span>до цели</span></div>
+      </div>
+    </section>
+  </div>
 </main>
 
 <script>
-var root = document.documentElement;
-var controls = {
-  weight: document.getElementById('weight'),
-  waist: document.getElementById('waist'),
-  hip: document.getElementById('hip')
+var canvas = document.getElementById('bodyCanvas');
+var ctx = canvas.getContext('2d');
+var state = {
+  sex: 'male',
+  view: 'model',
+  rotation: -8,
+  zoom: 1,
 };
-function updateHologram() {
-  var weight = Number(controls.weight.value);
-  var waist = Number(controls.waist.value);
-  var hip = Number(controls.hip.value);
-  var coreScale = 0.82 + (waist - 68) / 44 * 0.48;
-  var hipScale = 0.86 + (hip - 82) / 40 * 0.34;
-  var armShift = Math.round((coreScale - 1) * 16);
-  var targetScale = Math.max(0.72, coreScale - 0.18);
-  root.style.setProperty('--core-scale', coreScale.toFixed(2));
-  root.style.setProperty('--hip-scale', hipScale.toFixed(2));
-  root.style.setProperty('--arm-shift', armShift);
-  root.style.setProperty('--target-scale', targetScale.toFixed(2));
-  document.getElementById('weightVal').textContent = weight + ' кг';
-  document.getElementById('waistVal').textContent = waist + ' см';
-  document.getElementById('hipVal').textContent = hip + ' см';
-  document.getElementById('weightOut').textContent = weight.toFixed(1);
-  document.getElementById('waistOut').textContent = waist;
-  document.getElementById('chestOut').textContent = Math.round(waist + 16);
-  document.getElementById('score').textContent = Math.max(40, Math.round(100 - (waist - 68) * 1.25));
-  document.getElementById('deltaWeight').textContent = (weight - 87.2).toFixed(1);
-  document.getElementById('deltaWaist').textContent = (waist - 93);
-  document.getElementById('targetPct').textContent = Math.min(100, Math.max(0, Math.round((87.2 - weight) / (87.2 - 74) * 100))) + '%';
-}
-Object.values(controls).forEach(function(input) { input.addEventListener('input', updateHologram); });
-document.querySelectorAll('.tab').forEach(function(tab) {
-  tab.addEventListener('click', function() {
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelectorAll('.prototype').forEach(function(p) { p.classList.remove('active'); });
-    tab.classList.add('active');
-    document.getElementById(tab.dataset.target).classList.add('active');
+var controls = {};
+['height','weight','fat','muscle','chest','waist','hips','hue'].forEach(function(id) {
+  controls[id] = document.getElementById(id);
+  controls[id].addEventListener('input', update);
+});
+
+document.querySelectorAll('[data-sex]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-sex]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    state.sex = btn.dataset.sex;
+    if (state.sex === 'female') {
+      controls.chest.value = 92;
+      controls.waist.value = 72;
+      controls.hips.value = 102;
+      controls.fat.value = 24;
+      controls.muscle.value = 26;
+    } else {
+      controls.chest.value = 98;
+      controls.waist.value = 82;
+      controls.hips.value = 96;
+      controls.fat.value = 18;
+      controls.muscle.value = 32;
+    }
+    update();
   });
 });
-updateHologram();
+
+document.querySelectorAll('[data-view]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-view]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    state.view = btn.dataset.view;
+    document.getElementById('comparePanel').classList.toggle('active', state.view === 'compare');
+    draw();
+  });
+});
+
+var dragging = false;
+var lastX = 0;
+canvas.addEventListener('pointerdown', function(e) { dragging = true; lastX = e.clientX; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', function(e) {
+  if (!dragging) return;
+  state.rotation += (e.clientX - lastX) * 0.35;
+  lastX = e.clientX;
+  draw();
+});
+canvas.addEventListener('pointerup', function() { dragging = false; });
+canvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  state.zoom = Math.max(.78, Math.min(1.28, state.zoom + (e.deltaY < 0 ? .04 : -.04)));
+  draw();
+}, { passive: false });
+
+function val(id) { return Number(controls[id].value); }
+function resizeCanvas() {
+  var rect = canvas.getBoundingClientRect();
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function update() {
+  var height = val('height');
+  var weight = val('weight');
+  var fat = val('fat');
+  var muscle = val('muscle');
+  var chest = val('chest');
+  var waist = val('waist');
+  var hips = val('hips');
+  var bmi = weight / Math.pow(height / 100, 2);
+  var form = Math.max(35, Math.min(98, Math.round(104 - fat * 1.4 + (muscle / weight) * 28 - Math.max(0, waist - 84) * .18)));
+  var goal = Math.max(0, Math.min(100, Math.round((87.2 - weight) / (87.2 - 68) * 100)));
+  document.getElementById('heightOut').innerHTML = height + ' <small>см</small>';
+  document.getElementById('weightOut').innerHTML = weight + ' <small>кг</small>';
+  document.getElementById('fatOut').innerHTML = fat + ' <small>%</small>';
+  document.getElementById('muscleOut').innerHTML = muscle.toFixed(1) + ' <small>кг</small>';
+  document.getElementById('chestOut').innerHTML = chest + ' <small>см</small>';
+  document.getElementById('waistOut').innerHTML = waist + ' <small>см</small>';
+  document.getElementById('hipsOut').innerHTML = hips + ' <small>см</small>';
+  document.getElementById('hueOut').textContent = val('hue') + '°';
+  document.getElementById('rulerHeight').textContent = height + 'см';
+  document.getElementById('bmiOut').textContent = bmi.toFixed(1);
+  document.getElementById('deltaOut').textContent = (weight - 87.2).toFixed(1);
+  document.getElementById('formOut').textContent = form;
+  document.getElementById('goalOut').textContent = goal + '%';
+  document.getElementById('nowWeight').textContent = weight;
+  document.getElementById('nowBar').style.setProperty('--w', Math.max(24, Math.min(100, weight / 87.2 * 100)) + '%');
+  draw();
+}
+
+function drawBodyPart(path, fill, stroke) {
+  ctx.save();
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = 'rgba(120,215,255,.18)';
+  ctx.shadowBlur = 12;
+  ctx.fill(path);
+  ctx.stroke(path);
+  ctx.restore();
+}
+
+function ellipsePath(x, y, rx, ry) {
+  var p = new Path2D();
+  p.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  return p;
+}
+
+function roundedLimb(x1, y1, x2, y2, w1, w2) {
+  var dx = x2 - x1, dy = y2 - y1;
+  var len = Math.sqrt(dx * dx + dy * dy) || 1;
+  var nx = -dy / len, ny = dx / len;
+  var p = new Path2D();
+  p.moveTo(x1 + nx*w1, y1 + ny*w1);
+  p.bezierCurveTo(x1 + nx*w1*.8, y1 + ny*w1*.8, x2 + nx*w2, y2 + ny*w2, x2 + nx*w2, y2 + ny*w2);
+  p.quadraticCurveTo(x2, y2 + w2*.65, x2 - nx*w2, y2 - ny*w2);
+  p.bezierCurveTo(x2 - nx*w2, y2 - ny*w2, x1 - nx*w1*.8, y1 - ny*w1*.8, x1 - nx*w1, y1 - ny*w1);
+  p.quadraticCurveTo(x1, y1 - w1*.45, x1 + nx*w1, y1 + ny*w1);
+  return p;
+}
+
+function limbPath(points, widths) {
+  var left = [];
+  var right = [];
+  for (var i = 0; i < points.length; i++) {
+    var prev = points[Math.max(0, i - 1)];
+    var next = points[Math.min(points.length - 1, i + 1)];
+    var dx = next[0] - prev[0];
+    var dy = next[1] - prev[1];
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var nx = -dy / len;
+    var ny = dx / len;
+    left.push([points[i][0] + nx * widths[i], points[i][1] + ny * widths[i]]);
+    right.push([points[i][0] - nx * widths[i], points[i][1] - ny * widths[i]]);
+  }
+  var p = new Path2D();
+  p.moveTo(left[0][0], left[0][1]);
+  for (var l = 1; l < left.length; l++) {
+    var prevL = left[l - 1];
+    var curL = left[l];
+    p.quadraticCurveTo(prevL[0], prevL[1], (prevL[0] + curL[0]) / 2, (prevL[1] + curL[1]) / 2);
+  }
+  p.lineTo(left[left.length - 1][0], left[left.length - 1][1]);
+  for (var r = right.length - 1; r >= 0; r--) {
+    var curR = right[r];
+    if (r === right.length - 1) p.lineTo(curR[0], curR[1]);
+    else {
+      var nextR = right[r + 1];
+      p.quadraticCurveTo(nextR[0], nextR[1], (nextR[0] + curR[0]) / 2, (nextR[1] + curR[1]) / 2);
+    }
+  }
+  p.closePath();
+  return p;
+}
+
+function draw() {
+  resizeCanvas();
+  var rect = canvas.getBoundingClientRect();
+  var w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+
+  var height = val('height');
+  var weight = val('weight');
+  var fat = val('fat');
+  var muscle = val('muscle');
+  var chest = val('chest');
+  var waist = val('waist');
+  var hips = val('hips');
+  var hue = val('hue');
+  var centerX = w * (w < 700 ? .5 : .57);
+  var floorY = h - (w < 700 ? 92 : 95);
+  var scale = Math.min(h * (w < 700 ? .62 : .7) / 320, w * (w < 700 ? .58 : .45) / 190) * state.zoom * (height / 175);
+  var rot = Math.sin(state.rotation * Math.PI / 180);
+  var perspective = 1 - Math.abs(rot) * .18;
+  var fatK = (fat - 18) / 27;
+  var muscleK = (muscle - 30) / 22;
+  var chestW = (62 + (chest - 98) * .5 + muscleK * 11 + fatK * 7) * perspective;
+  var waistW = (34 + (waist - 82) * .48 + fatK * 13 - muscleK * 4) * perspective;
+  var hipW = (46 + (hips - 96) * .5 + fatK * 8) * perspective;
+  if (state.sex === 'female') {
+    chestW *= 0.96;
+    waistW *= 0.88;
+    hipW *= 1.12;
+  }
+
+  ctx.save();
+  ctx.translate(centerX, floorY);
+  ctx.scale(scale, scale);
+
+  var skin = 'hsl(' + hue + ' 44% 88%)';
+  var skinMid = 'hsl(' + hue + ' 35% 74%)';
+  var skinDark = 'hsl(' + hue + ' 28% 58%)';
+  var stroke = 'hsla(' + hue + ', 45%, 92%, .72)';
+
+  var shadow = ctx.createRadialGradient(0, 0, 20, 0, 0, 118);
+  shadow.addColorStop(0, 'rgba(0,0,0,.42)');
+  shadow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.save();
+  ctx.translate(-18, 8);
+  ctx.scale(1.55, .25);
+  ctx.fillStyle = shadow;
+  ctx.beginPath();
+  ctx.arc(0, 0, 100, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  var grad = ctx.createLinearGradient(-80, -300, 70, -40);
+  grad.addColorStop(0, skin);
+  grad.addColorStop(.46, skinMid);
+  grad.addColorStop(1, skinDark);
+
+  var headY = -292;
+  drawBodyPart(ellipsePath(0, headY, 15 * perspective, 21), grad, stroke);
+  drawBodyPart(ellipsePath(0, -271, 9 * perspective, 11), grad, stroke);
+
+  var torso = new Path2D();
+  torso.moveTo(-chestW*.54, -252);
+  torso.bezierCurveTo(-chestW*.78, -235, -chestW*.74, -205, -waistW*.66, -164);
+  torso.bezierCurveTo(-waistW*.42, -137, -waistW*.6, -122, -hipW*.44, -112);
+  torso.bezierCurveTo(-hipW*.18, -101, hipW*.18, -101, hipW*.44, -112);
+  torso.bezierCurveTo(waistW*.6, -122, waistW*.42, -137, waistW*.66, -164);
+  torso.bezierCurveTo(chestW*.74, -205, chestW*.78, -235, chestW*.54, -252);
+  torso.bezierCurveTo(chestW*.24, -263, -chestW*.24, -263, -chestW*.54, -252);
+  drawBodyPart(torso, grad, stroke);
+
+  var pelvis = new Path2D();
+  pelvis.moveTo(-hipW*.48, -116);
+  pelvis.bezierCurveTo(-hipW*.76, -101, -hipW*.58, -83, -20*perspective, -78);
+  pelvis.bezierCurveTo(-10*perspective, -92, 10*perspective, -92, 20*perspective, -78);
+  pelvis.bezierCurveTo(hipW*.58, -83, hipW*.76, -101, hipW*.48, -116);
+  pelvis.bezierCurveTo(hipW*.22, -126, -hipW*.22, -126, -hipW*.48, -116);
+  drawBodyPart(pelvis, grad, stroke);
+
+  var shoulder = chestW * .72;
+  var armBase = 8.5 + muscleK*2.2 + fatK*2.8;
+  drawBodyPart(roundedLimb(-shoulder, -238, -104*perspective, -184, armBase + 3, armBase + 1), grad, stroke);
+  drawBodyPart(roundedLimb(shoulder, -238, 104*perspective, -184, armBase + 3, armBase + 1), grad, stroke);
+  drawBodyPart(roundedLimb(-104*perspective, -184, -114*perspective, -104, armBase, 4.6), grad, stroke);
+  drawBodyPart(roundedLimb(104*perspective, -184, 114*perspective, -104, armBase, 4.6), grad, stroke);
+  drawBodyPart(ellipsePath(-114*perspective, -94, 4.8, 9), grad, stroke);
+  drawBodyPart(ellipsePath(114*perspective, -94, 4.8, 9), grad, stroke);
+
+  var thigh = 14 + fatK*4 + muscleK*2;
+  drawBodyPart(limbPath([
+    [-hipW*.3, -86],
+    [-34*perspective, -52],
+    [-29*perspective, -19],
+    [-24*perspective, 0]
+  ], [thigh, thigh - 1, 10 + fatK*2, 6.8]), grad, stroke);
+  drawBodyPart(limbPath([
+    [hipW*.3, -86],
+    [34*perspective, -52],
+    [29*perspective, -19],
+    [24*perspective, 0]
+  ], [thigh, thigh - 1, 10 + fatK*2, 6.8]), grad, stroke);
+  drawBodyPart(ellipsePath(-28*perspective, 2, 13, 4.2), grad, stroke);
+  drawBodyPart(ellipsePath(28*perspective, 2, 13, 4.2), grad, stroke);
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(.12, Math.min(.55, muscleK + .28));
+  ctx.strokeStyle = 'rgba(255,255,255,.34)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, -242);
+  ctx.bezierCurveTo(-12*perspective, -216, -10*perspective, -184, 0, -158);
+  ctx.bezierCurveTo(10*perspective, -184, 12*perspective, -216, 0, -242);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-waistW*.24, -186);
+  ctx.bezierCurveTo(-16*perspective, -170, -12*perspective, -140, -22*perspective, -116);
+  ctx.moveTo(waistW*.24, -186);
+  ctx.bezierCurveTo(16*perspective, -170, 12*perspective, -140, 22*perspective, -116);
+  ctx.stroke();
+  ctx.restore();
+
+  if (state.view === 'compare') {
+    ctx.save();
+    ctx.globalAlpha = .28;
+    ctx.strokeStyle = 'rgba(102,211,140,.9)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.ellipse(0, -178, Math.max(waistW*.48 - 10, 26), 78, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+window.addEventListener('resize', draw);
+update();
 </script>
 </body>
 </html>
