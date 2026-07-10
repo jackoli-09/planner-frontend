@@ -15,6 +15,34 @@ if ('serviceWorker' in navigator) {
   }
 }
 
+function localDateISO(date) {
+  var d = date || new Date();
+  var year = d.getFullYear();
+  var month = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+}
+
+function applyTheme(theme) {
+  var selected = theme || localStorage.getItem('planner_theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', selected);
+  localStorage.setItem('planner_theme', selected);
+  var tgApp = window.Telegram?.WebApp;
+  if (tgApp) {
+    var bg = selected === 'dark' ? '#101115' : '#f5f4f0';
+    tgApp.setHeaderColor && tgApp.setHeaderColor(bg);
+    tgApp.setBackgroundColor && tgApp.setBackgroundColor(bg);
+  }
+  var label = document.getElementById('theme-mode-label');
+  if (label) label.textContent = selected === 'dark' ? 'Темная' : 'Светлая';
+}
+
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+applyTheme();
+
 // ════ ИИ АНАЛИЗ ════
 async function runAiAnalysis() {
   var btn = document.getElementById('ai-btn');
@@ -53,7 +81,7 @@ async function runAiAnalysis() {
 }
 
 // ════ ПИТАНИЕ ════
-var currentFoodDate = new Date().toISOString().slice(0,10);
+var currentFoodDate = localDateISO();
 var selectedFood = null;
 var CALORIE_GOAL = 2500;
 var MEAL_ORDER = ['завтрак','обед','ужин','перекус'];
@@ -73,7 +101,7 @@ function renderFoodScreen() {
 function foodDateShift(delta) {
   var d = new Date(currentFoodDate + 'T00:00:00');
   d.setDate(d.getDate() + delta);
-  currentFoodDate = d.toISOString().slice(0,10);
+  currentFoodDate = localDateISO(d);
   renderFoodScreen();
 }
 
@@ -270,6 +298,32 @@ async function deleteFoodLog(id) {
   --red: #c0392b;
   --red-soft: rgba(192, 57, 43, 0.12);
 }
+html[data-theme="dark"] {
+  --bg: #101115;
+  --card: #181a20;
+  --card2: #22242b;
+  --ink: #f4f1ea;
+  --text: #f4f1ea;
+  --text-sub: #c5c0b6;
+  --text-muted: #8f8a82;
+  --border: #2a2d35;
+  --border-light: #353944;
+  --neon: #8b63ff;
+  --neon2: #69a7ff;
+  --accent: #ff806f;
+  --accent-soft: rgba(255, 128, 111, 0.16);
+  --neon-soft: rgba(105, 167, 255, 0.18);
+  --neon-soft2: rgba(105, 167, 255, 0.09);
+  --neon-glow: rgba(105, 167, 255, 0.24);
+  --green: #3fce91;
+  --green-soft: rgba(63, 206, 145, 0.14);
+  --orange: #f0a24a;
+  --orange-soft: rgba(240, 162, 74, 0.14);
+  --blue: #78b7ff;
+  --blue-soft: rgba(120, 183, 255, 0.14);
+  --red: #ff6d62;
+  --red-soft: rgba(255, 109, 98, 0.15);
+}
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0;
@@ -313,7 +367,7 @@ body { background: var(--bg); color: var(--text); }
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .nav-indicator {
-  display: flex;
+  display: none;
   height: 2px;
 }
 .nav-ind-seg {
@@ -343,24 +397,23 @@ body { background: var(--bg); color: var(--text); }
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+.nav-item::before {
+  content: none;
+  display: none;
+}
 .nav-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 21px;
   color: var(--text-muted);
   transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease;
 }
 .nav-item.active .nav-icon { color: var(--text); background: var(--card2); transform: translateY(-1px); }
 .nav-item.active .nav-label { color: var(--text); font-weight: 600; }
-.nav-item.active::before {
-  content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
-  width: 28px; height: 2px; background: var(--neon2);
-  box-shadow: 0 0 8px var(--neon-glow);
-}
 .nav-icon { line-height: 1; }
 .nav-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.2px; }
 
@@ -460,6 +513,15 @@ body { background: var(--bg); color: var(--text); }
     radial-gradient(circle at 100% 100%, rgba(237,106,90,0.1), transparent 30%);
   border: 1px solid rgba(255,255,255,0.78);
   box-shadow: 0 18px 42px rgba(37, 34, 28, 0.1);
+}
+html[data-theme="dark"] .focus-card {
+  background:
+    linear-gradient(145deg, rgba(24,26,32,0.96), rgba(24,26,32,0.78)),
+    radial-gradient(circle at 10% 0%, rgba(255,128,111,0.2), transparent 32%),
+    radial-gradient(circle at 100% 0%, rgba(105,167,255,0.17), transparent 34%),
+    radial-gradient(circle at 100% 100%, rgba(255,128,111,0.09), transparent 30%);
+  border-color: rgba(255,255,255,0.06);
+  box-shadow: 0 18px 42px rgba(0,0,0,0.25);
 }
 .focus-kicker { font-size: 10px; color: var(--text-muted); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .focus-title { max-width: 260px; margin-top: 8px; font-size: 22px; line-height: 1.12; font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
@@ -581,6 +643,7 @@ body { background: var(--bg); color: var(--text); }
 .home-card-big { margin-top: 9px; font-size: 24px; font-weight: 800; line-height: 1; }
 .home-card-meta { margin-top: 8px; font-size: 10.5px; color: var(--text-muted); }
 .home-card-link.dark .home-card-meta { color: rgba(255,255,255,0.5); }
+.home-card-link.wide { grid-column: 1 / -1; min-height: 88px; }
 .home-mini-bar { height: 5px; background: var(--card2); border-radius: 999px; overflow: hidden; margin-top: 10px; }
 .home-mini-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--neon2)); border-radius: 999px; transition: width 0.45s ease; }
 .animate-in { animation: riseIn 0.44s both; }
@@ -908,10 +971,12 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   flex-shrink: 0;
 }
 .more-title {
+  display: block;
   font-size: 13px;
   font-weight: 800;
 }
 .more-sub {
+  display: block;
   font-size: 10px;
   color: var(--text-muted);
   margin-top: 2px;
@@ -939,22 +1004,6 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   }
 }
 
-/* Принудительная светлая тема — переопределяем всё */
-html, body, #app, .screen, .screen.active {
-  background: #f5f4f0 !important;
-  background-color: #f5f4f0 !important;
-  color: #1a1a1a !important;
-}
-.page-header {
-  background: #f5f4f0 !important;
-}
-.bottom-nav, .nav {
-  background: #ffffff !important;
-}
-.card {
-  background: #ffffff !important;
-  border-color: #e8e4dc !important;
-}
 </style>
 </head>
 <body>
@@ -1036,6 +1085,11 @@ html, body, #app, .screen, .screen.active {
           <div class="home-mini-bar">
             <div class="home-mini-fill" id="home-cal-bar" style="width:0%"></div>
           </div>
+        </div>
+        <div class="home-card-link wide" onclick="go('supps')">
+          <div class="home-card-kicker">Добавки</div>
+          <div class="home-card-title">Приемы и отметки на сегодня</div>
+          <div class="home-card-meta">Открыть чек-лист</div>
         </div>
       </div>
     </div>
@@ -1462,6 +1516,10 @@ html, body, #app, .screen, .screen.active {
         <span class="more-icon">AI</span>
         <span><span class="more-title">ИИ-анализ</span><span class="more-sub">Плато, достижения и фокус недели</span></span>
       </button>
+      <button class="more-action" onclick="toggleTheme()" style="grid-column:1 / -1">
+        <span class="more-icon">◐</span>
+        <span><span class="more-title">Тема</span><span class="more-sub" id="theme-mode-label">Светлая</span></span>
+      </button>
     </div>
     <button class="modal-close-btn" onclick="closeModal('modal-more')">Закрыть</button>
   </div>
@@ -1595,8 +1653,7 @@ var tg = window.Telegram?.WebApp;
 if (tg) {
   tg.ready();
   tg.expand();
-  tg.setHeaderColor && tg.setHeaderColor('#f5f4f0');
-  tg.setBackgroundColor && tg.setBackgroundColor('#f5f4f0');
+  applyTheme(localStorage.getItem('planner_theme') || document.documentElement.getAttribute('data-theme'));
   const u = tg.initDataUnsafe?.user;
   var userNameEl = document.getElementById('user-name');
   if (u?.first_name && userNameEl) userNameEl.textContent = u.first_name;
@@ -1663,7 +1720,7 @@ var HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","e
 
 let currentMuscle = 'Грудь + Трицепс';
 let currentBodyTab = 'weight';
-let selectedSuppDate = new Date().toISOString().slice(0,10);
+let selectedSuppDate = localDateISO();
 let reportMonthOffset = 0; // 0 = current month
 let progChart=null, avgChart=null, weightChart=null, calChart=null;
 
@@ -1676,7 +1733,7 @@ const EXERCISES = {
   'Пресс + Кор':      ['Скручивания','Подъём ног в висе','Планка','Боковая планка','Велосипед','Русский твист'],
 };
 
-function todayStr() { return new Date().toISOString().slice(0,10); }
+function todayStr() { return localDateISO(); }
 function formatDate(d) {
   const opts = {day:'numeric',month:'long',weekday:'long'};
   return new Date(d+'T00:00').toLocaleDateString('ru-RU', opts);
@@ -2562,7 +2619,7 @@ function renderDayStrip() {
   const days = [];
   for (let i=-3; i<=3; i++) {
     const d = new Date(); d.setDate(d.getDate()+i);
-    days.push(d.toISOString().slice(0,10));
+    days.push(localDateISO(d));
   }
   const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
   strip.innerHTML = days.map(d=>{
@@ -2651,8 +2708,8 @@ function getReportMonthRange() {
   const now = new Date();
   const target = new Date(now.getFullYear(), now.getMonth()+reportMonthOffset, 1);
   const year = target.getFullYear(), month = target.getMonth();
-  const start = new Date(year, month, 1).toISOString().slice(0,10);
-  const end = new Date(year, month+1, 0).toISOString().slice(0,10);
+  const start = localDateISO(new Date(year, month, 1));
+  const end = localDateISO(new Date(year, month+1, 0));
   return {start, end, year, month};
 }
 
@@ -2743,6 +2800,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 // ════════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════════
+applyTheme(localStorage.getItem('planner_theme') || document.documentElement.getAttribute('data-theme'));
 renderHome();
 loadState(() => {
   renderHome();
