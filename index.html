@@ -1828,8 +1828,8 @@ function applyLoaded(vals) {
   if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal).map(c => ({date: asDateStr(c.date), cal: parseInt(c.cal || c.calories) || 0}));
 }
 
-// Общая функция сохранения — пишет в localStorage всегда (мгновенный отклик UI),
-// и параллельно пытается синхронизировать с сервером, если он доступен.
+// Мгновенный локальный кэш для отзывчивого UI. Постоянная память пишется
+// в PostgreSQL через API-вызовы конкретных действий.
 function saveState() {
   saveStateLocal();
 }
@@ -1837,23 +1837,16 @@ function saveState() {
 // Загрузка при старте: сначала пробуем API (надёжный источник истины),
 // если недоступен — берём то, что есть в localStorage.
 async function loadState(cb) {
-  const [workouts, tasks, supps, checks, weight, cal] = await Promise.all([
-    apiCall('GET', '/api/workouts'),
-    apiCall('GET', '/api/tasks'),
-    apiCall('GET', '/api/supplements'),
-    apiCall('GET', '/api/supplement_checks'),
-    apiCall('GET', '/api/body/weight'),
-    apiCall('GET', '/api/body/calories'),
-  ]);
-
-  if (workouts !== null) {
+  var bootstrap = await apiCall('GET', '/api/bootstrap');
+  if (bootstrap !== null) {
     apiAvailable = true;
-    state.workouts = (workouts || []).map(normalizeWorkout);
-    state.tasks = (tasks || []).map(normalizeTask);
-    if (supps && supps.length) state.supps.list = supps.map(normalizeSupplement);
-    state.supps.checked = normalizeChecks(checks);
-    state.bodyWeight = (weight || []).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
-    state.bodyCal = (cal || []).map(c => ({date: asDateStr(c.date), cal: parseInt(c.calories) || 0}));
+    state.workouts = (bootstrap.workouts || []).map(normalizeWorkout);
+    state.tasks = (bootstrap.tasks || []).map(normalizeTask);
+    if (bootstrap.supplements && bootstrap.supplements.length) state.supps.list = bootstrap.supplements.map(normalizeSupplement);
+    state.supps.checked = normalizeChecks(bootstrap.supplement_checks);
+    state.bodyWeight = (bootstrap.body_weight || []).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
+    state.bodyCal = (bootstrap.body_calories || []).map(c => ({date: asDateStr(c.date), cal: parseInt(c.calories) || 0}));
+    saveStateLocal();
   } else {
     apiAvailable = false;
     loadStateLocal();
