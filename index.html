@@ -2,17 +2,14 @@
 <html lang="ru">
 <head>
 <script>
-// Отменяем все Service Workers
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs.forEach(function(reg) { reg.unregister(); });
-  });
-  // Очищаем кеш SW
-  if ('caches' in window) {
-    caches.keys().then(function(names) {
-      names.forEach(function(name) { caches.delete(name); });
+// Offline-first: после первого онлайн-запуска оболочка планировщика
+// открывается из локального кеша. На file:// Service Worker недоступен.
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function(err) {
+      console.warn('Офлайн-кеш пока недоступен:', err);
     });
-  }
+  });
 }
 
 function localDateISO(date) {
@@ -63,12 +60,12 @@ async function runAiAnalysis() {
     if(w) w.textContent = data.weekly_recommendation || '—';
     var ach = document.getElementById('ai-achievements');
     if(ach) ach.innerHTML = (data.top_achievements||[]).map(function(a){
-      return '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:13px;color:var(--text)"><span style="color:var(--text-muted)">✦</span>'+a+'</div>';
+      return '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:13px;color:var(--text)"><span style="color:var(--text-muted)">✦</span>'+escapeHtml(a)+'</div>';
     }).join('');
     var pl = document.getElementById('ai-plateau');
     if(pl) pl.innerHTML = (data.plateau||[]).length ?
       (data.plateau||[]).map(function(p){
-        return '<div style="margin-bottom:8px;padding:10px;background:var(--red-soft);border-radius:10px"><div style="font-size:12px;font-weight:600;color:var(--red)">'+p.exercise+' — '+p.sessions_stuck+' сессий без роста</div><div style="font-size:11px;color:var(--text-sub);margin-top:3px">'+p.recommendation+'</div></div>';
+        return '<div style="margin-bottom:8px;padding:10px;background:var(--red-soft);border-radius:10px"><div style="font-size:12px;font-weight:600;color:var(--red)">'+escapeHtml(p.exercise)+' — '+(parseInt(p.sessions_stuck)||0)+' сессий без роста</div><div style="font-size:11px;color:var(--text-sub);margin-top:3px">'+escapeHtml(p.recommendation)+'</div></div>';
       }).join('') :
       '<div style="font-size:13px;color:var(--green)">Плато не обнаружено</div>';
   } catch(e) {
@@ -106,10 +103,16 @@ function foodDateShift(delta) {
 }
 
 async function loadFoodLog() {
+  var localEntries = (state.foodLog || []).filter(function(e){ return e.date === currentFoodDate; });
+  renderFoodLog(localEntries);
   try {
     var data = await apiCall('GET', '/api/food/log?log_date=' + currentFoodDate);
-    renderFoodLog(data || []);
-  } catch(e) { renderFoodLog([]); }
+    if (data !== null) {
+      state.foodLog = (state.foodLog || []).filter(function(e){ return e.date !== currentFoodDate; }).concat(data);
+      saveStateLocal();
+      renderFoodLog(data);
+    }
+  } catch(e) { renderFoodLog(localEntries); }
 }
 
 function renderFoodLog(entries) {
@@ -117,6 +120,14 @@ function renderFoodLog(entries) {
   var totProt = entries.reduce(function(a,e){return a+(parseFloat(e.protein)||0);},0);
   var totFat = entries.reduce(function(a,e){return a+(parseFloat(e.fat)||0);},0);
   var totCarb = entries.reduce(function(a,e){return a+(parseFloat(e.carbs)||0);},0);
+
+  // Дневник питания является источником калорий для главной и отчётов.
+  if (typeof state !== 'undefined' && Array.isArray(state.bodyCal)) {
+    state.bodyCal = state.bodyCal.filter(function(e){ return e.date !== currentFoodDate; });
+    if (totCal > 0) state.bodyCal.push({date: currentFoodDate, cal: Math.round(totCal), source: 'food'});
+    saveStateLocal();
+    renderHome();
+  }
 
   var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
   setEl('fd-cal', Math.round(totCal));
@@ -146,11 +157,11 @@ function renderFoodLog(entries) {
       '</div>' +
       items.map(function(e){
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">' +
-          '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+e.food_name+'</div>' +
+          '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+escapeHtml(e.food_name)+'</div>' +
           '<div style="font-size:10px;color:var(--text-muted)">'+(e.amount||100)+'г</div></div>' +
           '<div style="display:flex;align-items:center;gap:10px">' +
             '<div style="font-size:12px;font-weight:600;color:var(--text)">'+Math.round(parseFloat(e.calories)||0)+'</div>' +
-            '<span onclick="deleteFoodLog('+e.id+')" style="color:var(--red);cursor:pointer;font-size:18px;line-height:1">×</span>' +
+            '<span onclick="deleteFoodLog(decodeURIComponent(\''+encodeToken(e.id)+'\'))" style="color:var(--red);cursor:pointer;font-size:18px;line-height:1">×</span>' +
           '</div>' +
         '</div>';
       }).join('') +
@@ -191,7 +202,7 @@ async function searchFood() {
     }
     if(resultsEl) resultsEl.innerHTML = items.map(function(f,i){
       return '<div onclick="openFoodModal('+i+')" style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">' +
-        '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+f.food_name+'</div>' +
+        '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+escapeHtml(f.food_name)+'</div>' +
         '<div style="font-size:10px;color:var(--text-muted)">'+(f.calories||0)+' ккал · Б:'+(f.protein||0)+' Ж:'+(f.fat||0)+' У:'+(f.carbs||0)+'</div></div>' +
         '<div style="font-size:18px;color:var(--text-muted);padding-left:8px">+</div>' +
       '</div>';
@@ -239,7 +250,9 @@ async function confirmAddFood() {
   var amount = parseFloat(document.getElementById('mf-amount').value)||100;
   var meal = document.getElementById('mf-meal-type').value;
   var r = amount/100;
-  await apiCall('POST','/api/food/log',{
+  var clientId = 'food_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  var entry = {
+    client_id: clientId,
     date: currentFoodDate,
     meal_type: meal,
     food_id: selectedFood.food_id||'manual',
@@ -249,7 +262,16 @@ async function confirmAddFood() {
     fat: parseFloat(((selectedFood.fat||0)*r).toFixed(1)),
     carbs: parseFloat(((selectedFood.carbs||0)*r).toFixed(1)),
     amount: amount,
-  });
+  };
+  state.foodLog.push(Object.assign({id: clientId}, entry));
+  saveStateLocal();
+  renderFoodLog(state.foodLog.filter(function(e){ return e.date === currentFoodDate; }));
+  var saved = await apiCall('POST','/api/food/log', entry);
+  if (saved?.id) {
+    var localEntry = state.foodLog.find(function(e){ return e.client_id === clientId; });
+    if (localEntry) localEntry.id = saved.id;
+    saveStateLocal();
+  }
   closeModal('modal-food-add');
   document.getElementById('food-search-results').innerHTML = '';
   document.getElementById('food-search-input').value = '';
@@ -257,8 +279,17 @@ async function confirmAddFood() {
 }
 
 async function deleteFoodLog(id) {
-  await apiCall('DELETE','/api/food/log/'+id);
-  loadFoodLog();
+  var entry = state.foodLog.find(function(e){ return String(e.id) === String(id); });
+  state.foodLog = state.foodLog.filter(function(e){ return String(e.id) !== String(id); });
+  saveStateLocal();
+  if (String(id).indexOf('food_') === 0) {
+    saveOutbox(getOutbox().filter(function(item) {
+      return !(item.method === 'POST' && item.path === '/api/food/log' && item.body?.client_id === entry?.client_id);
+    }));
+  } else {
+    await apiCall('DELETE','/api/food/log/'+encodeURIComponent(id));
+  }
+  renderFoodLog(state.foodLog.filter(function(e){ return e.date === currentFoodDate; }));
 }
 
 
@@ -882,6 +913,211 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   line-height: 1.5; margin: 0 12px 10px;
 }
 
+.body-visual-card {
+  margin: 0 12px 12px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--card), var(--card2));
+}
+.body-visual-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 14px 10px;
+}
+.body-visual-kicker {
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.body-visual-title {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+.body-visual-copy {
+  margin-top: 6px;
+  max-width: 210px;
+  color: var(--text-sub);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.body-visual-btn {
+  flex-shrink: 0;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--neon), var(--neon2));
+  color: #fff;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px var(--neon-glow);
+}
+.body-visual-stage {
+  position: relative;
+  height: 250px;
+  min-height: 250px;
+  background: #10131a;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  transition: height .42s cubic-bezier(.2,.8,.2,1), min-height .42s cubic-bezier(.2,.8,.2,1);
+}
+.body-visual-stage.expanded {
+  height: min(62vh, 430px);
+  min-height: 340px;
+}
+.body-visual-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.body-visual-loader {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  color: var(--text-sub);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.45;
+  background: rgba(16,19,26,.72);
+}
+.body-visual-loader.hidden { display: none; }
+.body-visual-stats {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  pointer-events: none;
+}
+.body-visual-stat {
+  min-height: 54px;
+  padding: 9px 10px;
+  border-radius: 13px;
+  background: rgba(20,23,31,.82);
+  border: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(8px);
+}
+.body-visual-stat strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+}
+.body-visual-stat span {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+.body-measure-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 12px 10px;
+}
+.body-measure-tile {
+  min-height: 70px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 11px 10px;
+}
+.body-measure-tile strong {
+  display: block;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 800;
+}
+.body-measure-tile span {
+  display: block;
+  margin-top: 7px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+.body-measure-note {
+  margin: 0 12px 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(77,171,255,.24);
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.body-measure-note strong { color: var(--text); }
+.body-shape-caption {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  max-width: calc(100% - 20px);
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  background: rgba(20,23,31,.76);
+  color: rgba(255,255,255,.72);
+  font-size: 10px;
+  line-height: 1.35;
+  backdrop-filter: blur(8px);
+}
+.body-measure-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.body-measure-form .modal-row { margin-bottom: 0; }
+.body-advanced {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.body-advanced summary {
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.body-advanced .body-measure-form { margin-top: 12px; }
+.body-form-hint {
+  margin: 8px 0 12px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.body-form-error {
+  display: none;
+  margin: 10px 0 0;
+  color: var(--red);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.body-form-error.visible { display: block; }
+@media (max-width: 380px) {
+  .body-visual-head { flex-direction: column; }
+  .body-visual-btn { width: 100%; }
+  .body-visual-stage { min-height: 220px; height: 220px; }
+  .body-visual-stage.expanded { min-height: 340px; height: min(58vh, 400px); }
+  .body-measure-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ── REPORT (monthly) ── */
 .report-month-switch {
   display: flex; align-items: center; justify-content: space-between;
@@ -1178,6 +1414,33 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     </div>
 
     <div id="body-weight-section">
+      <div class="section-label">Тело</div>
+      <div class="body-visual-card">
+        <div class="body-visual-head">
+          <div>
+            <div class="body-visual-kicker">3D трекинг</div>
+            <div class="body-visual-title">Модель тела по замерам</div>
+            <div class="body-visual-copy">Легкий мобильный просмотр прогресса. Модель загружается только по кнопке.</div>
+          </div>
+          <button class="body-visual-btn" id="body3dBtn" onclick="initBodyVisualizer()">Показать</button>
+        </div>
+        <div class="body-visual-stage" id="body3dStage">
+          <div class="body-visual-loader" id="body3dLoader">Нажмите “Показать”, чтобы загрузить 3D-модель.</div>
+          <div class="body-shape-caption" id="body3dShape">Добавьте рост и вес, чтобы настроить силуэт</div>
+          <div class="body-visual-stats">
+            <div class="body-visual-stat"><strong id="body3dWeight">—</strong><span>вес</span></div>
+            <div class="body-visual-stat"><strong id="body3dDelta">—</strong><span>динамика</span></div>
+            <div class="body-visual-stat"><strong id="body3dCount">0</strong><span>замеров</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Замеры тела</div>
+      <div class="body-measure-note"><strong>Достаточно роста и веса.</strong> Грудь, талия и бёдра сделают силуэт точнее. Процент жира и мышцы вводить не обязательно.</div>
+      <div class="body-measure-grid" id="body-measure-summary"></div>
+      <div class="card add-ex-card" onclick="openAddBody('measure')">+ Обновить параметры тела</div>
+      <div class="card"><div class="card-inner" id="measure-history"></div></div>
+
       <div class="section-label">Динамика веса</div>
       <div class="card card-glow">
         <div class="card-inner">
@@ -1640,6 +1903,45 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="modal-label">Калории (ккал)</div>
       <input class="modal-input" type="number" id="m-body-cal" step="10" placeholder="2400">
     </div>
+    <div id="m-body-measure-row" style="display:none">
+      <div class="body-form-hint">Основные данные можно измерить дома. Они сразу изменят пропорции 3D-силуэта.</div>
+      <div class="body-measure-form">
+        <div class="modal-row">
+          <div class="modal-label">Вес (кг)</div>
+          <input class="modal-input" type="number" id="m-body-shape-weight" step="0.1" placeholder="78.5">
+        </div>
+        <div class="modal-row">
+          <div class="modal-label">Рост (см)</div>
+          <input class="modal-input" type="number" id="m-body-height" step="1" placeholder="175">
+        </div>
+        <div class="modal-row">
+          <div class="modal-label">Грудь (см)</div>
+          <input class="modal-input" type="number" id="m-body-chest" step="0.1" placeholder="98">
+        </div>
+        <div class="modal-row">
+          <div class="modal-label">Талия (см)</div>
+          <input class="modal-input" type="number" id="m-body-waist" step="0.1" placeholder="82">
+        </div>
+        <div class="modal-row">
+          <div class="modal-label">Бедра (см)</div>
+          <input class="modal-input" type="number" id="m-body-hips" step="0.1" placeholder="96">
+        </div>
+      </div>
+      <details class="body-advanced">
+        <summary>Дополнительные данные с весов или исследования</summary>
+        <div class="body-measure-form">
+          <div class="modal-row">
+            <div class="modal-label">Жир (%)</div>
+            <input class="modal-input" type="number" id="m-body-fat" step="0.1" placeholder="Необязательно">
+          </div>
+          <div class="modal-row">
+            <div class="modal-label">Мышцы (кг)</div>
+            <input class="modal-input" type="number" id="m-body-muscle" step="0.1" placeholder="Необязательно">
+          </div>
+        </div>
+      </details>
+      <div class="body-form-error" id="m-body-error">Укажите рост и вес, чтобы построить силуэт.</div>
+    </div>
     <button class="btn-primary" onclick="saveBody()">Сохранить</button>
     <button class="modal-close-btn" onclick="closeModal('modal-body')">Отмена</button>
   </div>
@@ -1673,25 +1975,125 @@ function getUserId() {
 }
 var USER_ID = getUserId();
 
-async function apiCall(method, path, body) {
+function getApiHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'X-User-Id': String(USER_ID || getUserId() || 0),
+    'X-Telegram-Init-Data': tg?.initData || ''
+  };
+}
+
+function getOutbox() {
+  try { return JSON.parse(localStorage.getItem('planner_outbox_' + USER_ID) || '[]'); }
+  catch (_) { return []; }
+}
+
+function saveOutbox(items) {
+  localStorage.setItem('planner_outbox_' + USER_ID, JSON.stringify(items));
+  setSyncStatus(items.length ? 'pending' : (apiAvailable ? 'online' : 'offline'));
+}
+
+function queueWrite(method, path, body) {
+  var items = getOutbox();
+  var identity = '';
+  if (path === '/api/tasks') identity = body?.id || '';
+  else if (path.indexOf('/api/body/') === 0) identity = body?.date || '';
+  else if (path === '/api/supplement_checks') {
+    identity = [body?.date, body?.supp_name, body?.time_slot].filter(Boolean).join('|');
+  }
+  var key = identity ? path + '|' + identity : '';
+  if (method === 'POST' && key) {
+    items = items.filter(item => item.key !== key);
+  }
+  var item = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+    key: key,
+    method: method,
+    path: path,
+    body: body || null,
+    created_at: new Date().toISOString()
+  };
+  items.push(item);
+  saveOutbox(items);
+  return item.id;
+}
+
+function removeQueuedWrite(id) {
+  if (!id) return;
+  saveOutbox(getOutbox().filter(item => item.id !== id));
+}
+
+function setSyncStatus(mode) {
+  var dot = document.getElementById('sync-dot');
+  var status = document.getElementById('sync-status');
+  var pill = document.getElementById('home-sync-pill');
+  var labels = {
+    online: 'Синхронизировано',
+    pending: 'Сохранено на устройстве · ожидает сеть',
+    offline: 'Офлайн · данные на устройстве'
+  };
+  if (pill) pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : 'Офлайн');
+  if (status) status.textContent = labels[mode] || labels.offline;
+  if (dot) {
+    dot.style.background = mode === 'online' ? 'var(--green)' : 'var(--orange)';
+    dot.style.boxShadow = mode === 'online' ? '0 0 6px var(--green)' : 'none';
+  }
+}
+
+async function apiCall(method, path, body, options) {
+  options = options || {};
+  var isWrite = method !== 'GET' && method !== 'HEAD';
+  var outboxId = options.outboxId || (isWrite && !options.replay ? queueWrite(method, path, body) : null);
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    apiAvailable = false;
+    setSyncStatus(getOutbox().length ? 'pending' : 'offline');
+    return null;
+  }
   var controller = new AbortController();
   var timeout = setTimeout(function() { controller.abort(); }, 7000);
   try {
     const res = await fetch(API_BASE + path, {
       method,
-      headers: { 'Content-Type': 'application/json', 'X-User-Id': String(USER_ID || getUserId() || 0) },
+      headers: getApiHeaders(),
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     });
-    if (!res.ok) throw new Error('API error ' + res.status);
+    if (!res.ok) {
+      var err = new Error('API error ' + res.status);
+      err.status = res.status;
+      throw err;
+    }
+    apiAvailable = true;
+    if (isWrite) removeQueuedWrite(outboxId);
+    if (!getOutbox().length) setSyncStatus('online');
     return await res.json();
   } catch (e) {
+    apiAvailable = false;
+    if (isWrite && [400, 404, 409, 422].includes(e.status)) {
+      removeQueuedWrite(outboxId);
+    }
+    setSyncStatus(getOutbox().length ? 'pending' : 'offline');
     console.warn('API недоступен, работаем в офлайн-режиме (localStorage):', e);
     return null;
   } finally {
     clearTimeout(timeout);
   }
 }
+
+async function flushPendingWrites() {
+  var items = getOutbox();
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var result = await apiCall(item.method, item.path, item.body, {replay:true, outboxId:item.id});
+    if (result === null && getOutbox().some(x => x.id === item.id)) return false;
+  }
+  return getOutbox().length === 0;
+}
+
+window.addEventListener('online', function() {
+  flushPendingWrites().then(function(ok) { if (ok) loadStateFromServer(); });
+});
+window.addEventListener('offline', function() { setSyncStatus(getOutbox().length ? 'pending' : 'offline'); });
 
 // ════════════════════════════════════════════════════════════════
 // STATE
@@ -1701,6 +2103,8 @@ let state = {
   tasks: [],
   bodyWeight: [],   // [{date, weight}]
   bodyCal: [],      // [{date, cal}]
+  bodyMeasures: [], // [{date, weight, height, chest, waist, hips, fat?, muscle?}]
+  foodLog: [],
   supps: {
     list: [
       { name: 'Витамин D3', emoji: '🌅', dose: '2000 МЕ', times: ['Утро'] },
@@ -1753,6 +2157,9 @@ function escapeHtml(value) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch];
   });
 }
+function encodeToken(value) {
+  return encodeURIComponent(String(value == null ? '' : value)).replace(/'/g, '%27');
+}
 function normalizeWorkout(w) {
   return {
     ...w,
@@ -1772,6 +2179,18 @@ function normalizeTask(t) {
 function normalizeSupplement(s) {
   var times = Array.isArray(s.times) ? s.times : [];
   return {...s, times};
+}
+function normalizeBodyMeasure(m) {
+  return {
+    date: asDateStr(m.date),
+    weight: asNumber(m.weight),
+    height: asNumber(m.height),
+    fat: asNumber(m.fat),
+    muscle: asNumber(m.muscle),
+    chest: asNumber(m.chest),
+    waist: asNumber(m.waist),
+    hips: asNumber(m.hips)
+  };
 }
 function normalizeChecks(checks) {
   var result = {};
@@ -1808,12 +2227,14 @@ function saveStateLocal() {
     supps_checked: JSON.stringify(state.supps.checked),
     body_weight: JSON.stringify(state.bodyWeight),
     body_cal: JSON.stringify(state.bodyCal),
+    body_measures: JSON.stringify(state.bodyMeasures),
+    food_log: JSON.stringify(state.foodLog),
   };
   Object.entries(payload).forEach(([k,v]) => localStorage.setItem(k + '_' + USER_ID, v));
 }
 
 function loadStateLocal() {
-  const keys = ['workouts','tasks','supps_list','supps_checked','body_weight','body_cal'];
+  const keys = ['workouts','tasks','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log'];
   const vals = {};
   keys.forEach(k => vals[k] = localStorage.getItem(k + '_' + USER_ID));
   applyLoaded(vals);
@@ -1826,6 +2247,8 @@ function applyLoaded(vals) {
   if (vals.supps_checked) state.supps.checked = JSON.parse(vals.supps_checked);
   if (vals.body_weight) state.bodyWeight = JSON.parse(vals.body_weight).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
   if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal).map(c => ({date: asDateStr(c.date), cal: parseInt(c.cal || c.calories) || 0}));
+  if (vals.body_measures) state.bodyMeasures = JSON.parse(vals.body_measures).map(normalizeBodyMeasure);
+  if (vals.food_log) state.foodLog = JSON.parse(vals.food_log);
 }
 
 // Мгновенный локальный кэш для отзывчивого UI. Постоянная память пишется
@@ -1834,25 +2257,41 @@ function saveState() {
   saveStateLocal();
 }
 
-// Загрузка при старте: сначала пробуем API (надёжный источник истины),
-// если недоступен — берём то, что есть в localStorage.
-async function loadState(cb) {
-  var bootstrap = await apiCall('GET', '/api/bootstrap');
-  if (bootstrap !== null) {
-    apiAvailable = true;
-    state.workouts = (bootstrap.workouts || []).map(normalizeWorkout);
-    state.tasks = (bootstrap.tasks || []).map(normalizeTask);
-    if (bootstrap.supplements && bootstrap.supplements.length) state.supps.list = bootstrap.supplements.map(normalizeSupplement);
-    state.supps.checked = normalizeChecks(bootstrap.supplement_checks);
-    state.bodyWeight = (bootstrap.body_weight || []).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
-    state.bodyCal = (bootstrap.body_calories || []).map(c => ({date: asDateStr(c.date), cal: parseInt(c.calories) || 0}));
-    saveStateLocal();
-  } else {
-    apiAvailable = false;
-    loadStateLocal();
-  }
+function applyBootstrap(bootstrap) {
+  state.workouts = (bootstrap.workouts || []).map(normalizeWorkout);
+  state.tasks = (bootstrap.tasks || []).map(normalizeTask);
+  if (bootstrap.supplements && bootstrap.supplements.length) state.supps.list = bootstrap.supplements.map(normalizeSupplement);
+  state.supps.checked = normalizeChecks(bootstrap.supplement_checks);
+  state.bodyWeight = (bootstrap.body_weight || []).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
+  state.bodyCal = (bootstrap.body_calories || []).map(c => ({date: asDateStr(c.date), cal: parseInt(c.calories) || 0, source: c.source || 'manual'}));
+  state.bodyMeasures = (bootstrap.body_measures || []).map(normalizeBodyMeasure);
+  state.foodLog = bootstrap.food_log_recent || [];
+  saveStateLocal();
+}
 
+function renderSyncedScreens() {
+  renderHome();
+  renderSupps();
+  renderBody();
+}
+
+async function loadStateFromServer() {
+  if (getOutbox().length) return false;
+  var bootstrap = await apiCall('GET', '/api/bootstrap');
+  if (bootstrap === null) return false;
+  applyBootstrap(bootstrap);
+  renderSyncedScreens();
+  return true;
+}
+
+// Сначала мгновенно поднимаем локальную копию. Сервер подключается позже и
+// никогда не перезаписывает данные, пока есть неотправленные операции.
+async function loadState(cb) {
+  loadStateLocal();
   cb();
+  setSyncStatus(getOutbox().length ? 'pending' : 'offline');
+  var flushed = await flushPendingWrites();
+  if (flushed) await loadStateFromServer();
   maybeImportHistory().then(function(imported) {
     if (imported) cb();
   });
@@ -1861,16 +2300,13 @@ async function loadState(cb) {
 // Импорт твоей истории тренировок при первом запуске (один раз на user_id)
 async function maybeImportHistory() {
   const flagKey = 'history_imported_' + USER_ID;
+  if (localStorage.getItem('planner_import_demo_history') !== '1') return false;
   if (localStorage.getItem(flagKey)) return false;
   if (state.workouts.length > 0) { localStorage.setItem(flagKey, '1'); return false; }
 
-  if (apiAvailable) {
-    const result = await apiCall('POST', '/api/workouts/bulk', { workouts: HISTORY_SEED });
-    if (result) state.workouts = HISTORY_SEED.map(normalizeWorkout);
-  } else {
-    state.workouts = HISTORY_SEED.map(normalizeWorkout);
-    saveStateLocal();
-  }
+  state.workouts = HISTORY_SEED.map(normalizeWorkout);
+  saveStateLocal();
+  await apiCall('POST', '/api/workouts/bulk', { workouts: HISTORY_SEED });
   localStorage.setItem(flagKey, '1');
   return true;
 }
@@ -2183,6 +2619,7 @@ function updateRMPreview() {
 
 async function saveSet() {
   const entry = {
+    client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
     date: todayStr(), muscle: currentMuscle,
     exercise: document.getElementById('m-exercise').value,
     sets: parseInt(document.getElementById('m-sets').value)||1,
@@ -2191,12 +2628,10 @@ async function saveSet() {
   };
   state.workouts.push(entry);
   saveState();
-  if (apiAvailable) {
-    var saved = await apiCall('POST', '/api/workouts', entry);
-    if (saved && saved.id) {
-      entry.id = saved.id;
-      saveState();
-    }
+  var saved = await apiCall('POST', '/api/workouts', entry);
+  if (saved && saved.id) {
+    entry.id = saved.id;
+    saveState();
   }
   closeModal('modal-set');
   renderExercises();
@@ -2204,9 +2639,16 @@ async function saveSet() {
 
 async function deleteWorkout(index, id) {
   if (index < 0 || index >= state.workouts.length) return;
+  const workout = state.workouts[index];
   state.workouts.splice(index, 1);
   saveState();
-  if (apiAvailable && id) await apiCall('DELETE', '/api/workouts/' + id);
+  if (id) {
+    await apiCall('DELETE', '/api/workouts/' + id);
+  } else if (workout?.client_id) {
+    saveOutbox(getOutbox().filter(item => !(
+      item.method === 'POST' && item.path === '/api/workouts' && item.body?.client_id === workout.client_id
+    )));
+  }
   renderExercises();
   renderHome();
 }
@@ -2311,8 +2753,382 @@ function renderBody() {
   document.getElementById('body-date-label').textContent = formatDate(todayStr());
   renderWeightChart();
   renderCalChart();
+  renderBodyMeasureSummary();
   renderWeightHistory();
+  renderMeasureHistory();
   renderCalHistory();
+  renderBodyVisualizerSummary();
+}
+
+let body3d = {
+  loading: false,
+  ready: false,
+  renderer: null,
+  scene: null,
+  camera: null,
+  hemiLight: null,
+  keyLight: null,
+  rimLight: null,
+  group: null,
+  model: null,
+  baseScale: 1,
+  sourceBounds: null,
+  meshes: [],
+  raf: 0,
+  yaw: 0,
+  lastFrame: 0
+};
+
+function latestBodyWeights() {
+  return [...(state.bodyWeight || [])].sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function latestBodyMeasures() {
+  return [...(state.bodyMeasures || [])].sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function renderBodyVisualizerSummary() {
+  const list = latestBodyWeights();
+  const latest = list[0];
+  const prev = list[1];
+  const weightEl = document.getElementById('body3dWeight');
+  const deltaEl = document.getElementById('body3dDelta');
+  const countEl = document.getElementById('body3dCount');
+  if (!weightEl || !deltaEl || !countEl) return;
+  weightEl.textContent = latest ? `${latest.weight} кг` : '—';
+  if (latest && prev) {
+    const d = round1(latest.weight - prev.weight);
+    deltaEl.textContent = `${d >= 0 ? '+' : ''}${d} кг`;
+  } else {
+    deltaEl.textContent = '—';
+  }
+  countEl.textContent = String(list.length);
+  const shapeEl = document.getElementById('body3dShape');
+  const measure = latestBodyMeasures()[0];
+  const weight = latest?.weight || measure?.weight || 0;
+  const height = measure?.height || 0;
+  if (shapeEl) {
+    if (weight && height) {
+      const bmi = weight / Math.pow(height / 100, 2);
+      shapeEl.textContent = `${height} см · ${weight} кг · ИМТ ${round1(bmi)} · визуальная оценка`;
+    } else {
+      shapeEl.textContent = 'Добавьте рост и вес, чтобы настроить силуэт';
+    }
+  }
+  if (body3d.ready) updateBody3dFromWeight();
+}
+
+function renderBodyMeasureSummary() {
+  const cont = document.getElementById('body-measure-summary');
+  if (!cont) return;
+  const latest = latestBodyMeasures()[0];
+  const latestWeight = latestBodyWeights()[0]?.weight || latest?.weight || 0;
+  const bmi = latest?.height && latestWeight ? latestWeight / Math.pow(latest.height / 100, 2) : 0;
+  const tiles = [
+    ['weight', 'Вес', 'кг'],
+    ['height', 'Рост', 'см'],
+    ['bmi', 'ИМТ', ''],
+    ['chest', 'Грудь', 'см'],
+    ['waist', 'Талия', 'см'],
+    ['hips', 'Бедра', 'см']
+  ];
+  cont.innerHTML = tiles.map(([key, label, unit]) => {
+    const raw = key === 'weight' ? latestWeight : (key === 'bmi' ? bmi : latest?.[key]);
+    const val = raw ? round1(raw) + (unit ? ' ' + unit : '') : '—';
+    return `<div class="body-measure-tile"><strong>${val}</strong><span>${label}</span></div>`;
+  }).join('');
+}
+
+function loadBody3dScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === '1') resolve();
+      else existing.addEventListener('load', resolve, { once:true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => { script.dataset.loaded = '1'; resolve(); };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureBody3dLibs() {
+  if (!window.THREE) {
+    await loadBody3dScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+  }
+  if (!window.THREE || !THREE.GLTFLoader) {
+    await loadBody3dScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js');
+  }
+}
+
+function setBody3dStatus(text, hidden) {
+  const loader = document.getElementById('body3dLoader');
+  if (!loader) return;
+  loader.textContent = text;
+  loader.classList.toggle('hidden', !!hidden);
+}
+
+async function initBodyVisualizer() {
+  if (body3d.loading) return;
+  if (body3d.ready) {
+    updateBody3dFromWeight();
+    return;
+  }
+  body3d.loading = true;
+  const btn = document.getElementById('body3dBtn');
+  const stage = document.getElementById('body3dStage');
+  if (stage) {
+    stage.classList.add('expanded');
+    window.setTimeout(resizeBody3d, 440);
+  }
+  if (btn) btn.textContent = 'Загрузка...';
+  setBody3dStatus('Загружаем 3D-модель. Первый запуск может занять несколько секунд.', false);
+  try {
+    await ensureBody3dLibs();
+    setupBody3dScene();
+    await loadBody3dModel();
+    body3d.ready = true;
+    setBody3dStatus('', true);
+    if (btn) btn.textContent = 'Обновить';
+    updateBody3dFromWeight();
+    animateBody3d();
+  } catch (err) {
+    console.error(err);
+    setBody3dStatus('Не удалось загрузить 3D-модель. Проверьте локальный сервер и файл assets/models/human_glb.glb.', false);
+    if (btn) btn.textContent = 'Повторить';
+  } finally {
+    body3d.loading = false;
+  }
+}
+
+function setupBody3dScene() {
+  const stage = document.getElementById('body3dStage');
+  if (!stage || body3d.renderer) return;
+  body3d.scene = new THREE.Scene();
+  body3d.scene.background = new THREE.Color(0x10131a);
+  body3d.camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+  body3d.camera.position.set(0, .25, 6.8);
+  body3d.camera.lookAt(0, .45, 0);
+  body3d.renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:'low-power' });
+  const mobilePixelRatio = window.matchMedia('(max-width: 600px)').matches ? 1 : 1.25;
+  body3d.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobilePixelRatio));
+  body3d.renderer.shadowMap.enabled = false;
+  stage.appendChild(body3d.renderer.domElement);
+  body3d.hemiLight = new THREE.HemisphereLight(0xeaf6ff, 0x1c2230, 1.45);
+  body3d.scene.add(body3d.hemiLight);
+  const key = new THREE.DirectionalLight(0xffffff, 1.55);
+  key.position.set(-2.8, 4.4, 4.2);
+  key.castShadow = true;
+  body3d.scene.add(key);
+  body3d.keyLight = key;
+  const rim = new THREE.DirectionalLight(0x82c9ff, .85);
+  rim.position.set(2.5, 2.1, -2.6);
+  body3d.scene.add(rim);
+  body3d.rimLight = rim;
+  body3d.group = new THREE.Group();
+  body3d.scene.add(body3d.group);
+  resizeBody3d();
+  window.addEventListener('resize', resizeBody3d);
+}
+
+function resizeBody3d() {
+  const stage = document.getElementById('body3dStage');
+  if (!stage || !body3d.renderer || !body3d.camera) return;
+  const rect = stage.getBoundingClientRect();
+  body3d.renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
+  body3d.camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
+  body3d.camera.updateProjectionMatrix();
+}
+
+function loadBody3dModel() {
+  return new Promise((resolve, reject) => {
+    const loader = new THREE.GLTFLoader();
+    loader.load('assets/models/human_glb.glb', gltf => {
+      body3d.model = gltf.scene;
+      body3d.model.rotation.set(0, 0, 0);
+      body3d.model.traverse(obj => {
+        if (!obj.isMesh) return;
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        if (obj.material) {
+          obj.material = obj.material.clone();
+          if (obj.material.color) obj.material.color.setHSL(.58, .28, .86);
+          obj.material.metalness = 0;
+          obj.material.roughness = .58;
+        }
+      });
+      const box = new THREE.Box3().setFromObject(body3d.model);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
+      body3d.baseScale = 2.7 / Math.max(.001, size.y);
+      body3d.sourceBounds = { min: box.min.clone(), max: box.max.clone(), size: size.clone(), center: center.clone() };
+      body3d.meshes = [];
+      body3d.model.updateMatrixWorld(true);
+      body3d.model.traverse(obj => {
+        const attr = obj.isMesh && obj.geometry?.attributes?.position;
+        if (!attr) return;
+        const original = new Float32Array(attr.array);
+        const modelPositions = new Float32Array(original.length);
+        const v = new THREE.Vector3();
+        for (let i = 0; i < original.length; i += 3) {
+          v.set(original[i], original[i + 1], original[i + 2]).applyMatrix4(obj.matrixWorld);
+          modelPositions[i] = v.x;
+          modelPositions[i + 1] = v.y;
+          modelPositions[i + 2] = v.z;
+        }
+        body3d.meshes.push({
+          mesh: obj,
+          original,
+          modelPositions,
+          fromModel: obj.matrixWorld.clone().invert()
+        });
+      });
+      body3d.model.position.sub(center);
+      body3d.group.add(body3d.model);
+      resolve();
+    }, undefined, reject);
+  });
+}
+
+function updateBody3dFromWeight() {
+  if (!body3d.model) return;
+  applyBodyProportions();
+  body3d.model.scale.setScalar(body3d.baseScale);
+  centerBody3dModel();
+  resizeBody3d();
+}
+
+function clampBody(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function bodyZone(y, center, spread) {
+  const d = (y - center) / spread;
+  return Math.exp(-d * d);
+}
+
+function getBodyShapeProfile() {
+  const measure = latestBodyMeasures()[0] || {};
+  const weight = latestBodyWeights()[0]?.weight || measure.weight || 0;
+  const height = measure.height || 0;
+  if (!weight || !height) return { ready:false, overall:1, chest:1, waist:1, hips:1, softness:0 };
+
+  const bmi = weight / Math.pow(height / 100, 2);
+  const mass = clampBody((bmi - 22) / 18, -0.28, 1);
+  const softness = clampBody((bmi - 27) / 13, 0, 1);
+  const referenceChest = height * .56;
+  const referenceWaist = height * .47;
+  const referenceHips = height * .55;
+  const circumferenceScale = (value, reference, influence) => value
+    ? clampBody(1 + ((value / reference) - 1) * influence, .82, 1.48)
+    : 1 + mass * influence * .34;
+
+  return {
+    ready: true,
+    bmi,
+    softness,
+    overall: clampBody(1 + mass * .16, .9, 1.2),
+    chest: circumferenceScale(measure.chest, referenceChest, .82) - softness * .06,
+    waist: circumferenceScale(measure.waist, referenceWaist, 1.02),
+    hips: circumferenceScale(measure.hips, referenceHips, .88)
+  };
+}
+
+function applyBodyProportions() {
+  const bounds = body3d.sourceBounds;
+  const profile = getBodyShapeProfile();
+  if (!bounds || !body3d.meshes.length) return;
+  const height = Math.max(.001, bounds.size.y);
+  const centerX = bounds.center.x;
+  const centerZ = bounds.center.z;
+  updateBodySurface(profile);
+
+  body3d.meshes.forEach(item => {
+    const attr = item.mesh.geometry.attributes.position;
+    const src = item.modelPositions;
+    const dst = attr.array;
+    const point = new THREE.Vector3();
+    for (let i = 0; i < src.length; i += 3) {
+      const y = src[i + 1];
+      const yn = (y - bounds.min.y) / height;
+      const chestZone = bodyZone(yn, .68, .105);
+      const waistZone = bodyZone(yn, .55, .105);
+      const hipsZone = bodyZone(yn, .43, .105);
+      const torsoZone = clampBody(chestZone + waistZone + hipsZone, 0, 1);
+      const zoneScale = 1
+        + (profile.chest - 1) * chestZone
+        + (profile.waist - 1) * waistZone
+        + (profile.hips - 1) * hipsZone;
+      const safeScale = clampBody(profile.overall + (zoneScale - 1) * .72, .82, 1.52);
+      const xDistance = Math.abs(src[i] - centerX) / Math.max(.001, bounds.size.x * .5);
+      const armProtection = xDistance > .58 ? .32 : 1;
+      const bellyZone = bodyZone(yn, .545, .125);
+      const xScale = 1 + (safeScale - 1) * torsoZone * armProtection
+        + profile.softness * bellyZone * .1 * armProtection;
+      const zScale = 1 + (safeScale - 1) * torsoZone
+        + profile.softness * bellyZone * .24;
+      point.set(
+        centerX + (src[i] - centerX) * xScale,
+        y,
+        centerZ + (src[i + 2] - centerZ) * zScale
+      ).applyMatrix4(item.fromModel);
+      dst[i] = point.x;
+      dst[i + 1] = point.y;
+      dst[i + 2] = point.z;
+    }
+    attr.needsUpdate = true;
+    item.mesh.geometry.computeBoundingBox();
+    item.mesh.geometry.computeBoundingSphere();
+  });
+}
+
+function updateBodySurface(profile) {
+  const softness = profile.softness || 0;
+  body3d.model.traverse(obj => {
+    if (!obj.isMesh || !obj.material) return;
+    const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+    materials.forEach(material => {
+      material.roughness = .62 + softness * .34;
+      material.metalness = 0;
+      if (material.color) material.color.setHSL(.58, .2 - softness * .08, .84 + softness * .05);
+      material.needsUpdate = true;
+    });
+  });
+  if (body3d.hemiLight) body3d.hemiLight.intensity = 1.45 + softness * .65;
+  if (body3d.keyLight) body3d.keyLight.intensity = 1.55 - softness * .85;
+  if (body3d.rimLight) body3d.rimLight.intensity = .85 - softness * .42;
+}
+
+function centerBody3dModel() {
+  if (!body3d.model) return;
+  body3d.model.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(body3d.model);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  body3d.model.position.x -= center.x;
+  body3d.model.position.y -= center.y;
+  body3d.model.position.z -= center.z;
+  body3d.model.position.y += .52;
+}
+
+function animateBody3d(now) {
+  if (!body3d.renderer || !body3d.scene || !body3d.camera) return;
+  body3d.raf = requestAnimationFrame(animateBody3d);
+  const bodyScreen = document.getElementById('s-body');
+  if (document.hidden || !bodyScreen?.classList.contains('active')) return;
+  if (now - body3d.lastFrame < 42) return;
+  body3d.lastFrame = now;
+  if (body3d.group) {
+    body3d.yaw += .006;
+    body3d.group.rotation.y = body3d.yaw;
+  }
+  body3d.renderer.render(body3d.scene, body3d.camera);
 }
 
 function renderWeightChart() {
@@ -2379,6 +3195,21 @@ function renderWeightHistory() {
   }).join('');
 }
 
+function renderMeasureHistory() {
+  const sorted = latestBodyMeasures();
+  const cont = document.getElementById('measure-history');
+  if (!cont) return;
+  if (!sorted.length) { cont.innerHTML = '<div class="empty-state">Пока нет замеров тела</div>'; return; }
+  cont.innerHTML = sorted.map(e=>`<div class="body-entry-row">
+    <span class="be-date">${e.date}</span>
+    <span class="be-val">${e.waist ? round1(e.waist) + ' см талия' : 'замер'}</span>
+    <span style="display:flex;gap:6px">
+      <button onclick="openEditBody('measure','${e.date}')" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:11px;font-weight:700">Изм.</button>
+      <button onclick="deleteBodyEntry('measure','${e.date}')" style="border:0;background:var(--card2);color:var(--red);border-radius:8px;width:28px;height:28px;cursor:pointer;font-weight:800">×</button>
+    </span>
+  </div>`).join('');
+}
+
 function renderCalHistory() {
   const sorted = [...state.bodyCal].sort((a,b)=>b.date.localeCompare(a.date));
   const cont = document.getElementById('cal-history');
@@ -2398,11 +3229,21 @@ function openAddBody(type) {
   document.getElementById('m-body-date').disabled = false;
   document.getElementById('m-body-weight').value = '';
   document.getElementById('m-body-cal').value = '';
-  document.getElementById('m-body-title').textContent = type==='weight' ? 'Добавить замер веса' : 'Добавить калории за день';
+  const lastMeasure = latestBodyMeasures()[0] || {};
+  const lastWeight = latestBodyWeights()[0]?.weight || lastMeasure.weight || '';
+  const shapeWeight = document.getElementById('m-body-shape-weight');
+  if (shapeWeight) shapeWeight.value = type === 'measure' ? lastWeight : '';
+  ['height','fat','muscle','chest','waist','hips'].forEach(k => {
+    const el = document.getElementById('m-body-' + k);
+    if (el) el.value = type === 'measure' ? (lastMeasure[k] || '') : '';
+  });
+  document.getElementById('m-body-title').textContent = type==='weight' ? 'Добавить замер веса' : (type==='cal' ? 'Добавить калории за день' : 'Добавить замеры тела');
   document.getElementById('m-body-weight-row').style.display = type==='weight' ? 'block' : 'none';
   document.getElementById('m-body-cal-row').style.display = type==='cal' ? 'block' : 'none';
+  document.getElementById('m-body-measure-row').style.display = type==='measure' ? 'block' : 'none';
   document.getElementById('modal-body').dataset.type = type;
   document.getElementById('modal-body').dataset.mode = 'add';
+  document.getElementById('m-body-error')?.classList.remove('visible');
   document.getElementById('modal-body').classList.add('open');
 }
 
@@ -2410,18 +3251,28 @@ function openEditBody(type, date) {
   const modal = document.getElementById('modal-body');
   document.getElementById('m-body-date').value = date;
   document.getElementById('m-body-date').disabled = true;
-  document.getElementById('m-body-title').textContent = type==='weight' ? 'Изменить вес' : 'Изменить калории';
+  document.getElementById('m-body-title').textContent = type==='weight' ? 'Изменить вес' : (type==='cal' ? 'Изменить калории' : 'Изменить замеры тела');
   document.getElementById('m-body-weight-row').style.display = type==='weight' ? 'block' : 'none';
   document.getElementById('m-body-cal-row').style.display = type==='cal' ? 'block' : 'none';
+  document.getElementById('m-body-measure-row').style.display = type==='measure' ? 'block' : 'none';
   if (type === 'weight') {
     const entry = state.bodyWeight.find(e=>e.date===date);
     document.getElementById('m-body-weight').value = entry ? entry.weight : '';
-  } else {
+  } else if (type === 'cal') {
     const entry = state.bodyCal.find(e=>e.date===date);
     document.getElementById('m-body-cal').value = entry ? entry.cal : '';
+  } else {
+    const entry = state.bodyMeasures.find(e=>e.date===date) || {};
+    const weightEntry = state.bodyWeight.find(e=>e.date===date);
+    document.getElementById('m-body-shape-weight').value = weightEntry?.weight || entry.weight || '';
+    ['height','fat','muscle','chest','waist','hips'].forEach(k => {
+      const el = document.getElementById('m-body-' + k);
+      if (el) el.value = entry[k] || '';
+    });
   }
   modal.dataset.type = type;
   modal.dataset.mode = 'edit';
+  document.getElementById('m-body-error')?.classList.remove('visible');
   modal.classList.add('open');
 }
 
@@ -2433,13 +3284,34 @@ function saveBody() {
     if (!w) return;
     state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
     state.bodyWeight.push({date, weight: w});
-    if (apiAvailable) apiCall('POST', '/api/body/weight', {date, weight: w});
-  } else {
+    apiCall('POST', '/api/body/weight', {date, weight: w});
+  } else if (type === 'cal') {
     const c = parseInt(document.getElementById('m-body-cal').value);
     if (!c) return;
     state.bodyCal = state.bodyCal.filter(e=>e.date!==date);
     state.bodyCal.push({date, cal: c});
-    if (apiAvailable) apiCall('POST', '/api/body/calories', {date, calories: c});
+    apiCall('POST', '/api/body/calories', {date, calories: c});
+  } else {
+    const shapeWeight = asNumber(document.getElementById('m-body-shape-weight').value);
+    const entry = normalizeBodyMeasure({
+      date,
+      weight: shapeWeight,
+      height: document.getElementById('m-body-height').value,
+      fat: document.getElementById('m-body-fat').value,
+      muscle: document.getElementById('m-body-muscle').value,
+      chest: document.getElementById('m-body-chest').value,
+      waist: document.getElementById('m-body-waist').value,
+      hips: document.getElementById('m-body-hips').value
+    });
+    if (!entry.height || !shapeWeight) {
+      document.getElementById('m-body-error')?.classList.add('visible');
+      return;
+    }
+    state.bodyMeasures = state.bodyMeasures.filter(e=>e.date!==date);
+    state.bodyMeasures.push(entry);
+    state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
+    state.bodyWeight.push({date, weight: shapeWeight});
+    apiCall('POST', '/api/body/measures', entry);
   }
   saveState();
   closeModal('modal-body');
@@ -2451,10 +3323,13 @@ function saveBody() {
 async function deleteBodyEntry(type, date) {
   if (type === 'weight') {
     state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
-    if (apiAvailable) await apiCall('DELETE', '/api/body/weight/' + encodeURIComponent(date));
-  } else {
+    await apiCall('DELETE', '/api/body/weight/' + encodeURIComponent(date));
+  } else if (type === 'cal') {
     state.bodyCal = state.bodyCal.filter(e=>e.date!==date);
-    if (apiAvailable) await apiCall('DELETE', '/api/body/calories/' + encodeURIComponent(date));
+    await apiCall('DELETE', '/api/body/calories/' + encodeURIComponent(date));
+  } else {
+    state.bodyMeasures = state.bodyMeasures.filter(e=>e.date!==date);
+    await apiCall('DELETE', '/api/body/measures/' + encodeURIComponent(date));
   }
   saveState();
   renderBody();
@@ -2485,19 +3360,19 @@ function renderTasks() {
       return;
     }
     document.getElementById(container).innerHTML = arr.map(t=>`
-      <div class="task-item" onclick="toggleTask('${t.id}')">
+      <div class="task-item" onclick="toggleTask(decodeURIComponent('${encodeToken(t.id)}'))">
         <div class="task-cb ${t.done?'done':''}">${t.done?'✓':''}</div>
         <div class="task-body">
-          <div class="task-text ${t.done?'done':''}">${t.text}</div>
+          <div class="task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
           <div class="task-meta">
             <span class="prio ${prioClass[t.prio]}">${prioLabel[t.prio]}</span>
-            ${t.dl?`<span class="task-dl">${t.dl}</span>`:''}
-            ${t.cat?`<span class="task-cat">${t.cat}</span>`:''}
+            ${t.dl?`<span class="task-dl">${escapeHtml(t.dl)}</span>`:''}
+            ${t.cat?`<span class="task-cat">${escapeHtml(t.cat)}</span>`:''}
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <button onclick="openEditTask('${t.id}', event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;padding:0 9px;height:30px;cursor:pointer;font-size:11px;font-weight:700">Изм.</button>
-          <button onclick="deleteTask('${t.id}', event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-weight:800">×</button>
+          <button onclick="openEditTask(decodeURIComponent('${encodeToken(t.id)}'), event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;padding:0 9px;height:30px;cursor:pointer;font-size:11px;font-weight:700">Изм.</button>
+          <button onclick="deleteTask(decodeURIComponent('${encodeToken(t.id)}'), event)" style="border:0;background:var(--card2);color:var(--text-muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-weight:800">×</button>
         </div>
       </div>`).join('');
   }
@@ -2509,7 +3384,7 @@ async function deleteTask(id, event) {
   if (event) event.stopPropagation();
   state.tasks = state.tasks.filter(t=>t.id!==id);
   saveState();
-  if (apiAvailable) await apiCall('DELETE', '/api/tasks/' + encodeURIComponent(id));
+  await apiCall('DELETE', '/api/tasks/' + encodeURIComponent(id));
   renderTasks();
   renderHome();
 }
@@ -2519,8 +3394,9 @@ function toggleTask(id) {
   if (t) {
     t.done = !t.done;
     saveState();
-    if (apiAvailable) apiCall('POST', '/api/tasks', t);
+    apiCall('POST', '/api/tasks', t);
     renderTasks();
+    renderHome();
   }
 }
 
@@ -2568,7 +3444,7 @@ function saveTask() {
   task.dl = document.getElementById('m-task-dl').value;
   task.cat = document.getElementById('m-task-cat').value.trim();
   saveState();
-  if (apiAvailable) apiCall('POST', '/api/tasks', task);
+  apiCall('POST', '/api/tasks', task);
   closeModal('modal-task');
   document.getElementById('m-task-text').value = '';
   document.getElementById('m-task-cat').value = '';
@@ -2588,14 +3464,14 @@ function renderSupps() {
     const chips = s.times.map(t=>{
       const key = selectedSuppDate+'_'+s.name+'_'+t;
       const on = !!state.supps.checked[key];
-      return `<div class="time-chip${on?' on':''}" onclick="toggleSupp('${key}',this)">${t}${on?' ✓':''}</div>`;
+      return `<div class="time-chip${on?' on':''}" onclick="toggleSupp(decodeURIComponent('${encodeToken(key)}'),this)">${escapeHtml(t)}${on?' ✓':''}</div>`;
     }).join('');
     const done = s.times.filter(t=>state.supps.checked[selectedSuppDate+'_'+s.name+'_'+t]).length;
     const pct = Math.round(done/s.times.length*100);
     return `<div class="supp-item">
       <div class="supp-row">
-        <div class="supp-emoji">${s.emoji}</div>
-        <div class="supp-info"><div class="supp-name">${s.name}</div><div class="supp-dose">${s.dose}</div></div>
+        <div class="supp-emoji">${escapeHtml(s.emoji)}</div>
+        <div class="supp-info"><div class="supp-name">${escapeHtml(s.name)}</div><div class="supp-dose">${escapeHtml(s.dose)}</div></div>
         <div class="supp-pct">${pct}%</div>
         <div class="supp-del" onclick="deleteSupp(${si})">🗑</div>
       </div>
@@ -2637,10 +3513,10 @@ function toggleSupp(key, el) {
   const suppName = rest.slice(0, -1).join('_');
   if (isOn) {
     delete state.supps.checked[key]; el.classList.remove('on'); el.textContent = label;
-    if (apiAvailable) apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: false});
+    apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: false});
   } else {
     state.supps.checked[key] = true; el.classList.add('on'); el.textContent = label + ' ✓';
-    if (apiAvailable) apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: true});
+    apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: true});
   }
   saveState();
   updateSuppProgress();
@@ -2666,7 +3542,7 @@ function openAddSupp() {
   document.getElementById('modal-supp').classList.add('open');
 }
 
-function saveSupp() {
+async function saveSupp() {
   const name = document.getElementById('m-supp-name').value.trim();
   if (!name) return;
   const times = [];
@@ -2675,13 +3551,18 @@ function saveSupp() {
   if (document.getElementById('m-supp-evening').checked) times.push('Вечер');
   if (!times.length) times.push('Утро');
   const newSupp = {
+    client_id: 'supp_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
     name, emoji: document.getElementById('m-supp-emoji').value || '💊',
     dose: document.getElementById('m-supp-dose').value.trim() || '—',
     times
   };
   state.supps.list.push(newSupp);
   saveState();
-  if (apiAvailable) apiCall('POST', '/api/supplements', newSupp);
+  const saved = await apiCall('POST', '/api/supplements', newSupp);
+  if (saved?.id) {
+    newSupp.id = saved.id;
+    saveState();
+  }
   closeModal('modal-supp');
   renderSupps();
 }
@@ -2690,7 +3571,14 @@ function deleteSupp(idx) {
   const supp = state.supps.list[idx];
   state.supps.list.splice(idx,1);
   saveState();
-  if (apiAvailable && supp?.id) apiCall('DELETE', `/api/supplements/${supp.id}`);
+  if (supp?.id) {
+    apiCall('DELETE', `/api/supplements/${supp.id}`);
+  } else if (supp) {
+    saveOutbox(getOutbox().filter(item => !(
+      item.method === 'POST' && item.path === '/api/supplements' &&
+      (item.body?.client_id === supp.client_id || (item.body?.name === supp.name && item.body?.dose === supp.dose))
+    )));
+  }
   renderSupps();
 }
 
@@ -2768,7 +3656,7 @@ function renderReport() {
     if (t.done) catMap[cat].done++;
   });
   const catHTML = Object.entries(catMap).map(([cat,v])=>
-    `<div class="report-row"><div class="rr-label">${cat}</div><div class="rr-val">${v.done}/${v.total}</div></div>`
+    `<div class="report-row"><div class="rr-label">${escapeHtml(cat)}</div><div class="rr-val">${v.done}/${v.total}</div></div>`
   ).join('');
   document.getElementById('report-tasks-cat').innerHTML = catHTML || '<div class="empty-state">Нет задач с дедлайном в этом месяце</div>';
 
@@ -2796,20 +3684,8 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 applyTheme(localStorage.getItem('planner_theme') || document.documentElement.getAttribute('data-theme'));
 renderHome();
 loadState(() => {
-  renderHome();
-  renderSupps();
-  const dot = document.getElementById('sync-dot');
-  const status = document.getElementById('sync-status');
-  if (dot && status) {
-    if (apiAvailable) {
-      dot.style.background = 'var(--green)';
-      dot.style.boxShadow = '0 0 6px var(--green)';
-      status.textContent = 'Подключено к серверу — данные синхронизируются';
-    } else {
-      dot.style.background = 'var(--orange)';
-      status.textContent = 'Офлайн-режим — данные сохраняются только на этом устройстве';
-    }
-  }
+  renderSyncedScreens();
+  setSyncStatus(getOutbox().length ? 'pending' : (apiAvailable ? 'online' : 'offline'));
 });
 </script>
 </body>
