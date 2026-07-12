@@ -423,6 +423,7 @@ body { background: var(--bg); color: var(--text); }
   background: none;
   border: none;
   font-family: 'Manrope', sans-serif;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px 0;
   touch-action: manipulation;
@@ -446,7 +447,7 @@ body { background: var(--bg); color: var(--text); }
 .nav-item.active .nav-icon { color: var(--text); background: var(--card2); transform: translateY(-1px); }
 .nav-item.active .nav-label { color: var(--text); font-weight: 600; }
 .nav-icon { line-height: 1; }
-.nav-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.2px; }
+.nav-label { color: var(--text-muted); font-size: 9.5px; font-weight: 600; letter-spacing: 0.2px; }
 
 /* ── Headers ── */
 .page-header {
@@ -518,7 +519,7 @@ body { background: var(--bg); color: var(--text); }
   padding: 7px 9px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.72);
+  background: var(--card2);
   color: var(--text-sub);
   font-size: 10px;
   font-weight: 800;
@@ -531,6 +532,11 @@ body { background: var(--bg); color: var(--text); }
   border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 0 4px var(--green-soft);
+}
+.home-sync-pill[data-sync="pending"]::before,
+.home-sync-pill[data-sync="offline"]::before {
+  background: var(--orange);
+  box-shadow: 0 0 0 4px var(--orange-soft);
 }
 .focus-card {
   position: relative;
@@ -574,7 +580,7 @@ html[data-theme="dark"] .focus-card {
   transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 .home-btn.primary {
-  color: #fff;
+  color: var(--bg);
   border-color: transparent;
   background: var(--ink);
   box-shadow: 0 12px 22px rgba(23,23,23,0.16);
@@ -2032,7 +2038,10 @@ function setSyncStatus(mode) {
     pending: 'Сохранено на устройстве · ожидает сеть',
     offline: 'Офлайн · данные на устройстве'
   };
-  if (pill) pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : 'Офлайн');
+  if (pill) {
+    pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : 'Офлайн');
+    pill.dataset.sync = mode;
+  }
   if (status) status.textContent = labels[mode] || labels.offline;
   if (dot) {
     dot.style.background = mode === 'online' ? 'var(--green)' : 'var(--orange)';
