@@ -108,9 +108,14 @@ async function loadFoodLog() {
   try {
     var data = await apiCall('GET', '/api/food/log?log_date=' + currentFoodDate);
     if (data !== null) {
-      state.foodLog = (state.foodLog || []).filter(function(e){ return e.date !== currentFoodDate; }).concat(data);
+      var deletedFoodIds = new Set(getTombstones().filter(function(item) { return item.kind === 'food'; }).map(function(item) { return item.key; }));
+      var safeServerEntries = data.filter(function(item) { return !deletedFoodIds.has(String(item.id)); });
+      var mergedEntries = mergeRecords(localEntries, safeServerEntries, function(item) {
+        return itemIdentity(item, ['date','meal_type','food_name','amount','calories']);
+      });
+      state.foodLog = (state.foodLog || []).filter(function(e){ return e.date !== currentFoodDate; }).concat(mergedEntries);
       saveStateLocal();
-      renderFoodLog(data);
+      renderFoodLog(mergedEntries);
     }
   } catch(e) { renderFoodLog(localEntries); }
 }
@@ -285,6 +290,7 @@ async function confirmAddFood() {
 async function deleteFoodLog(id) {
   var entry = state.foodLog.find(function(e){ return String(e.id) === String(id); });
   state.foodLog = state.foodLog.filter(function(e){ return String(e.id) !== String(id); });
+  if (String(id).indexOf('food_') !== 0) addTombstone('food', id);
   saveStateLocal();
   if (String(id).indexOf('food_') === 0) {
     saveOutbox(getOutbox().filter(function(item) {
@@ -887,6 +893,44 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 }
 .food-search-btn:active { transform: scale(.97); box-shadow: none; }
 .food-search-btn:disabled { cursor: default; opacity: .62; transform: none; box-shadow: none; }
+
+/* ── DATA CENTER ── */
+.sync-overview {
+  margin: 0 12px 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.sync-heading { display: flex; align-items: center; gap: 11px; }
+.sync-state-icon {
+  width: 38px; height: 38px; flex: 0 0 38px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--green-soft); color: var(--green);
+  font-size: 18px; font-weight: 800;
+}
+.sync-state-icon.pending { background: var(--orange-soft); color: var(--orange); }
+.sync-state-icon.offline { background: var(--card2); color: var(--text-muted); }
+.sync-main-status { font-size: 14px; font-weight: 800; color: var(--text); }
+.sync-last-status { margin-top: 3px; font-size: 10.5px; color: var(--text-muted); line-height: 1.4; }
+.sync-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-top: 15px; }
+.sync-metric { min-width: 0; padding: 10px 6px; text-align: center; border-radius: 10px; background: var(--card2); }
+.sync-metric-value { font-size: 15px; font-weight: 800; color: var(--text); }
+.sync-metric-label { margin-top: 3px; font-size: 8.5px; color: var(--text-muted); overflow-wrap: anywhere; }
+.sync-actions { display: grid; gap: 8px; margin: 0 12px 12px; }
+.sync-action {
+  min-height: 48px; width: 100%; padding: 0 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card); color: var(--text); cursor: pointer;
+  font: 700 12px/1.2 'Manrope', sans-serif; text-align: left;
+}
+.sync-action.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.sync-action:active { transform: scale(.985); }
+.sync-action:disabled { opacity: .55; transform: none; cursor: default; }
+.sync-action-icon { font-size: 17px; line-height: 1; }
+.sync-notice { display: none; margin: 0 12px 12px; padding: 10px 12px; border-radius: 10px; background: var(--green-soft); color: var(--green); font-size: 11px; line-height: 1.45; }
+.sync-notice.error { background: var(--red-soft); color: var(--red); }
 
 /* ── CHARTS ── */
 .chart-canvas-wrap { position: relative; height: 160px; padding: 0 4px 4px; }
@@ -1728,20 +1772,38 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="card"><div class="card-inner" id="ai-plateau"></div></div>
     </div>
 
-    <div class="section-label">Данные и синхронизация</div>
-    <div class="card">
-      <div class="card-inner">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <div id="sync-dot" style="width:9px;height:9px;border-radius:50%;background:var(--text-muted)"></div>
-          <div style="font-size:12px;color:var(--text-sub)" id="sync-status">Проверка подключения…</div>
+    <div style="height:8px"></div>
+  </div>
+
+  <!-- Data and Sync Screen -->
+  <div class="screen" id="s-sync">
+    <div class="page-header">
+      <div class="ph-title">Данные</div>
+      <div class="ph-sub">Синхронизация и резервные копии</div>
+    </div>
+    <div class="sync-overview">
+      <div class="sync-heading">
+        <div class="sync-state-icon offline" id="sync-state-icon">✓</div>
+        <div>
+          <div class="sync-main-status" id="sync-status">Проверка подключения…</div>
+          <div class="sync-last-status" id="sync-last-status">Последнее сохранение: —</div>
         </div>
-        <div style="font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:12px">
-          Данные привязаны к твоему Telegram-аккаунту и хранятся на сервере. Дополнительно можешь сохранить копию вручную.
-        </div>
-        <button class="btn-ghost" onclick="exportData()" style="margin:0">⬇️ Скачать резервную копию (JSON)</button>
+      </div>
+      <div class="sync-metrics">
+        <div class="sync-metric"><div class="sync-metric-value" id="sync-record-count">0</div><div class="sync-metric-label">записей</div></div>
+        <div class="sync-metric"><div class="sync-metric-value" id="sync-pending-count">0</div><div class="sync-metric-label">ожидают сеть</div></div>
+        <div class="sync-metric"><div class="sync-metric-value" id="sync-backup-state">—</div><div class="sync-metric-label">резервная копия</div></div>
       </div>
     </div>
-    <div style="height:8px"></div>
+    <div class="sync-actions">
+      <button class="sync-action primary" id="sync-now-btn" onclick="syncNow()"><span>Синхронизировать сейчас</span><span class="sync-action-icon">↻</span></button>
+      <button class="sync-action" onclick="exportData()"><span>Скачать резервную копию</span><span class="sync-action-icon">↓</span></button>
+      <button class="sync-action" onclick="document.getElementById('backup-file-input').click()"><span>Восстановить из файла</span><span class="sync-action-icon">↑</span></button>
+      <input id="backup-file-input" type="file" accept="application/json,.json" style="display:none" onchange="importBackupFile(this)">
+      <button class="sync-action" id="restore-auto-backup-btn" onclick="restoreAutomaticBackup()"><span>Восстановить автокопию</span><span class="sync-action-icon">↶</span></button>
+    </div>
+    <div class="sync-notice" id="sync-notice"></div>
+    <div style="height:80px"></div>
   </div>
 
 
@@ -1887,6 +1949,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <button class="more-action" onclick="goFromMore('ai')" style="grid-column:1 / -1">
         <span class="more-icon">AI</span>
         <span><span class="more-title">ИИ-анализ</span><span class="more-sub">Плато, достижения и фокус недели</span></span>
+      </button>
+      <button class="more-action" onclick="goFromMore('sync')" style="grid-column:1 / -1">
+        <span class="more-icon">↻</span>
+        <span><span class="more-title">Данные</span><span class="more-sub">Синхронизация и резервные копии</span></span>
       </button>
       <button class="more-action" onclick="toggleTheme()" style="grid-column:1 / -1">
         <span class="more-icon">◐</span>
@@ -2165,6 +2231,7 @@ function setSyncStatus(mode) {
     pending: 'Сохранено на устройстве · ожидает сеть',
     offline: 'Офлайн · данные на устройстве'
   };
+  currentSyncMode = mode;
   if (pill) {
     pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : 'Офлайн');
     pill.dataset.sync = mode;
@@ -2174,6 +2241,7 @@ function setSyncStatus(mode) {
     dot.style.background = mode === 'online' ? 'var(--green)' : 'var(--orange)';
     dot.style.boxShadow = mode === 'online' ? '0 0 6px var(--green)' : 'none';
   }
+  updateSyncCenter();
 }
 
 async function apiCall(method, path, body, options) {
@@ -2200,6 +2268,7 @@ async function apiCall(method, path, body, options) {
       throw err;
     }
     apiAvailable = true;
+    localStorage.setItem('planner_last_server_sync_' + USER_ID, new Date().toISOString());
     if (isWrite) removeQueuedWrite(outboxId);
     if (!getOutbox().length) setSyncStatus('online');
     return await res.json();
@@ -2363,6 +2432,7 @@ if (window.Chart) {
 // локально через localStorage, ничего не ломается.
 // ════════════════════════════════════════════════════════════════
 let apiAvailable = false;
+var currentSyncMode = 'offline';
 
 function stateSnapshot() {
   return {
@@ -2406,6 +2476,8 @@ function saveStateLocal() {
     localStorage.setItem(entry[0] + '_' + USER_ID, JSON.stringify(entry[1]));
   });
   saveStateBackup(snapshot);
+  localStorage.setItem('planner_last_local_save_' + USER_ID, new Date().toISOString());
+  updateSyncCenter();
 }
 
 function loadStateLocal() {
@@ -2457,6 +2529,33 @@ function itemIdentity(item, fallbackFields) {
   return fallbackFields.map(function(field) { return String(item[field] ?? ''); }).join('|');
 }
 
+function getTombstones() {
+  try {
+    var items = JSON.parse(localStorage.getItem('planner_tombstones_' + USER_ID) || '[]');
+    var cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    return Array.isArray(items) ? items.filter(function(item) { return item && item.kind && item.key && new Date(item.deleted_at || 0).getTime() >= cutoff; }) : [];
+  } catch(e) { return []; }
+}
+
+function saveTombstones(items) {
+  localStorage.setItem('planner_tombstones_' + USER_ID, JSON.stringify(items));
+}
+
+function addTombstone(kind, key) {
+  if (key === undefined || key === null || key === '') return;
+  var items = getTombstones().filter(function(item) { return !(item.kind === kind && String(item.key) === String(key)); });
+  items.push({kind:kind, key:String(key), deleted_at:new Date().toISOString()});
+  saveTombstones(items);
+}
+
+function clearTombstone(kind, key) {
+  saveTombstones(getTombstones().filter(function(item) { return !(item.kind === kind && String(item.key) === String(key)); }));
+}
+
+function isTombstoned(kind, key) {
+  return getTombstones().some(function(item) { return item.kind === kind && String(item.key) === String(key); });
+}
+
 async function recoverEmptyServerSections(bootstrap) {
   var writes = [];
   if (!(bootstrap.tasks || []).length) {
@@ -2494,22 +2593,31 @@ async function recoverEmptyServerSections(bootstrap) {
 }
 
 function applyBootstrap(bootstrap) {
-  state.workouts = mergeRecords(state.workouts, bootstrap.workouts, function(item) {
+  var deletedKeys = new Set(getTombstones().map(function(item) { return item.kind + '|' + item.key; }));
+  var keepServerItem = function(kind, key) { return !deletedKeys.has(kind + '|' + String(key)); };
+  var serverWorkouts = (bootstrap.workouts || []).filter(function(item) { return keepServerItem('workout', item.id); });
+  var serverTasks = (bootstrap.tasks || []).filter(function(item) { return keepServerItem('task', item.id); });
+  var serverSupplements = (bootstrap.supplements || []).filter(function(item) { return keepServerItem('supplement', item.id); });
+  var serverWeight = (bootstrap.body_weight || []).filter(function(item) { return keepServerItem('body_weight', asDateStr(item.date)); });
+  var serverCalories = (bootstrap.body_calories || []).filter(function(item) { return keepServerItem('body_cal', asDateStr(item.date)); });
+  var serverMeasures = (bootstrap.body_measures || []).filter(function(item) { return keepServerItem('body_measure', asDateStr(item.date)); });
+  var serverFood = (bootstrap.food_log_recent || []).filter(function(item) { return keepServerItem('food', item.id); });
+  state.workouts = mergeRecords(state.workouts, serverWorkouts, function(item) {
     return itemIdentity(item, ['date','muscle','exercise','sets','reps','weight']);
   }, normalizeWorkout);
-  state.tasks = mergeRecords(state.tasks, bootstrap.tasks, function(item) { return String(item.id); }, normalizeTask);
-  state.supps.list = mergeRecords(state.supps.list, bootstrap.supplements, function(item) {
+  state.tasks = mergeRecords(state.tasks, serverTasks, function(item) { return String(item.id); }, normalizeTask);
+  state.supps.list = mergeRecords(state.supps.list, serverSupplements, function(item) {
     return String(item.name || '').trim().toLowerCase();
   }, normalizeSupplement);
   state.supps.checked = Object.assign({}, state.supps.checked || {}, normalizeChecks(bootstrap.supplement_checks));
-  state.bodyWeight = mergeRecords(state.bodyWeight, bootstrap.body_weight, function(item) { return asDateStr(item.date); }, function(item) {
+  state.bodyWeight = mergeRecords(state.bodyWeight, serverWeight, function(item) { return asDateStr(item.date); }, function(item) {
     return {date: asDateStr(item.date), weight: asNumber(item.weight)};
   });
-  state.bodyCal = mergeRecords(state.bodyCal, bootstrap.body_calories, function(item) { return asDateStr(item.date); }, function(item) {
+  state.bodyCal = mergeRecords(state.bodyCal, serverCalories, function(item) { return asDateStr(item.date); }, function(item) {
     return {date: asDateStr(item.date), cal: parseInt(item.cal ?? item.calories) || 0, source: item.source || 'manual'};
   });
-  state.bodyMeasures = mergeRecords(state.bodyMeasures, bootstrap.body_measures, function(item) { return asDateStr(item.date); }, normalizeBodyMeasure);
-  state.foodLog = mergeRecords(state.foodLog, bootstrap.food_log_recent, function(item) {
+  state.bodyMeasures = mergeRecords(state.bodyMeasures, serverMeasures, function(item) { return asDateStr(item.date); }, normalizeBodyMeasure);
+  state.foodLog = mergeRecords(state.foodLog, serverFood, function(item) {
     return itemIdentity(item, ['date','meal_type','food_name','amount','calories']);
   });
   saveStateLocal();
@@ -2519,6 +2627,7 @@ function renderSyncedScreens() {
   renderHome();
   renderSupps();
   renderBody();
+  updateSyncCenter();
 }
 
 async function loadStateFromServer() {
@@ -2561,11 +2670,156 @@ async function maybeImportHistory() {
 // ════════════════════════════════════════════════════════════════
 // EXPORT — ручной бэкап в JSON-файл (доп. защита от потери данных)
 // ════════════════════════════════════════════════════════════════
+function formatSyncTime(value) {
+  if (!value) return '—';
+  var parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleString('ru', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+}
+
+function updateSyncCenter() {
+  var status = document.getElementById('sync-status');
+  var icon = document.getElementById('sync-state-icon');
+  var last = document.getElementById('sync-last-status');
+  var records = document.getElementById('sync-record-count');
+  var pending = document.getElementById('sync-pending-count');
+  var backup = document.getElementById('sync-backup-state');
+  var restoreButton = document.getElementById('restore-auto-backup-btn');
+  var labels = {online:'Все сохранено', pending:'Ожидает подключения', offline:'Работа без сети'};
+  if (status) status.textContent = labels[currentSyncMode] || labels.offline;
+  if (icon) {
+    icon.className = 'sync-state-icon ' + (currentSyncMode === 'online' ? '' : currentSyncMode);
+    icon.textContent = currentSyncMode === 'online' ? '✓' : (currentSyncMode === 'pending' ? '↻' : '−');
+  }
+  var localSaved = localStorage.getItem('planner_last_local_save_' + USER_ID);
+  var serverSaved = localStorage.getItem('planner_last_server_sync_' + USER_ID);
+  if (last) last.textContent = 'Устройство: ' + formatSyncTime(localSaved) + ' · Сервер: ' + formatSyncTime(serverSaved);
+  if (records) records.textContent = snapshotRecordCount(stateSnapshot());
+  if (pending) pending.textContent = getOutbox().length;
+  var hasBackup = !!(localStorage.getItem('planner_state_backup_previous_' + USER_ID) || localStorage.getItem('planner_state_backup_' + USER_ID));
+  if (backup) backup.textContent = hasBackup ? 'есть' : 'нет';
+  if (restoreButton) restoreButton.disabled = !hasBackup;
+}
+
+function showSyncNotice(message, isError) {
+  var notice = document.getElementById('sync-notice');
+  if (!notice) return;
+  notice.textContent = message;
+  notice.className = 'sync-notice' + (isError ? ' error' : '');
+  notice.style.display = 'block';
+}
+
+async function syncNow() {
+  var button = document.getElementById('sync-now-btn');
+  if (button) button.disabled = true;
+  showSyncNotice('Проверяем и сохраняем изменения…', false);
+  var flushed = await flushPendingWrites();
+  var loaded = flushed ? await loadStateFromServer() : false;
+  if (flushed && loaded) showSyncNotice('Данные на устройстве и сервере синхронизированы.', false);
+  else showSyncNotice(navigator.onLine ? 'Не удалось связаться с сервером. Изменения остаются на устройстве.' : 'Нет сети. Изменения остаются на устройстве.', true);
+  if (button) button.disabled = false;
+  updateSyncCenter();
+}
+
+function backupPayloadToSnapshot(raw) {
+  var source = raw?.state || raw?.snapshot || raw || {};
+  var supps = source.supps || {};
+  return {
+    workouts: Array.isArray(source.workouts) ? source.workouts : [],
+    tasks: Array.isArray(source.tasks) ? source.tasks : [],
+    supps_list: Array.isArray(source.supps_list) ? source.supps_list : (Array.isArray(supps.list) ? supps.list : []),
+    supps_checked: source.supps_checked || supps.checked || {},
+    body_weight: Array.isArray(source.body_weight) ? source.body_weight : (Array.isArray(source.bodyWeight) ? source.bodyWeight : []),
+    body_cal: Array.isArray(source.body_cal) ? source.body_cal : (Array.isArray(source.bodyCal) ? source.bodyCal : []),
+    body_measures: Array.isArray(source.body_measures) ? source.body_measures : (Array.isArray(source.bodyMeasures) ? source.bodyMeasures : []),
+    food_log: Array.isArray(source.food_log) ? source.food_log : (Array.isArray(source.foodLog) ? source.foodLog : [])
+  };
+}
+
+function checksObjectToRows(checks) {
+  return Object.keys(checks || {}).filter(function(key) { return checks[key]; }).map(function(key) {
+    var date = key.slice(0, 10);
+    var rest = key.slice(11);
+    var separator = rest.lastIndexOf('_');
+    return {date:date, supp_name:separator >= 0 ? rest.slice(0, separator) : rest, time_slot:separator >= 0 ? rest.slice(separator + 1) : '', checked:true};
+  }).filter(function(item) { return item.date && item.supp_name && item.time_slot; });
+}
+
+function mergeSnapshotIntoState(snapshot) {
+  snapshot.tasks.forEach(function(item) { clearTombstone('task', item.id); });
+  snapshot.workouts.forEach(function(item) { if (item.id) clearTombstone('workout', item.id); });
+  snapshot.supps_list.forEach(function(item) { if (item.id) clearTombstone('supplement', item.id); });
+  snapshot.body_weight.forEach(function(item) { clearTombstone('body_weight', asDateStr(item.date)); });
+  snapshot.body_cal.forEach(function(item) { clearTombstone('body_cal', asDateStr(item.date)); });
+  snapshot.body_measures.forEach(function(item) { clearTombstone('body_measure', asDateStr(item.date)); });
+  snapshot.food_log.forEach(function(item) { if (item.id && String(item.id).indexOf('food_') !== 0) clearTombstone('food', item.id); });
+  applyBootstrap({
+    workouts: snapshot.workouts,
+    tasks: snapshot.tasks,
+    supplements: snapshot.supps_list,
+    supplement_checks: checksObjectToRows(snapshot.supps_checked),
+    body_weight: snapshot.body_weight,
+    body_calories: snapshot.body_cal,
+    body_measures: snapshot.body_measures,
+    food_log_recent: snapshot.food_log
+  });
+  renderSyncedScreens();
+  renderTasks();
+  renderExercises();
+  renderFoodLog((state.foodLog || []).filter(function(item) { return item.date === currentFoodDate; }));
+}
+
+async function syncImportedSnapshot(snapshot) {
+  var writes = [];
+  snapshot.tasks.forEach(function(item) { writes.push(apiCall('POST', '/api/tasks', normalizeTask(item))); });
+  snapshot.workouts.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/workouts', normalizeWorkout(item))); });
+  snapshot.supps_list.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/supplements', normalizeSupplement(item))); });
+  snapshot.body_weight.forEach(function(item) { writes.push(apiCall('POST', '/api/body/weight', {date:asDateStr(item.date), weight:asNumber(item.weight)})); });
+  snapshot.body_cal.filter(function(item) { return item.source !== 'food'; }).forEach(function(item) { writes.push(apiCall('POST', '/api/body/calories', {date:asDateStr(item.date), calories:parseInt(item.cal ?? item.calories) || 0})); });
+  snapshot.body_measures.forEach(function(item) { writes.push(apiCall('POST', '/api/body/measures', normalizeBodyMeasure(item))); });
+  snapshot.food_log.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/food/log', item)); });
+  checksObjectToRows(snapshot.supps_checked).forEach(function(item) { writes.push(apiCall('POST', '/api/supplement_checks', item)); });
+  if (writes.length) await Promise.all(writes);
+  updateSyncCenter();
+}
+
+async function restoreSnapshot(snapshot, sourceLabel) {
+  if (snapshotRecordCount(snapshot) === 0) throw new Error('В копии нет записей планировщика');
+  mergeSnapshotIntoState(snapshot);
+  await syncImportedSnapshot(snapshot);
+  showSyncNotice(sourceLabel + ': восстановлено ' + snapshotRecordCount(snapshot) + ' записей.', false);
+}
+
+async function importBackupFile(input) {
+  var file = input?.files?.[0];
+  if (!file) return;
+  try {
+    if (file.size > 10 * 1024 * 1024) throw new Error('Файл больше 10 МБ');
+    var raw = JSON.parse(await file.text());
+    await restoreSnapshot(backupPayloadToSnapshot(raw), 'Файл');
+  } catch(e) {
+    showSyncNotice('Не удалось восстановить: ' + (e.message || 'неверный файл'), true);
+  } finally {
+    input.value = '';
+  }
+}
+
+async function restoreAutomaticBackup() {
+  try {
+    var raw = localStorage.getItem('planner_state_backup_previous_' + USER_ID) || localStorage.getItem('planner_state_backup_' + USER_ID);
+    if (!raw) throw new Error('автокопия не найдена');
+    await restoreSnapshot(backupPayloadToSnapshot(JSON.parse(raw)), 'Автокопия');
+  } catch(e) {
+    showSyncNotice('Не удалось восстановить: ' + (e.message || 'копия повреждена'), true);
+  }
+}
+
 function exportData() {
   const payload = {
+    schema_version: 2,
     exported_at: new Date().toISOString(),
     user_id: USER_ID,
-    ...state
+    state: stateSnapshot()
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
@@ -2574,13 +2828,16 @@ function exportData() {
   a.download = `planner_backup_${todayStr()}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  localStorage.setItem('planner_last_export_' + USER_ID, new Date().toISOString());
+  showSyncNotice('Резервная копия подготовлена.', false);
+  updateSyncCenter();
 }
 
 // ════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════════════════════════════
 function go(name) {
-  var allScreens = ['home','workout','charts','body','tasks','supps','report','ai','food'];
+  var allScreens = ['home','workout','charts','body','tasks','supps','report','ai','food','sync'];
   for (var i = 0; i < allScreens.length; i++) {
     var scr = document.getElementById('s-' + allScreens[i]);
     if (scr) {
@@ -2600,7 +2857,7 @@ function go(name) {
   // Сбрасываем кнопку Ещё
   var moreBtn = document.getElementById('nav-more');
   var moreInd = document.getElementById('nind-more');
-  var isMoreSection = ['supps','report','charts','body','ai'].includes(name);
+  var isMoreSection = ['supps','report','charts','body','ai','sync'].includes(name);
   if (moreBtn) { if (isMoreSection) moreBtn.classList.add('active'); else moreBtn.classList.remove('active'); }
   if (moreInd) { if (isMoreSection) moreInd.classList.add('on'); else moreInd.classList.remove('on'); }
   closeMoreMenu();
@@ -2614,6 +2871,7 @@ function go(name) {
   try { if (name === 'tasks') renderTasks(); } catch(e) {}
   try { if (name === 'supps') renderSupps(); } catch(e) {}
   try { if (name === 'report') renderReport(); } catch(e) {}
+  try { if (name === 'sync') updateSyncCenter(); } catch(e) {}
 }
 
 function openMore() {
@@ -2891,6 +3149,7 @@ async function deleteWorkout(index, id) {
   if (index < 0 || index >= state.workouts.length) return;
   const workout = state.workouts[index];
   state.workouts.splice(index, 1);
+  if (id) addTombstone('workout', id);
   saveState();
   if (id) {
     await apiCall('DELETE', '/api/workouts/' + id);
@@ -3532,12 +3791,14 @@ function saveBody() {
   if (type === 'weight') {
     const w = parseFloat(document.getElementById('m-body-weight').value);
     if (!w) return;
+    clearTombstone('body_weight', date);
     state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
     state.bodyWeight.push({date, weight: w});
     apiCall('POST', '/api/body/weight', {date, weight: w});
   } else if (type === 'cal') {
     const c = parseInt(document.getElementById('m-body-cal').value);
     if (!c) return;
+    clearTombstone('body_cal', date);
     state.bodyCal = state.bodyCal.filter(e=>e.date!==date);
     state.bodyCal.push({date, cal: c});
     apiCall('POST', '/api/body/calories', {date, calories: c});
@@ -3557,6 +3818,8 @@ function saveBody() {
       document.getElementById('m-body-error')?.classList.add('visible');
       return;
     }
+    clearTombstone('body_measure', date);
+    clearTombstone('body_weight', date);
     state.bodyMeasures = state.bodyMeasures.filter(e=>e.date!==date);
     state.bodyMeasures.push(entry);
     state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
@@ -3572,12 +3835,15 @@ function saveBody() {
 
 async function deleteBodyEntry(type, date) {
   if (type === 'weight') {
+    addTombstone('body_weight', date);
     state.bodyWeight = state.bodyWeight.filter(e=>e.date!==date);
     await apiCall('DELETE', '/api/body/weight/' + encodeURIComponent(date));
   } else if (type === 'cal') {
+    addTombstone('body_cal', date);
     state.bodyCal = state.bodyCal.filter(e=>e.date!==date);
     await apiCall('DELETE', '/api/body/calories/' + encodeURIComponent(date));
   } else {
+    addTombstone('body_measure', date);
     state.bodyMeasures = state.bodyMeasures.filter(e=>e.date!==date);
     await apiCall('DELETE', '/api/body/measures/' + encodeURIComponent(date));
   }
@@ -3635,6 +3901,7 @@ function renderTasks() {
 
 async function deleteTask(id, event) {
   if (event) event.stopPropagation();
+  addTombstone('task', id);
   state.tasks = state.tasks.filter(t=>t.id!==id);
   saveState();
   await apiCall('DELETE', '/api/tasks/' + encodeURIComponent(id));
@@ -3727,6 +3994,7 @@ function saveTask() {
   task.start_time = document.getElementById('m-task-time').value || null;
   task.duration_minutes = parseInt(document.getElementById('m-task-duration').value) || 30;
   task.repeat_rule = document.getElementById('m-task-repeat').value;
+  clearTombstone('task', task.id);
   saveState();
   apiCall('POST', '/api/tasks', task);
   closeModal('modal-task');
@@ -3854,6 +4122,7 @@ async function saveSupp() {
 function deleteSupp(idx) {
   const supp = state.supps.list[idx];
   state.supps.list.splice(idx,1);
+  if (supp?.id) addTombstone('supplement', supp.id);
   saveState();
   if (supp?.id) {
     apiCall('DELETE', `/api/supplements/${supp.id}`);
