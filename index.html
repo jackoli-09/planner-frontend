@@ -964,6 +964,33 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .profile-actions { display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-top: 8px; }
 .profile-back { width: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--card2); color: var(--text); font-size: 18px; cursor: pointer; }
 
+/* ── NOTIFICATION SETTINGS ── */
+.notification-list { display: grid; gap: 8px; }
+.notification-row {
+  min-height: 58px; padding: 10px 11px; display: grid; grid-template-columns: minmax(0,1fr) auto auto;
+  align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card2);
+}
+.notification-title { color: var(--text); font-size: 11.5px; font-weight: 800; line-height: 1.25; }
+.notification-sub { margin-top: 3px; color: var(--text-muted); font-size: 9.5px; line-height: 1.25; }
+.notification-time {
+  width: 78px; height: 36px; padding: 0 5px; border: 1px solid var(--border); border-radius: 7px;
+  outline: none; background: var(--card); color: var(--text); font: 700 11px/1 'Manrope', sans-serif;
+}
+.notification-time:disabled { opacity: .42; }
+.notification-switch { position: relative; width: 40px; height: 24px; display: block; flex: 0 0 auto; }
+.notification-switch input {
+  appearance: none; -webkit-appearance: none; width: 40px; height: 24px; margin: 0; border: 1px solid var(--border);
+  border-radius: 999px; outline: none; background: var(--border); cursor: pointer; transition: background .16s, border-color .16s;
+}
+.notification-switch input::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.22); transition: transform .16s;
+}
+.notification-switch input:checked { border-color: var(--green); background: var(--green); }
+.notification-switch input:checked::after { transform: translateX(16px); }
+.notification-timezone { margin-top: 12px; }
+.notification-note { margin-top: 10px; color: var(--text-muted); font-size: 9.5px; line-height: 1.45; }
+
 /* ── CHARTS ── */
 .chart-canvas-wrap { position: relative; height: 160px; padding: 0 4px 4px; }
 .pr-row { display: flex; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
@@ -2020,6 +2047,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <span class="more-icon">◎</span>
         <span><span class="more-title">Профиль</span><span class="more-sub">Цель, параметры и калории</span></span>
       </button>
+      <button class="more-action" onclick="openNotificationSettings()" style="grid-column:1 / -1">
+        <span class="more-icon">◷</span>
+        <span><span class="more-title">Напоминания</span><span class="more-sub" id="notifications-mode-label">Настроить время</span></span>
+      </button>
       <button class="more-action" onclick="goFromMore('sync')" style="grid-column:1 / -1">
         <span class="more-icon">↻</span>
         <span><span class="more-title">Данные</span><span class="more-sub">Синхронизация и резервные копии</span></span>
@@ -2074,6 +2105,59 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="profile-error" id="profile-step3-error"></div>
       <div class="profile-actions"><button class="profile-back" onclick="profileSetStep(2)">←</button><button class="btn-primary" id="profile-save-btn" onclick="saveProfile()" style="margin:0">Сохранить профиль</button></div>
     </div>
+  </div>
+</div>
+
+<!-- Notification Settings -->
+<div class="modal-overlay" id="modal-notifications">
+  <div class="modal-sheet">
+    <div class="modal-title">Напоминания</div>
+    <div class="notification-list">
+      <div class="notification-row">
+        <div><div class="notification-title">Утренние добавки</div><div class="notification-sub">Только если есть приём утром</div></div>
+        <input class="notification-time" type="time" id="notif-morning">
+        <label class="notification-switch" aria-label="Утренние добавки"><input type="checkbox" id="notif-morning-on" onchange="updateNotificationRowState('morning')"></label>
+      </div>
+      <div class="notification-row">
+        <div><div class="notification-title">Тренировка</div><div class="notification-sub">Если сегодня ещё не было подходов</div></div>
+        <input class="notification-time" type="time" id="notif-workout">
+        <label class="notification-switch" aria-label="Тренировка"><input type="checkbox" id="notif-workout-on" onchange="updateNotificationRowState('workout')"></label>
+      </div>
+      <div class="notification-row">
+        <div><div class="notification-title">Вечерние добавки</div><div class="notification-sub">Только если есть вечерний приём</div></div>
+        <input class="notification-time" type="time" id="notif-evening">
+        <label class="notification-switch" aria-label="Вечерние добавки"><input type="checkbox" id="notif-evening-on" onchange="updateNotificationRowState('evening')"></label>
+      </div>
+      <div class="notification-row">
+        <div><div class="notification-title">Незавершённые задачи</div><div class="notification-sub">Просроченные и запланированные на сегодня</div></div>
+        <input class="notification-time" type="time" id="notif-tasks">
+        <label class="notification-switch" aria-label="Незавершённые задачи"><input type="checkbox" id="notif-tasks-on" onchange="updateNotificationRowState('tasks')"></label>
+      </div>
+      <div class="notification-row">
+        <div><div class="notification-title">Недельный итог</div><div class="notification-sub">По воскресеньям</div></div>
+        <input class="notification-time" type="time" id="notif-weekly">
+        <label class="notification-switch" aria-label="Недельный итог"><input type="checkbox" id="notif-weekly-on" onchange="updateNotificationRowState('weekly')"></label>
+      </div>
+    </div>
+    <div class="notification-timezone">
+      <div class="profile-label">Часовой пояс</div>
+      <select class="profile-input" id="notif-timezone">
+        <option value="Europe/Kaliningrad">Калининград</option>
+        <option value="Europe/Moscow">Москва</option>
+        <option value="Asia/Yekaterinburg">Екатеринбург</option>
+        <option value="Asia/Omsk">Омск</option>
+        <option value="Asia/Krasnoyarsk">Красноярск</option>
+        <option value="Asia/Irkutsk">Иркутск</option>
+        <option value="Asia/Yakutsk">Якутск</option>
+        <option value="Asia/Vladivostok">Владивосток</option>
+        <option value="Asia/Magadan">Магадан</option>
+        <option value="Asia/Kamchatka">Камчатка</option>
+      </select>
+    </div>
+    <div class="notification-note">Сообщения приходят от Telegram-бота. Изменения без сети сохранятся и отправятся позже.</div>
+    <div class="profile-error" id="notification-settings-error"></div>
+    <button class="btn-primary" id="notification-settings-save" onclick="saveNotificationSettings()">Сохранить</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-notifications')">Отмена</button>
   </div>
 </div>
 
@@ -2354,6 +2438,141 @@ function applyServerProfile(settings) {
   }
 }
 
+function detectedTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow'; }
+  catch (_) { return 'Europe/Moscow'; }
+}
+
+function defaultNotificationSettings() {
+  return {
+    notif_morning:'08:00', notif_morning_on:true,
+    notif_workout:'10:00', notif_workout_on:true,
+    notif_evening:'21:00', notif_evening_on:true,
+    notif_tasks:'20:00', notif_tasks_on:true,
+    notif_weekly:'19:00', notif_weekly_on:true,
+    timezone:detectedTimezone(), updated_at:null
+  };
+}
+
+function normalizeNotificationTime(value, fallback) {
+  var match = String(value || '').match(/^(\d{2}):(\d{2})/);
+  return match ? match[1] + ':' + match[2] : fallback;
+}
+
+function loadNotificationSettingsLocal() {
+  try {
+    return Object.assign(defaultNotificationSettings(), JSON.parse(localStorage.getItem('planner_notifications_' + USER_ID) || '{}'));
+  } catch (_) { return defaultNotificationSettings(); }
+}
+
+var notificationSettings = loadNotificationSettingsLocal();
+
+function updateNotificationModeLabel() {
+  var enabled = ['morning','workout','evening','tasks','weekly'].filter(function(key) {
+    return notificationSettings['notif_' + key + '_on'];
+  }).length;
+  var label = document.getElementById('notifications-mode-label');
+  if (label) label.textContent = enabled ? 'Включено: ' + enabled : 'Все выключены';
+}
+
+function saveNotificationSettingsLocal(settings) {
+  var key = 'planner_notifications_' + USER_ID;
+  var previous = localStorage.getItem(key);
+  notificationSettings = Object.assign(defaultNotificationSettings(), settings);
+  var next = JSON.stringify(notificationSettings);
+  if (previous && previous !== next) localStorage.setItem('planner_notifications_previous_' + USER_ID, previous);
+  localStorage.setItem(key, next);
+  updateNotificationModeLabel();
+}
+
+function notificationApiPayload(settings) {
+  return {
+    notif_morning:settings.notif_morning, notif_morning_on:!!settings.notif_morning_on,
+    notif_workout:settings.notif_workout, notif_workout_on:!!settings.notif_workout_on,
+    notif_evening:settings.notif_evening, notif_evening_on:!!settings.notif_evening_on,
+    notif_tasks:settings.notif_tasks, notif_tasks_on:!!settings.notif_tasks_on,
+    notif_weekly:settings.notif_weekly, notif_weekly_on:!!settings.notif_weekly_on,
+    timezone:settings.timezone || 'Europe/Moscow'
+  };
+}
+
+function applyServerNotifications(settings) {
+  if (!settings || settings.notif_morning == null) return;
+  var localTime = new Date(notificationSettings.updated_at || 0).getTime();
+  var serverTime = new Date(settings.updated_at || 0).getTime();
+  if (!notificationSettings.updated_at || serverTime >= localTime) {
+    saveNotificationSettingsLocal({
+      notif_morning:normalizeNotificationTime(settings.notif_morning, '08:00'),
+      notif_morning_on:settings.notif_morning_on !== false,
+      notif_workout:normalizeNotificationTime(settings.notif_workout, '10:00'),
+      notif_workout_on:settings.notif_workout_on !== false,
+      notif_evening:normalizeNotificationTime(settings.notif_evening, '21:00'),
+      notif_evening_on:settings.notif_evening_on !== false,
+      notif_tasks:normalizeNotificationTime(settings.notif_tasks, '20:00'),
+      notif_tasks_on:settings.notif_tasks_on !== false,
+      notif_weekly:normalizeNotificationTime(settings.notif_weekly, '19:00'),
+      notif_weekly_on:settings.notif_weekly_on !== false,
+      timezone:settings.timezone || 'Europe/Moscow', updated_at:settings.updated_at || null
+    });
+  } else if (localTime > serverTime) {
+    apiCall('POST', '/api/settings/notifications', notificationApiPayload(notificationSettings));
+  }
+}
+
+function updateNotificationRowState(key) {
+  var enabled = document.getElementById('notif-' + key + '-on').checked;
+  document.getElementById('notif-' + key).disabled = !enabled;
+}
+
+function fillNotificationSettingsForm() {
+  ['morning','workout','evening','tasks','weekly'].forEach(function(key) {
+    document.getElementById('notif-' + key).value = notificationSettings['notif_' + key];
+    document.getElementById('notif-' + key + '-on').checked = !!notificationSettings['notif_' + key + '_on'];
+    updateNotificationRowState(key);
+  });
+  var timezone = document.getElementById('notif-timezone');
+  if (!Array.from(timezone.options).some(function(option) { return option.value === notificationSettings.timezone; })) {
+    timezone.add(new Option(notificationSettings.timezone, notificationSettings.timezone));
+  }
+  timezone.value = notificationSettings.timezone;
+  document.getElementById('notification-settings-error').textContent = '';
+}
+
+function openNotificationSettings() {
+  closeMoreMenu();
+  fillNotificationSettingsForm();
+  document.getElementById('modal-notifications').classList.add('open');
+}
+
+function readNotificationSettingsForm() {
+  var result = {timezone:document.getElementById('notif-timezone').value};
+  ['morning','workout','evening','tasks','weekly'].forEach(function(key) {
+    result['notif_' + key] = document.getElementById('notif-' + key).value;
+    result['notif_' + key + '_on'] = document.getElementById('notif-' + key + '-on').checked;
+  });
+  return result;
+}
+
+async function saveNotificationSettings() {
+  var settings = readNotificationSettingsForm();
+  var invalid = ['morning','workout','evening','tasks','weekly'].some(function(key) {
+    return settings['notif_' + key + '_on'] && !/^\d{2}:\d{2}$/.test(settings['notif_' + key]);
+  });
+  var error = document.getElementById('notification-settings-error');
+  if (invalid || !settings.timezone) {
+    error.textContent = 'Проверь время и часовой пояс';
+    return;
+  }
+  var button = document.getElementById('notification-settings-save');
+  button.disabled = true;
+  settings.updated_at = new Date().toISOString();
+  saveNotificationSettingsLocal(settings);
+  var saved = await apiCall('POST', '/api/settings/notifications', notificationApiPayload(settings));
+  if (saved) saveNotificationSettingsLocal(Object.assign({}, settings, {updated_at:saved.updated_at || settings.updated_at}));
+  button.disabled = false;
+  closeModal('modal-notifications');
+}
+
 function estimateProfileCalories(profile) {
   var weight = Number(profile.weight), height = Number(profile.height), age = Number(profile.age);
   if (!weight || !height || !age) return 0;
@@ -2499,6 +2718,7 @@ function queueWrite(method, path, body) {
   var identity = '';
   if (path === '/api/tasks') identity = body?.id || '';
   else if (path === '/api/settings/profile') identity = 'profile';
+  else if (path === '/api/settings/notifications') identity = 'notifications';
   else if (path.indexOf('/api/body/') === 0) identity = body?.date || '';
   else if (path === '/api/supplement_checks') {
     identity = [body?.date, body?.supp_name, body?.time_slot].filter(Boolean).join('|');
@@ -2897,6 +3117,7 @@ async function recoverEmptyServerSections(bootstrap) {
 
 function applyBootstrap(bootstrap) {
   applyServerProfile(bootstrap.settings);
+  applyServerNotifications(bootstrap.settings);
   var deletedKeys = new Set(getTombstones().map(function(item) { return item.kind + '|' + item.key; }));
   var keepServerItem = function(kind, key) { return !deletedKeys.has(kind + '|' + String(key)); };
   var serverWorkouts = (bootstrap.workouts || []).filter(function(item) { return keepServerItem('workout', item.id); });
@@ -2931,6 +3152,7 @@ function renderSyncedScreens() {
   renderHome();
   renderSupps();
   renderBody();
+  updateNotificationModeLabel();
   updateSyncCenter();
 }
 
@@ -3087,12 +3309,17 @@ async function syncImportedSnapshot(snapshot) {
   updateSyncCenter();
 }
 
-async function restoreSnapshot(snapshot, sourceLabel, importedProfile) {
+async function restoreSnapshot(snapshot, sourceLabel, importedProfile, importedNotifications) {
   if (snapshotRecordCount(snapshot) === 0) throw new Error('В копии нет записей планировщика');
   if (importedProfile?.onboarding_completed) {
     var restoredProfile = Object.assign(defaultUserProfile(), importedProfile, {updated_at:new Date().toISOString()});
     saveUserProfileLocal(restoredProfile);
     await apiCall('POST', '/api/settings/profile', restoredProfile);
+  }
+  if (importedNotifications) {
+    var restoredNotifications = Object.assign(defaultNotificationSettings(), importedNotifications, {updated_at:new Date().toISOString()});
+    saveNotificationSettingsLocal(restoredNotifications);
+    await apiCall('POST', '/api/settings/notifications', notificationApiPayload(restoredNotifications));
   }
   mergeSnapshotIntoState(snapshot);
   await syncImportedSnapshot(snapshot);
@@ -3105,7 +3332,10 @@ async function importBackupFile(input) {
   try {
     if (file.size > 10 * 1024 * 1024) throw new Error('Файл больше 10 МБ');
     var raw = JSON.parse(await file.text());
-    await restoreSnapshot(backupPayloadToSnapshot(raw), 'Файл', raw.profile || raw.state?.profile);
+    await restoreSnapshot(
+      backupPayloadToSnapshot(raw), 'Файл', raw.profile || raw.state?.profile,
+      raw.notifications || raw.state?.notifications
+    );
   } catch(e) {
     showSyncNotice('Не удалось восстановить: ' + (e.message || 'неверный файл'), true);
   } finally {
@@ -3118,7 +3348,8 @@ async function restoreAutomaticBackup() {
     var raw = localStorage.getItem('planner_state_backup_previous_' + USER_ID) || localStorage.getItem('planner_state_backup_' + USER_ID);
     if (!raw) throw new Error('автокопия не найдена');
     var previousProfile = JSON.parse(localStorage.getItem('planner_profile_previous_' + USER_ID) || 'null');
-    await restoreSnapshot(backupPayloadToSnapshot(JSON.parse(raw)), 'Автокопия', previousProfile);
+    var previousNotifications = JSON.parse(localStorage.getItem('planner_notifications_previous_' + USER_ID) || 'null');
+    await restoreSnapshot(backupPayloadToSnapshot(JSON.parse(raw)), 'Автокопия', previousProfile, previousNotifications);
   } catch(e) {
     showSyncNotice('Не удалось восстановить: ' + (e.message || 'копия повреждена'), true);
   }
@@ -3126,10 +3357,11 @@ async function restoreAutomaticBackup() {
 
 function exportData() {
   const payload = {
-    schema_version: 2,
+    schema_version: 3,
     exported_at: new Date().toISOString(),
     user_id: USER_ID,
     profile: userProfile,
+    notifications: notificationSettings,
     state: stateSnapshot()
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
@@ -4640,6 +4872,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 // INIT
 // ════════════════════════════════════════════════════════════════
 applyTheme(localStorage.getItem('planner_theme') || document.documentElement.getAttribute('data-theme'));
+updateNotificationModeLabel();
 renderHome();
 loadState(() => {
   renderSyncedScreens();
