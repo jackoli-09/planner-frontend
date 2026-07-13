@@ -2364,24 +2364,60 @@ if (window.Chart) {
 // ════════════════════════════════════════════════════════════════
 let apiAvailable = false;
 
-function saveStateLocal() {
-  const payload = {
-    workouts: JSON.stringify(state.workouts),
-    tasks: JSON.stringify(state.tasks),
-    supps_list: JSON.stringify(state.supps.list),
-    supps_checked: JSON.stringify(state.supps.checked),
-    body_weight: JSON.stringify(state.bodyWeight),
-    body_cal: JSON.stringify(state.bodyCal),
-    body_measures: JSON.stringify(state.bodyMeasures),
-    food_log: JSON.stringify(state.foodLog),
+function stateSnapshot() {
+  return {
+    workouts: state.workouts || [],
+    tasks: state.tasks || [],
+    supps_list: state.supps?.list || [],
+    supps_checked: state.supps?.checked || {},
+    body_weight: state.bodyWeight || [],
+    body_cal: state.bodyCal || [],
+    body_measures: state.bodyMeasures || [],
+    food_log: state.foodLog || []
   };
-  Object.entries(payload).forEach(([k,v]) => localStorage.setItem(k + '_' + USER_ID, v));
+}
+
+function snapshotRecordCount(snapshot) {
+  if (!snapshot) return 0;
+  return ['workouts','tasks','supps_list','body_weight','body_cal','body_measures','food_log']
+    .reduce(function(total, key) { return total + (Array.isArray(snapshot[key]) ? snapshot[key].length : 0); }, 0) +
+    Object.keys(snapshot.supps_checked || {}).length;
+}
+
+function saveStateBackup(snapshot) {
+  var key = 'planner_state_backup_' + USER_ID;
+  var previousKey = 'planner_state_backup_previous_' + USER_ID;
+  var serialized = JSON.stringify(snapshot);
+  var existing = localStorage.getItem(key);
+  var existingCount = 0;
+  try { existingCount = snapshotRecordCount(JSON.parse(existing || 'null')); } catch(e) {}
+  // Пустое состояние не должно уничтожать последнюю содержательную копию.
+  try {
+    if (snapshotRecordCount(snapshot) > 0 || existingCount === 0) {
+      if (existing && existing !== serialized) localStorage.setItem(previousKey, existing);
+      localStorage.setItem(key, serialized);
+    }
+  } catch(e) { console.warn('Не удалось обновить резервную копию:', e); }
+}
+
+function saveStateLocal() {
+  var snapshot = stateSnapshot();
+  Object.entries(snapshot).forEach(function(entry) {
+    localStorage.setItem(entry[0] + '_' + USER_ID, JSON.stringify(entry[1]));
+  });
+  saveStateBackup(snapshot);
 }
 
 function loadStateLocal() {
   const keys = ['workouts','tasks','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log'];
   const vals = {};
   keys.forEach(k => vals[k] = localStorage.getItem(k + '_' + USER_ID));
+  try {
+    var backup = JSON.parse(localStorage.getItem('planner_state_backup_' + USER_ID) || 'null');
+    if (backup) keys.forEach(function(key) {
+      if (vals[key] === null && backup[key] !== undefined) vals[key] = JSON.stringify(backup[key]);
+    });
+  } catch(e) {}
   applyLoaded(vals);
 }
 
@@ -2391,7 +2427,7 @@ function applyLoaded(vals) {
   if (vals.supps_list) state.supps.list = JSON.parse(vals.supps_list).map(normalizeSupplement);
   if (vals.supps_checked) state.supps.checked = JSON.parse(vals.supps_checked);
   if (vals.body_weight) state.bodyWeight = JSON.parse(vals.body_weight).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
-  if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal).map(c => ({date: asDateStr(c.date), cal: parseInt(c.cal || c.calories) || 0}));
+  if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal).map(c => ({date: asDateStr(c.date), cal: parseInt(c.cal || c.calories) || 0, source: c.source || 'manual'}));
   if (vals.body_measures) state.bodyMeasures = JSON.parse(vals.body_measures).map(normalizeBodyMeasure);
   if (vals.food_log) state.foodLog = JSON.parse(vals.food_log);
 }
@@ -2402,15 +2438,80 @@ function saveState() {
   saveStateLocal();
 }
 
+function mergeRecords(localItems, serverItems, keyFn, normalizeFn) {
+  var merged = new Map();
+  (localItems || []).forEach(function(item) {
+    var normalized = normalizeFn ? normalizeFn(item) : item;
+    merged.set(keyFn(normalized), normalized);
+  });
+  (serverItems || []).forEach(function(item) {
+    var normalized = normalizeFn ? normalizeFn(item) : item;
+    merged.set(keyFn(normalized), normalized);
+  });
+  return Array.from(merged.values());
+}
+
+function itemIdentity(item, fallbackFields) {
+  if (item.client_id) return 'client:' + item.client_id;
+  if (item.id !== undefined && item.id !== null) return 'id:' + item.id;
+  return fallbackFields.map(function(field) { return String(item[field] ?? ''); }).join('|');
+}
+
+async function recoverEmptyServerSections(bootstrap) {
+  var writes = [];
+  if (!(bootstrap.tasks || []).length) {
+    (state.tasks || []).forEach(function(item) { writes.push(apiCall('POST', '/api/tasks', item)); });
+  }
+  if (!(bootstrap.workouts || []).length) {
+    (state.workouts || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/workouts', item));
+    });
+  }
+  if (!(bootstrap.supplements || []).length) {
+    (state.supps.list || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/supplements', item));
+    });
+  }
+  if (!(bootstrap.body_weight || []).length) {
+    (state.bodyWeight || []).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/body/weight', {date:item.date, weight:item.weight}));
+    });
+  }
+  if (!(bootstrap.body_calories || []).length) {
+    (state.bodyCal || []).filter(function(item) { return item.source !== 'food'; }).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/body/calories', {date:item.date, calories:item.cal}));
+    });
+  }
+  if (!(bootstrap.body_measures || []).length) {
+    (state.bodyMeasures || []).forEach(function(item) { writes.push(apiCall('POST', '/api/body/measures', item)); });
+  }
+  if (!(bootstrap.food_log_recent || []).length) {
+    (state.foodLog || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/food/log', item));
+    });
+  }
+  if (writes.length) await Promise.all(writes);
+}
+
 function applyBootstrap(bootstrap) {
-  state.workouts = (bootstrap.workouts || []).map(normalizeWorkout);
-  state.tasks = (bootstrap.tasks || []).map(normalizeTask);
-  if (bootstrap.supplements && bootstrap.supplements.length) state.supps.list = bootstrap.supplements.map(normalizeSupplement);
-  state.supps.checked = normalizeChecks(bootstrap.supplement_checks);
-  state.bodyWeight = (bootstrap.body_weight || []).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
-  state.bodyCal = (bootstrap.body_calories || []).map(c => ({date: asDateStr(c.date), cal: parseInt(c.calories) || 0, source: c.source || 'manual'}));
-  state.bodyMeasures = (bootstrap.body_measures || []).map(normalizeBodyMeasure);
-  state.foodLog = bootstrap.food_log_recent || [];
+  state.workouts = mergeRecords(state.workouts, bootstrap.workouts, function(item) {
+    return itemIdentity(item, ['date','muscle','exercise','sets','reps','weight']);
+  }, normalizeWorkout);
+  state.tasks = mergeRecords(state.tasks, bootstrap.tasks, function(item) { return String(item.id); }, normalizeTask);
+  state.supps.list = mergeRecords(state.supps.list, bootstrap.supplements, function(item) {
+    return String(item.name || '').trim().toLowerCase();
+  }, normalizeSupplement);
+  state.supps.checked = Object.assign({}, state.supps.checked || {}, normalizeChecks(bootstrap.supplement_checks));
+  state.bodyWeight = mergeRecords(state.bodyWeight, bootstrap.body_weight, function(item) { return asDateStr(item.date); }, function(item) {
+    return {date: asDateStr(item.date), weight: asNumber(item.weight)};
+  });
+  state.bodyCal = mergeRecords(state.bodyCal, bootstrap.body_calories, function(item) { return asDateStr(item.date); }, function(item) {
+    return {date: asDateStr(item.date), cal: parseInt(item.cal ?? item.calories) || 0, source: item.source || 'manual'};
+  });
+  state.bodyMeasures = mergeRecords(state.bodyMeasures, bootstrap.body_measures, function(item) { return asDateStr(item.date); }, normalizeBodyMeasure);
+  state.foodLog = mergeRecords(state.foodLog, bootstrap.food_log_recent, function(item) {
+    return itemIdentity(item, ['date','meal_type','food_name','amount','calories']);
+  });
   saveStateLocal();
 }
 
@@ -2424,6 +2525,7 @@ async function loadStateFromServer() {
   if (getOutbox().length) return false;
   var bootstrap = await apiCall('GET', '/api/bootstrap');
   if (bootstrap === null) return false;
+  await recoverEmptyServerSections(bootstrap);
   applyBootstrap(bootstrap);
   renderSyncedScreens();
   return true;
