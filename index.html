@@ -292,6 +292,56 @@ async function deleteFoodLog(id) {
   renderFoodLog(state.foodLog.filter(function(e){ return e.date === currentFoodDate; }));
 }
 
+async function repeatYesterdayFood() {
+  var status = document.getElementById('repeat-food-status');
+  var button = document.getElementById('repeat-food-btn');
+  var currentEntries = (state.foodLog || []).filter(function(e){ return e.date === currentFoodDate; });
+  if (currentEntries.length) {
+    if (status) { status.style.display = 'block'; status.textContent = 'В этом дне уже есть записи'; }
+    return;
+  }
+  var yesterday = new Date(currentFoodDate + 'T00:00:00');
+  yesterday.setDate(yesterday.getDate() - 1);
+  var yesterdayStr = localDateISO(yesterday);
+  var source = (state.foodLog || []).filter(function(e){ return e.date === yesterdayStr; });
+  if (!source.length && navigator.onLine) {
+    try { source = await apiCall('GET', '/api/food/log?log_date=' + yesterdayStr) || []; } catch(e) {}
+  }
+  if (!source.length) {
+    if (status) { status.style.display = 'block'; status.textContent = 'Вчера записей не было'; }
+    return;
+  }
+  if (button) button.disabled = true;
+  var copies = source.map(function(entry, index) {
+    var clientId = 'food_' + Date.now().toString(36) + index.toString(36) + Math.random().toString(36).slice(2, 6);
+    return {
+      client_id: clientId,
+      date: currentFoodDate,
+      meal_type: entry.meal_type || 'перекус',
+      food_id: entry.food_id || 'repeat',
+      food_name: entry.food_name,
+      calories: asNumber(entry.calories),
+      protein: asNumber(entry.protein),
+      fat: asNumber(entry.fat),
+      carbs: asNumber(entry.carbs),
+      amount: asNumber(entry.amount, 100)
+    };
+  });
+  copies.forEach(function(entry) { state.foodLog.push(Object.assign({id: entry.client_id}, entry)); });
+  saveStateLocal();
+  renderFoodLog(copies);
+  await Promise.all(copies.map(async function(entry) {
+    var saved = await apiCall('POST', '/api/food/log', entry);
+    if (saved && saved.id) {
+      var localEntry = state.foodLog.find(function(e){ return e.client_id === entry.client_id; });
+      if (localEntry) localEntry.id = saved.id;
+    }
+  }));
+  saveStateLocal();
+  if (status) { status.style.display = 'block'; status.textContent = 'Добавлено: ' + copies.length; }
+  if (button) button.disabled = false;
+}
+
 
 </script>
 <meta charset="UTF-8">
@@ -775,6 +825,7 @@ html[data-theme="dark"] .focus-card {
 .modal-input::placeholder { color: var(--text-muted); }
 .modal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .modal-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.task-schedule-grid { grid-template-columns: 1fr 1fr; }
 .modal-close-btn {
   display: block; width: 100%; padding: 14px;
   background: transparent; border: none; border-radius: 12px;
@@ -1678,6 +1729,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       </div>
       <div id="food-search-results"></div>
     </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:0 12px 10px">
+      <button id="repeat-food-btn" onclick="repeatYesterdayFood()" style="flex:1;padding:11px 12px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700">Повторить вчерашнее питание</button>
+      <div id="repeat-food-status" style="display:none;font-size:10px;color:var(--text-muted);max-width:42%"></div>
+    </div>
     <!-- Приёмы пищи -->
     <div id="food-meals-container" style="padding:0 12px"></div>
     <div style="height:80px"></div>
@@ -1833,7 +1888,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="modal-label">Задача</div>
       <input class="modal-input" type="text" id="m-task-text" placeholder="Что нужно сделать?">
     </div>
-    <div class="modal-grid">
+    <div class="modal-grid task-schedule-grid">
       <div class="modal-row">
         <div class="modal-label">Приоритет</div>
         <select class="modal-input" id="m-task-prio">
@@ -1849,6 +1904,30 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="modal-row">
         <div class="modal-label">Категория</div>
         <input class="modal-input" type="text" id="m-task-cat" placeholder="SEO, Личное…">
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Время</div>
+        <input class="modal-input" type="time" id="m-task-time">
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Длительность</div>
+        <select class="modal-input" id="m-task-duration">
+          <option value="15">15 минут</option>
+          <option value="30" selected>30 минут</option>
+          <option value="45">45 минут</option>
+          <option value="60">1 час</option>
+          <option value="90">1,5 часа</option>
+          <option value="120">2 часа</option>
+        </select>
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Повтор</div>
+        <select class="modal-input" id="m-task-repeat">
+          <option value="none">Не повторять</option>
+          <option value="daily">Каждый день</option>
+          <option value="weekdays">По будням</option>
+          <option value="weekly">Каждую неделю</option>
+        </select>
       </div>
     </div>
     <button class="btn-primary" id="m-task-submit" onclick="saveTask()">Добавить задачу</button>
@@ -2183,7 +2262,16 @@ function normalizeTask(t) {
   if (prio === 'high') prio = 'h';
   if (prio === 'medium') prio = 'm';
   if (prio === 'low') prio = 'l';
-  return {...t, prio, dl: asDateStr(t.dl), done: !!t.done};
+  var repeatRule = ['none','daily','weekdays','weekly'].indexOf(t.repeat_rule) >= 0 ? t.repeat_rule : 'none';
+  return {
+    ...t,
+    prio,
+    dl: asDateStr(t.dl),
+    done: !!t.done,
+    start_time: t.start_time ? String(t.start_time).slice(0, 5) : null,
+    duration_minutes: Math.max(5, parseInt(t.duration_minutes) || 30),
+    repeat_rule: repeatRule
+  };
 }
 function normalizeSupplement(s) {
   var times = Array.isArray(s.times) ? s.times : [];
@@ -2422,6 +2510,12 @@ function renderHome() {
   var todayStr_ = todayStr();
   var todayTasks = (state.tasks || []).filter(function(t) {
     return !t.dl || t.dl === todayStr_;
+  }).sort(function(a,b) {
+    if (a.start_time && b.start_time) return a.start_time.localeCompare(b.start_time);
+    if (a.start_time) return -1;
+    if (b.start_time) return 1;
+    var rank = {h:0,m:1,l:2};
+    return rank[a.prio] - rank[b.prio];
   });
   var doneTasks = todayTasks.filter(function(t) { return t.done; });
   var total = todayTasks.length;
@@ -2440,16 +2534,13 @@ function renderHome() {
   var focusCopy = document.getElementById('home-focus-copy');
   var focusAction = document.getElementById('home-focus-action');
   var syncPill = document.getElementById('home-sync-pill');
-  var nextTask = todayTasks.filter(function(t) { return !t.done; }).sort(function(a,b) {
-    var ap = a.prio === 'h' ? 0 : a.prio === 'm' ? 1 : 2;
-    var bp = b.prio === 'h' ? 0 : b.prio === 'm' ? 1 : 2;
-    return ap - bp;
-  })[0];
+  var nextTask = todayTasks.filter(function(t) { return !t.done; })[0];
   if (syncPill) syncPill.textContent = apiAvailable ? 'Синхр.' : 'Локально';
   if (focusTitle && focusCopy && focusAction) {
     if (nextTask) {
       focusTitle.textContent = nextTask.prio === 'h' ? 'Закрой главное: ' + nextTask.text : 'Следующий шаг: ' + nextTask.text;
-      focusCopy.textContent = total ? 'Осталось ' + Math.max(total - done, 0) + ' из ' + total + '. Один короткий подход к делу лучше идеального плана.' : 'Добавь первую задачу, чтобы день стал управляемым.';
+      var timing = nextTask.start_time ? 'Начало в ' + nextTask.start_time + ', ' + nextTask.duration_minutes + ' мин. ' : '';
+      focusCopy.textContent = timing + (total ? 'Осталось ' + Math.max(total - done, 0) + ' из ' + total + '.' : 'Добавь первую задачу, чтобы день стал управляемым.');
       focusAction.textContent = 'К задачам';
       focusAction.onclick = function() { go('tasks'); };
     } else if (done && total && done === total) {
@@ -2479,7 +2570,7 @@ function renderHome() {
           '<div class="home-task-dot' + (isPrio ? ' hot' : '') + '"></div>' +
           '<div class="home-task-text">' +
             '<div class="home-task-name">' + escapeHtml(t.text) + '</div>' +
-            (t.dl ? '<div class="home-task-meta">' + escapeHtml(t.dl) + '</div>' : '') +
+            ((t.start_time || t.dl) ? '<div class="home-task-meta">' + (t.start_time ? escapeHtml(t.start_time) + ' · ' + t.duration_minutes + ' мин' : escapeHtml(t.dl)) + '</div>' : '') +
           '</div>' +
           (isPrio ? '<div class="home-task-badge">Срочно</div>' : '') +
         '</div>';
@@ -3362,6 +3453,7 @@ function renderTasks() {
   const completed = state.tasks.filter(t=>t.done);
   const prioLabel = {h:'Высокий',m:'Средний',l:'Низкий'};
   const prioClass = {h:'prio-h',m:'prio-m',l:'prio-l'};
+  const repeatLabel = {daily:'Ежедневно',weekdays:'По будням',weekly:'Еженедельно'};
 
   function renderList(arr, container) {
     if (!arr.length) {
@@ -3376,6 +3468,8 @@ function renderTasks() {
           <div class="task-meta">
             <span class="prio ${prioClass[t.prio]}">${prioLabel[t.prio]}</span>
             ${t.dl?`<span class="task-dl">${escapeHtml(t.dl)}</span>`:''}
+            ${t.start_time?`<span class="task-dl">${escapeHtml(t.start_time)} · ${t.duration_minutes} мин</span>`:''}
+            ${t.repeat_rule!=='none'?`<span class="task-cat">${repeatLabel[t.repeat_rule]}</span>`:''}
             ${t.cat?`<span class="task-cat">${escapeHtml(t.cat)}</span>`:''}
           </div>
         </div>
@@ -3398,10 +3492,32 @@ async function deleteTask(id, event) {
   renderHome();
 }
 
+function nextRepeatDate(task) {
+  if (!task.dl || task.repeat_rule === 'none') return '';
+  var next = new Date(task.dl + 'T12:00:00');
+  next.setDate(next.getDate() + (task.repeat_rule === 'weekly' ? 7 : 1));
+  if (task.repeat_rule === 'weekdays') {
+    while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
+  }
+  return localDateISO(next);
+}
+
 function toggleTask(id) {
   const t = state.tasks.find(t=>t.id===id);
   if (t) {
+    const wasDone = t.done;
     t.done = !t.done;
+    if (!wasDone && t.done && t.repeat_rule !== 'none') {
+      const nextDate = nextRepeatDate(t);
+      const exists = state.tasks.some(function(candidate) {
+        return candidate.text === t.text && candidate.dl === nextDate && candidate.repeat_rule === t.repeat_rule;
+      });
+      if (nextDate && !exists) {
+        const nextTask = normalizeTask({...t, id: 'task_' + Date.now().toString(36), dl: nextDate, done: false});
+        state.tasks.push(nextTask);
+        apiCall('POST', '/api/tasks', nextTask);
+      }
+    }
     saveState();
     apiCall('POST', '/api/tasks', t);
     renderTasks();
@@ -3418,6 +3534,9 @@ function openAddTask() {
   document.getElementById('m-task-prio').value = 'm';
   document.getElementById('m-task-dl').value = todayStr();
   document.getElementById('m-task-cat').value = '';
+  document.getElementById('m-task-time').value = '';
+  document.getElementById('m-task-duration').value = '30';
+  document.getElementById('m-task-repeat').value = 'none';
   document.getElementById('modal-task').classList.add('open');
 }
 
@@ -3434,6 +3553,9 @@ function openEditTask(id, event) {
   document.getElementById('m-task-prio').value = task.prio || 'm';
   document.getElementById('m-task-dl').value = task.dl || '';
   document.getElementById('m-task-cat').value = task.cat || '';
+  document.getElementById('m-task-time').value = task.start_time || '';
+  document.getElementById('m-task-duration').value = String(task.duration_minutes || 30);
+  document.getElementById('m-task-repeat').value = task.repeat_rule || 'none';
   modal.classList.add('open');
 }
 
@@ -3452,6 +3574,9 @@ function saveTask() {
   task.prio = document.getElementById('m-task-prio').value;
   task.dl = document.getElementById('m-task-dl').value;
   task.cat = document.getElementById('m-task-cat').value.trim();
+  task.start_time = document.getElementById('m-task-time').value || null;
+  task.duration_minutes = parseInt(document.getElementById('m-task-duration').value) || 30;
+  task.repeat_rule = document.getElementById('m-task-repeat').value;
   saveState();
   apiCall('POST', '/api/tasks', task);
   closeModal('modal-task');
