@@ -136,6 +136,7 @@ function renderFoodLog(entries) {
 
   var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
   setEl('fd-cal', Math.round(totCal));
+  setEl('fd-cal-goal-label', 'из ' + CALORIE_GOAL + ' ккал');
   setEl('fd-protein', Math.round(totProt));
   setEl('fd-fat', Math.round(totFat));
   setEl('fd-carbs', Math.round(totCarb));
@@ -932,6 +933,37 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .sync-notice { display: none; margin: 0 12px 12px; padding: 10px 12px; border-radius: 10px; background: var(--green-soft); color: var(--green); font-size: 11px; line-height: 1.45; }
 .sync-notice.error { background: var(--red-soft); color: var(--red); }
 
+/* ── PROFILE ONBOARDING ── */
+.profile-sheet { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
+.profile-progress { display: flex; gap: 6px; margin-bottom: 18px; }
+.profile-progress-dot { height: 4px; flex: 1; border-radius: 999px; background: var(--border); }
+.profile-progress-dot.active { background: var(--ink); }
+.profile-step { display: none; }
+.profile-step.active { display: block; animation: screenIn .18s ease; }
+.profile-question { margin-bottom: 15px; font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.25; }
+.profile-options { display: grid; gap: 8px; }
+.profile-option {
+  min-height: 50px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--card2); color: var(--text);
+  font: 700 12px/1.2 'Manrope', sans-serif; cursor: pointer; text-align: left;
+}
+.profile-option.selected { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.profile-field { min-width: 0; margin-bottom: 12px; }
+.profile-field.full { grid-column: 1 / -1; }
+.profile-label { margin-bottom: 6px; color: var(--text-muted); font-size: 10.5px; font-weight: 700; }
+.profile-input {
+  width: 100%; height: 46px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: 11px;
+  outline: none; background: var(--card2); color: var(--text); font: 700 13px/1 'Manrope', sans-serif;
+}
+.profile-input:focus { border-color: var(--neon2); box-shadow: 0 0 0 3px var(--neon-soft); }
+.profile-result { margin-bottom: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card2); }
+.profile-result-value { font-size: 26px; font-weight: 800; color: var(--text); }
+.profile-result-label { margin-top: 4px; font-size: 10px; color: var(--text-muted); }
+.profile-error { min-height: 18px; margin-top: 6px; color: var(--red); font-size: 10.5px; }
+.profile-actions { display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-top: 8px; }
+.profile-back { width: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--card2); color: var(--text); font-size: 18px; cursor: pointer; }
+
 /* ── CHARTS ── */
 .chart-canvas-wrap { position: relative; height: 160px; padding: 0 4px 4px; }
 .pr-row { display: flex; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
@@ -1466,7 +1498,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <div class="home-card-link" onclick="go('food')">
           <div class="home-card-kicker">Питание</div>
           <div class="home-card-big" id="home-cal-card">—</div>
-          <div class="home-card-meta">ккал сегодня</div>
+          <div class="home-card-meta" id="home-cal-goal-meta">из 2500 ккал</div>
           <div class="home-mini-bar">
             <div class="home-mini-fill" id="home-cal-bar" style="width:0%"></div>
           </div>
@@ -1822,7 +1854,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     <!-- Итоги -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin:0 12px 10px;padding:14px">
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;margin-bottom:10px">
-        <div><div style="font-size:20px;font-weight:800;color:var(--text)" id="fd-cal">0</div><div style="font-size:9px;color:var(--text-muted)">ккал</div></div>
+        <div><div style="font-size:20px;font-weight:800;color:var(--text)" id="fd-cal">0</div><div style="font-size:9px;color:var(--text-muted)" id="fd-cal-goal-label">из 2500 ккал</div></div>
         <div><div style="font-size:20px;font-weight:800;color:var(--green)" id="fd-protein">0</div><div style="font-size:9px;color:var(--text-muted)">белки</div></div>
         <div><div style="font-size:20px;font-weight:800;color:var(--orange)" id="fd-fat">0</div><div style="font-size:9px;color:var(--text-muted)">жиры</div></div>
         <div><div style="font-size:20px;font-weight:800;color:var(--blue)" id="fd-carbs">0</div><div style="font-size:9px;color:var(--text-muted)">углев</div></div>
@@ -1950,6 +1982,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <span class="more-icon">AI</span>
         <span><span class="more-title">ИИ-анализ</span><span class="more-sub">Плато, достижения и фокус недели</span></span>
       </button>
+      <button class="more-action" onclick="openProfileEditor()" style="grid-column:1 / -1">
+        <span class="more-icon">◎</span>
+        <span><span class="more-title">Профиль</span><span class="more-sub">Цель, параметры и калории</span></span>
+      </button>
       <button class="more-action" onclick="goFromMore('sync')" style="grid-column:1 / -1">
         <span class="more-icon">↻</span>
         <span><span class="more-title">Данные</span><span class="more-sub">Синхронизация и резервные копии</span></span>
@@ -1964,6 +2000,49 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 </div>
 
 <!-- ═══════════════════════ MODALS ═══════════════════════════ -->
+<!-- Profile Onboarding -->
+<div class="modal-overlay" id="modal-profile">
+  <div class="modal-sheet profile-sheet">
+    <div class="profile-progress">
+      <div class="profile-progress-dot active" data-profile-dot="1"></div>
+      <div class="profile-progress-dot" data-profile-dot="2"></div>
+      <div class="profile-progress-dot" data-profile-dot="3"></div>
+    </div>
+    <div class="profile-step active" data-profile-step="1">
+      <div class="modal-title" id="profile-modal-title">Настроим цель</div>
+      <div class="profile-question">Какой результат для тебя сейчас главный?</div>
+      <div class="profile-options">
+        <button class="profile-option" data-goal="lose" onclick="selectProfileGoal('lose')"><span>Снизить вес</span><span>↓</span></button>
+        <button class="profile-option" data-goal="maintain" onclick="selectProfileGoal('maintain')"><span>Поддерживать форму</span><span>＝</span></button>
+        <button class="profile-option" data-goal="gain" onclick="selectProfileGoal('gain')"><span>Набрать массу</span><span>↑</span></button>
+      </div>
+      <button class="btn-primary" onclick="profileNextStep()">Продолжить</button>
+      <button class="modal-close-btn" id="profile-later-btn" onclick="skipProfileOnboarding()">Позже</button>
+    </div>
+    <div class="profile-step" data-profile-step="2">
+      <div class="modal-title">Основные параметры</div>
+      <div class="profile-grid">
+        <div class="profile-field full"><div class="profile-label">Имя</div><input class="profile-input" id="profile-name" maxlength="80" placeholder="Как к тебе обращаться"></div>
+        <div class="profile-field"><div class="profile-label">Пол</div><select class="profile-input" id="profile-sex"><option value="male">Мужской</option><option value="female">Женский</option></select></div>
+        <div class="profile-field"><div class="profile-label">Возраст</div><input class="profile-input" id="profile-age" type="number" min="18" max="100" inputmode="numeric" placeholder="30"></div>
+        <div class="profile-field"><div class="profile-label">Рост, см</div><input class="profile-input" id="profile-height" type="number" min="120" max="230" inputmode="decimal" placeholder="175"></div>
+        <div class="profile-field"><div class="profile-label">Вес, кг</div><input class="profile-input" id="profile-weight" type="number" min="35" max="350" step="0.1" inputmode="decimal" placeholder="75"></div>
+        <div class="profile-field full"><div class="profile-label">Целевой вес, кг</div><input class="profile-input" id="profile-target-weight" type="number" min="35" max="350" step="0.1" inputmode="decimal" placeholder="Необязательно"></div>
+      </div>
+      <div class="profile-error" id="profile-step2-error"></div>
+      <div class="profile-actions"><button class="profile-back" onclick="profileSetStep(1)">←</button><button class="btn-primary" onclick="profileNextStep()" style="margin:0">Продолжить</button></div>
+    </div>
+    <div class="profile-step" data-profile-step="3">
+      <div class="modal-title">Ритм и питание</div>
+      <div class="profile-field full"><div class="profile-label">Повседневная активность</div><select class="profile-input" id="profile-activity" onchange="updateProfileEstimate(true)"><option value="low">Мало движения</option><option value="light">Легкая активность</option><option value="medium">Регулярные тренировки</option><option value="high">Высокая активность</option></select></div>
+      <div class="profile-result"><div class="profile-result-value"><span id="profile-calorie-estimate">—</span> ккал</div><div class="profile-result-label">Ориентир на день, можно изменить</div></div>
+      <div class="profile-field full"><div class="profile-label">Моя цель калорий</div><input class="profile-input" id="profile-calorie-goal" type="number" min="1200" max="6000" step="50" inputmode="numeric"></div>
+      <div class="profile-error" id="profile-step3-error"></div>
+      <div class="profile-actions"><button class="profile-back" onclick="profileSetStep(2)">←</button><button class="btn-primary" id="profile-save-btn" onclick="saveProfile()" style="margin:0">Сохранить профиль</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- Add Set Modal -->
 <div class="modal-overlay" id="modal-set">
   <div class="modal-sheet">
@@ -2174,6 +2253,172 @@ function getUserId() {
 }
 var USER_ID = getUserId();
 
+function defaultUserProfile() {
+  return {
+    name: tg?.initDataUnsafe?.user?.first_name || '',
+    goal: 'maintain', sex: 'male', age: 30, height: 175, weight: 75,
+    target_weight: null, activity: 'light', calorie_goal: 2500,
+    onboarding_completed: false, updated_at: null
+  };
+}
+
+function loadUserProfileLocal() {
+  try { return Object.assign(defaultUserProfile(), JSON.parse(localStorage.getItem('planner_profile_' + USER_ID) || '{}')); }
+  catch(e) { return defaultUserProfile(); }
+}
+
+var userProfile = loadUserProfileLocal();
+CALORIE_GOAL = parseInt(userProfile.calorie_goal) || 2500;
+
+function saveUserProfileLocal(profile) {
+  var key = 'planner_profile_' + USER_ID;
+  var previous = localStorage.getItem(key);
+  userProfile = Object.assign(defaultUserProfile(), profile);
+  CALORIE_GOAL = parseInt(userProfile.calorie_goal) || 2500;
+  var next = JSON.stringify(userProfile);
+  if (previous && previous !== next) localStorage.setItem('planner_profile_previous_' + USER_ID, previous);
+  localStorage.setItem(key, next);
+}
+
+function applyServerProfile(settings) {
+  if (!settings || !settings.onboarding_completed) return;
+  var localTime = new Date(userProfile.updated_at || 0).getTime();
+  var serverTime = new Date(settings.updated_at || 0).getTime();
+  if (!userProfile.onboarding_completed || serverTime >= localTime) {
+    saveUserProfileLocal({
+      name: settings.name, goal: settings.goal, sex: settings.sex, age: Number(settings.age),
+      height: Number(settings.height), weight: Number(settings.weight),
+      target_weight: settings.target_weight == null ? null : Number(settings.target_weight),
+      activity: settings.activity, calorie_goal: Number(settings.calorie_goal),
+      onboarding_completed: true, updated_at: settings.updated_at
+    });
+  } else if (localTime > serverTime) {
+    apiCall('POST', '/api/settings/profile', userProfile);
+  }
+}
+
+function estimateProfileCalories(profile) {
+  var weight = Number(profile.weight), height = Number(profile.height), age = Number(profile.age);
+  if (!weight || !height || !age) return 0;
+  var resting = 10 * weight + 6.25 * height - 5 * age + (profile.sex === 'female' ? -161 : 5);
+  var activityFactor = {low:1.2, light:1.375, medium:1.55, high:1.725}[profile.activity] || 1.375;
+  var goalFactor = profile.goal === 'lose' ? .85 : (profile.goal === 'gain' ? 1.1 : 1);
+  return Math.max(1200, Math.min(6000, Math.round(resting * activityFactor * goalFactor / 50) * 50));
+}
+
+var profileStep = 1;
+var selectedProfileGoal = userProfile.goal || 'maintain';
+
+function profileSetStep(step) {
+  profileStep = step;
+  document.querySelectorAll('[data-profile-step]').forEach(function(el) { el.classList.toggle('active', Number(el.dataset.profileStep) === step); });
+  document.querySelectorAll('[data-profile-dot]').forEach(function(el) { el.classList.toggle('active', Number(el.dataset.profileDot) <= step); });
+  if (step === 3) updateProfileEstimate(false);
+}
+
+function selectProfileGoal(goal) {
+  selectedProfileGoal = goal;
+  document.querySelectorAll('[data-goal]').forEach(function(el) { el.classList.toggle('selected', el.dataset.goal === goal); });
+}
+
+function fillProfileForm() {
+  selectedProfileGoal = userProfile.goal || 'maintain';
+  selectProfileGoal(selectedProfileGoal);
+  document.getElementById('profile-name').value = userProfile.name || tg?.initDataUnsafe?.user?.first_name || '';
+  document.getElementById('profile-sex').value = userProfile.sex || 'male';
+  document.getElementById('profile-age').value = userProfile.age || 30;
+  document.getElementById('profile-height').value = userProfile.height || 175;
+  document.getElementById('profile-weight').value = userProfile.weight || 75;
+  document.getElementById('profile-target-weight').value = userProfile.target_weight || '';
+  document.getElementById('profile-activity').value = userProfile.activity || 'light';
+  document.getElementById('profile-calorie-goal').value = userProfile.calorie_goal || 2500;
+}
+
+function openProfileEditor() {
+  closeMoreMenu();
+  fillProfileForm();
+  document.getElementById('profile-modal-title').textContent = userProfile.onboarding_completed ? 'Обновить цель' : 'Настроим цель';
+  document.getElementById('profile-later-btn').style.display = userProfile.onboarding_completed ? 'none' : 'block';
+  profileSetStep(1);
+  document.getElementById('modal-profile').classList.add('open');
+}
+
+function maybeShowProfileOnboarding() {
+  if (userProfile.onboarding_completed || localStorage.getItem('planner_profile_skipped_' + USER_ID) === '1') return;
+  openProfileEditor();
+}
+
+function skipProfileOnboarding() {
+  localStorage.setItem('planner_profile_skipped_' + USER_ID, '1');
+  closeModal('modal-profile');
+}
+
+function readProfileForm() {
+  return {
+    name: document.getElementById('profile-name').value.trim(),
+    goal: selectedProfileGoal,
+    sex: document.getElementById('profile-sex').value,
+    age: Number(document.getElementById('profile-age').value),
+    height: Number(document.getElementById('profile-height').value),
+    weight: Number(document.getElementById('profile-weight').value),
+    target_weight: Number(document.getElementById('profile-target-weight').value) || null,
+    activity: document.getElementById('profile-activity').value
+  };
+}
+
+function validateProfileBasics(profile) {
+  if (!profile.name) return 'Укажи имя';
+  if (profile.age < 18 || profile.age > 100) return 'Возраст: от 18 до 100 лет';
+  if (profile.height < 120 || profile.height > 230) return 'Рост: от 120 до 230 см';
+  if (profile.weight < 35 || profile.weight > 350) return 'Вес: от 35 до 350 кг';
+  if (profile.target_weight && (profile.target_weight < 35 || profile.target_weight > 350)) return 'Проверь целевой вес';
+  return '';
+}
+
+function profileNextStep() {
+  if (profileStep === 1) return profileSetStep(2);
+  var draft = readProfileForm();
+  var error = validateProfileBasics(draft);
+  document.getElementById('profile-step2-error').textContent = error;
+  if (!error) profileSetStep(3);
+}
+
+function updateProfileEstimate(forceGoalUpdate) {
+  var draft = readProfileForm();
+  var estimate = estimateProfileCalories(draft);
+  document.getElementById('profile-calorie-estimate').textContent = estimate || '—';
+  if (forceGoalUpdate || !userProfile.onboarding_completed) {
+    document.getElementById('profile-calorie-goal').value = estimate || userProfile.calorie_goal || 2500;
+  }
+}
+
+async function saveProfile() {
+  var draft = readProfileForm();
+  var error = validateProfileBasics(draft);
+  var calorieGoal = Number(document.getElementById('profile-calorie-goal').value);
+  if (!error && (calorieGoal < 1200 || calorieGoal > 6000)) error = 'Калории: от 1200 до 6000';
+  document.getElementById('profile-step3-error').textContent = error;
+  if (error) return;
+  var button = document.getElementById('profile-save-btn');
+  button.disabled = true;
+  var profile = Object.assign(draft, {calorie_goal:Math.round(calorieGoal), onboarding_completed:true, updated_at:new Date().toISOString()});
+  saveUserProfileLocal(profile);
+  localStorage.removeItem('planner_profile_skipped_' + USER_ID);
+  var saved = await apiCall('POST', '/api/settings/profile', profile);
+  if (saved) saveUserProfileLocal(Object.assign(profile, {updated_at:saved.updated_at || profile.updated_at}));
+  if (!(state.bodyWeight || []).some(function(item) { return item.date === todayStr(); })) {
+    state.bodyWeight.push({date:todayStr(), weight:profile.weight});
+    var measure = normalizeBodyMeasure({date:todayStr(), weight:profile.weight, height:profile.height});
+    state.bodyMeasures.push(measure);
+    apiCall('POST', '/api/body/measures', measure);
+    saveState();
+  }
+  button.disabled = false;
+  closeModal('modal-profile');
+  renderHome();
+  renderFoodLog((state.foodLog || []).filter(function(item) { return item.date === currentFoodDate; }));
+}
+
 function getApiHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -2196,6 +2441,7 @@ function queueWrite(method, path, body) {
   var items = getOutbox();
   var identity = '';
   if (path === '/api/tasks') identity = body?.id || '';
+  else if (path === '/api/settings/profile') identity = 'profile';
   else if (path.indexOf('/api/body/') === 0) identity = body?.date || '';
   else if (path === '/api/supplement_checks') {
     identity = [body?.date, body?.supp_name, body?.time_slot].filter(Boolean).join('|');
@@ -2593,6 +2839,7 @@ async function recoverEmptyServerSections(bootstrap) {
 }
 
 function applyBootstrap(bootstrap) {
+  applyServerProfile(bootstrap.settings);
   var deletedKeys = new Set(getTombstones().map(function(item) { return item.kind + '|' + item.key; }));
   var keepServerItem = function(kind, key) { return !deletedKeys.has(kind + '|' + String(key)); };
   var serverWorkouts = (bootstrap.workouts || []).filter(function(item) { return keepServerItem('workout', item.id); });
@@ -2783,8 +3030,13 @@ async function syncImportedSnapshot(snapshot) {
   updateSyncCenter();
 }
 
-async function restoreSnapshot(snapshot, sourceLabel) {
+async function restoreSnapshot(snapshot, sourceLabel, importedProfile) {
   if (snapshotRecordCount(snapshot) === 0) throw new Error('В копии нет записей планировщика');
+  if (importedProfile?.onboarding_completed) {
+    var restoredProfile = Object.assign(defaultUserProfile(), importedProfile, {updated_at:new Date().toISOString()});
+    saveUserProfileLocal(restoredProfile);
+    await apiCall('POST', '/api/settings/profile', restoredProfile);
+  }
   mergeSnapshotIntoState(snapshot);
   await syncImportedSnapshot(snapshot);
   showSyncNotice(sourceLabel + ': восстановлено ' + snapshotRecordCount(snapshot) + ' записей.', false);
@@ -2796,7 +3048,7 @@ async function importBackupFile(input) {
   try {
     if (file.size > 10 * 1024 * 1024) throw new Error('Файл больше 10 МБ');
     var raw = JSON.parse(await file.text());
-    await restoreSnapshot(backupPayloadToSnapshot(raw), 'Файл');
+    await restoreSnapshot(backupPayloadToSnapshot(raw), 'Файл', raw.profile || raw.state?.profile);
   } catch(e) {
     showSyncNotice('Не удалось восстановить: ' + (e.message || 'неверный файл'), true);
   } finally {
@@ -2808,7 +3060,8 @@ async function restoreAutomaticBackup() {
   try {
     var raw = localStorage.getItem('planner_state_backup_previous_' + USER_ID) || localStorage.getItem('planner_state_backup_' + USER_ID);
     if (!raw) throw new Error('автокопия не найдена');
-    await restoreSnapshot(backupPayloadToSnapshot(JSON.parse(raw)), 'Автокопия');
+    var previousProfile = JSON.parse(localStorage.getItem('planner_profile_previous_' + USER_ID) || 'null');
+    await restoreSnapshot(backupPayloadToSnapshot(JSON.parse(raw)), 'Автокопия', previousProfile);
   } catch(e) {
     showSyncNotice('Не удалось восстановить: ' + (e.message || 'копия повреждена'), true);
   }
@@ -2819,6 +3072,7 @@ function exportData() {
     schema_version: 2,
     exported_at: new Date().toISOString(),
     user_id: USER_ID,
+    profile: userProfile,
     state: stateSnapshot()
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
@@ -2908,7 +3162,7 @@ function renderHome() {
   var greetEl = document.getElementById('home-greeting');
   if (greetEl) {
     var name = '';
-    try { name = JSON.parse(localStorage.getItem('planner_settings') || '{}').name || ''; } catch(e) {}
+    name = userProfile.name || '';
     greetEl.textContent = greeting + (name ? ', ' + name : '');
   }
 
@@ -3019,9 +3273,11 @@ function renderHome() {
   var homeCalToday = document.getElementById('home-cal-today');
   var homeCalCard = document.getElementById('home-cal-card');
   var homeCalBar = document.getElementById('home-cal-bar');
+  var homeCalGoalMeta = document.getElementById('home-cal-goal-meta');
   if (homeCalToday) homeCalToday.textContent = calValue || '—';
   if (homeCalCard) homeCalCard.textContent = calValue || '—';
   if (homeCalBar) homeCalBar.style.width = Math.min(100, Math.round(calValue / CALORIE_GOAL * 100)) + '%';
+  if (homeCalGoalMeta) homeCalGoalMeta.textContent = 'из ' + CALORIE_GOAL + ' ккал';
 
   // Тренировка сегодня
   var workoutNameEl = document.getElementById('home-workout-name');
@@ -4239,7 +4495,7 @@ renderHome();
 loadState(() => {
   renderSyncedScreens();
   setSyncStatus(getOutbox().length ? 'pending' : (apiAvailable ? 'online' : 'offline'));
-});
+}).then(function() { setTimeout(maybeShowProfileOnboarding, 180); });
 </script>
 </body>
 </html>
