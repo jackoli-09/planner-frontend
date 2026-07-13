@@ -1213,6 +1213,23 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .template-option-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 800; }
 .template-option-count { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
 .template-option-copy { margin-top: 5px; color: var(--text-muted); font-size: 10.5px; line-height: 1.45; }
+.custom-template-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.custom-template-head { margin-bottom: 8px; color: var(--text); font-size: 11px; font-weight: 800; }
+.custom-template-list { display: grid; gap: 7px; }
+.custom-template-row {
+  display: grid; grid-template-columns: minmax(0,1fr) 34px; gap: 7px; align-items: stretch;
+}
+.custom-template-apply {
+  min-width: 0; min-height: 48px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--card2); color: var(--text); cursor: pointer; text-align: left;
+}
+.custom-template-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 800; }
+.custom-template-count { display: block; margin-top: 3px; color: var(--text-muted); font-size: 9.5px; }
+.custom-template-delete { border: 1px solid var(--border); border-radius: 8px; background: var(--card2); color: var(--text-muted); cursor: pointer; font-size: 17px; }
+.custom-template-empty { padding: 9px 0; color: var(--text-muted); font-size: 10.5px; }
+.custom-template-create { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; margin-top: 9px; }
+.custom-template-create .modal-input { min-width: 0; }
+.custom-template-save { min-height: 42px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--text); color: var(--bg); font: 800 10.5px/1 'Manrope',sans-serif; cursor: pointer; }
 
 .fab-btn {
   position: fixed; bottom: 76px; right: 16px;
@@ -2338,6 +2355,14 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <span class="template-option-copy">Прогулка, спокойное питание и свободный вечер.</span>
       </button>
     </div>
+    <div class="custom-template-block">
+      <div class="custom-template-head">Мои шаблоны</div>
+      <div class="custom-template-list" id="custom-template-list"><div class="custom-template-empty">Пока нет сохраненных шаблонов</div></div>
+      <div class="custom-template-create">
+        <input class="modal-input" id="custom-template-name" maxlength="80" placeholder="Название шаблона">
+        <button class="custom-template-save" onclick="saveCurrentDayTemplate()">Сохранить день</button>
+      </div>
+    </div>
     <button class="modal-close-btn" onclick="closeModal('modal-day-template')">Отмена</button>
   </div>
 </div>
@@ -2875,6 +2900,7 @@ function queueWrite(method, path, body) {
   var items = getOutbox();
   var identity = '';
   if (path === '/api/tasks') identity = body?.id || '';
+  else if (path === '/api/task-templates') identity = body?.client_id || '';
   else if (path === '/api/settings/profile') identity = 'profile';
   else if (path === '/api/settings/notifications') identity = 'notifications';
   else if (path === '/api/food/log' || path === '/api/food/favorites') identity = body?.client_id || '';
@@ -2988,6 +3014,7 @@ window.addEventListener('offline', function() { setSyncStatus(getOutbox().length
 let state = {
   workouts: [],
   tasks: [],
+  taskTemplates: [],
   bodyWeight: [],   // [{date, weight}]
   bodyCal: [],      // [{date, cal}]
   bodyMeasures: [], // [{date, weight, height, chest, waist, hips, fat?, muscle?}]
@@ -3121,6 +3148,7 @@ function stateSnapshot() {
   return {
     workouts: state.workouts || [],
     tasks: state.tasks || [],
+    task_templates: state.taskTemplates || [],
     supps_list: state.supps?.list || [],
     supps_checked: state.supps?.checked || {},
     body_weight: state.bodyWeight || [],
@@ -3133,7 +3161,7 @@ function stateSnapshot() {
 
 function snapshotRecordCount(snapshot) {
   if (!snapshot) return 0;
-  return ['workouts','tasks','supps_list','body_weight','body_cal','body_measures','food_log','food_favorites']
+  return ['workouts','tasks','task_templates','supps_list','body_weight','body_cal','body_measures','food_log','food_favorites']
     .reduce(function(total, key) { return total + (Array.isArray(snapshot[key]) ? snapshot[key].length : 0); }, 0) +
     Object.keys(snapshot.supps_checked || {}).length;
 }
@@ -3165,7 +3193,7 @@ function saveStateLocal() {
 }
 
 function loadStateLocal() {
-  const keys = ['workouts','tasks','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log','food_favorites'];
+  const keys = ['workouts','tasks','task_templates','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log','food_favorites'];
   const vals = {};
   keys.forEach(k => vals[k] = localStorage.getItem(k + '_' + USER_ID));
   try {
@@ -3180,6 +3208,7 @@ function loadStateLocal() {
 function applyLoaded(vals) {
   if (vals.workouts) state.workouts = JSON.parse(vals.workouts).map(normalizeWorkout);
   if (vals.tasks) state.tasks = JSON.parse(vals.tasks).map(normalizeTask);
+  if (vals.task_templates) state.taskTemplates = JSON.parse(vals.task_templates).map(normalizeTaskTemplate);
   if (vals.supps_list) state.supps.list = JSON.parse(vals.supps_list).map(normalizeSupplement);
   if (vals.supps_checked) state.supps.checked = JSON.parse(vals.supps_checked);
   if (vals.body_weight) state.bodyWeight = JSON.parse(vals.body_weight).map(w => ({date: asDateStr(w.date), weight: asNumber(w.weight)}));
@@ -3246,6 +3275,11 @@ async function recoverEmptyServerSections(bootstrap) {
   if (!(bootstrap.tasks || []).length) {
     (state.tasks || []).forEach(function(item) { writes.push(apiCall('POST', '/api/tasks', item)); });
   }
+  if (!(bootstrap.task_templates || []).length) {
+    (state.taskTemplates || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/task-templates', item));
+    });
+  }
   if (!(bootstrap.workouts || []).length) {
     (state.workouts || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
       writes.push(apiCall('POST', '/api/workouts', item));
@@ -3289,6 +3323,7 @@ function applyBootstrap(bootstrap) {
   var keepServerItem = function(kind, key) { return !deletedKeys.has(kind + '|' + String(key)); };
   var serverWorkouts = (bootstrap.workouts || []).filter(function(item) { return keepServerItem('workout', item.id); });
   var serverTasks = (bootstrap.tasks || []).filter(function(item) { return keepServerItem('task', item.id); });
+  var serverTaskTemplates = (bootstrap.task_templates || []).filter(function(item) { return keepServerItem('task_template', item.id); });
   var serverSupplements = (bootstrap.supplements || []).filter(function(item) { return keepServerItem('supplement', item.id); });
   var serverWeight = (bootstrap.body_weight || []).filter(function(item) { return keepServerItem('body_weight', asDateStr(item.date)); });
   var serverCalories = (bootstrap.body_calories || []).filter(function(item) { return keepServerItem('body_cal', asDateStr(item.date)); });
@@ -3299,6 +3334,9 @@ function applyBootstrap(bootstrap) {
     return itemIdentity(item, ['date','muscle','exercise','sets','reps','weight']);
   }, normalizeWorkout);
   state.tasks = mergeRecords(state.tasks, serverTasks, function(item) { return String(item.id); }, normalizeTask);
+  state.taskTemplates = mergeRecords(state.taskTemplates, serverTaskTemplates, function(item) {
+    return String(item.client_id || item.id);
+  }, normalizeTaskTemplate);
   state.supps.list = mergeRecords(state.supps.list, serverSupplements, function(item) {
     return String(item.name || '').trim().toLowerCase();
   }, normalizeSupplement);
@@ -3319,6 +3357,8 @@ function applyBootstrap(bootstrap) {
 
 function renderSyncedScreens() {
   renderHome();
+  renderTasks();
+  renderCustomTaskTemplates();
   renderSupps();
   renderBody();
   renderFoodFavorites();
@@ -3423,6 +3463,7 @@ function backupPayloadToSnapshot(raw) {
   return {
     workouts: Array.isArray(source.workouts) ? source.workouts : [],
     tasks: Array.isArray(source.tasks) ? source.tasks : [],
+    task_templates: Array.isArray(source.task_templates) ? source.task_templates : (Array.isArray(source.taskTemplates) ? source.taskTemplates : []),
     supps_list: Array.isArray(source.supps_list) ? source.supps_list : (Array.isArray(supps.list) ? supps.list : []),
     supps_checked: source.supps_checked || supps.checked || {},
     body_weight: Array.isArray(source.body_weight) ? source.body_weight : (Array.isArray(source.bodyWeight) ? source.bodyWeight : []),
@@ -3444,6 +3485,7 @@ function checksObjectToRows(checks) {
 
 function mergeSnapshotIntoState(snapshot) {
   snapshot.tasks.forEach(function(item) { clearTombstone('task', item.id); });
+  snapshot.task_templates.forEach(function(item) { if (item.id && String(item.id).indexOf('tpl_') !== 0) clearTombstone('task_template', item.id); });
   snapshot.workouts.forEach(function(item) { if (item.id) clearTombstone('workout', item.id); });
   snapshot.supps_list.forEach(function(item) { if (item.id) clearTombstone('supplement', item.id); });
   snapshot.body_weight.forEach(function(item) { clearTombstone('body_weight', asDateStr(item.date)); });
@@ -3454,6 +3496,7 @@ function mergeSnapshotIntoState(snapshot) {
   applyBootstrap({
     workouts: snapshot.workouts,
     tasks: snapshot.tasks,
+    task_templates: snapshot.task_templates,
     supplements: snapshot.supps_list,
     supplement_checks: checksObjectToRows(snapshot.supps_checked),
     body_weight: snapshot.body_weight,
@@ -3471,6 +3514,7 @@ function mergeSnapshotIntoState(snapshot) {
 async function syncImportedSnapshot(snapshot) {
   var writes = [];
   snapshot.tasks.forEach(function(item) { writes.push(apiCall('POST', '/api/tasks', normalizeTask(item))); });
+  snapshot.task_templates.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/task-templates', normalizeTaskTemplate(item))); });
   snapshot.workouts.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/workouts', normalizeWorkout(item))); });
   snapshot.supps_list.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/supplements', normalizeSupplement(item))); });
   snapshot.body_weight.forEach(function(item) { writes.push(apiCall('POST', '/api/body/weight', {date:asDateStr(item.date), weight:asNumber(item.weight)})); });
@@ -3531,7 +3575,7 @@ async function restoreAutomaticBackup() {
 
 function exportData() {
   const payload = {
-    schema_version: 4,
+    schema_version: 5,
     exported_at: new Date().toISOString(),
     user_id: USER_ID,
     profile: userProfile,
@@ -4575,7 +4619,48 @@ async function deleteBodyEntry(type, date) {
 // TASKS
 // ════════════════════════════════════════════════════════════════
 function openDayTemplates() {
+  renderCustomTaskTemplates();
+  var name = document.getElementById('custom-template-name');
+  if (name) name.value = '';
   document.getElementById('modal-day-template').classList.add('open');
+}
+
+function normalizeTaskTemplate(template) {
+  return {
+    ...template,
+    client_id:template.client_id || ('tpl_' + Date.now().toString(36) + Math.random().toString(36).slice(2)),
+    name:String(template.name || '').trim(),
+    tasks:(Array.isArray(template.tasks) ? template.tasks : []).filter(function(task) {
+      return String(task?.text || '').trim();
+    }).slice(0, 20).map(function(task) {
+      var normalized = normalizeTask(Object.assign({id:'template'}, task));
+      return {
+        text:normalized.text, prio:normalized.prio, cat:normalized.cat || null,
+        start_time:normalized.start_time, duration_minutes:normalized.duration_minutes,
+        repeat_rule:normalized.repeat_rule
+      };
+    })
+  };
+}
+
+function renderCustomTaskTemplates() {
+  var list = document.getElementById('custom-template-list');
+  if (!list) return;
+  var templates = state.taskTemplates || [];
+  if (!templates.length) {
+    list.innerHTML = '<div class="custom-template-empty">Пока нет сохраненных шаблонов</div>';
+    return;
+  }
+  list.innerHTML = templates.map(function(template) {
+    var token = encodeToken(template.id || template.client_id);
+    return '<div class="custom-template-row">' +
+      '<button class="custom-template-apply" onclick="applyCustomTaskTemplate(decodeURIComponent(\''+token+'\'))">' +
+        '<span class="custom-template-name">'+escapeHtml(template.name)+'</span>' +
+        '<span class="custom-template-count">Задач: '+template.tasks.length+'</span>' +
+      '</button>' +
+      '<button class="custom-template-delete" aria-label="Удалить шаблон" onclick="deleteTaskTemplate(decodeURIComponent(\''+token+'\'))">×</button>' +
+    '</div>';
+  }).join('');
 }
 
 function dayTemplateCatalog() {
@@ -4608,9 +4693,7 @@ function showTaskTemplateStatus(message) {
   showTaskTemplateStatus.timer = setTimeout(function() { status.style.display = 'none'; }, 4000);
 }
 
-function applyDayTemplate(templateId) {
-  var templates = dayTemplateCatalog();
-  var items = templates[templateId] || [];
+function addTemplateTasksToToday(items) {
   var date = todayStr();
   var created = [];
   items.forEach(function(item, index) {
@@ -4618,9 +4701,8 @@ function applyDayTemplate(templateId) {
       return !task.done && task.dl === date && task.text.trim().toLowerCase() === item.text.toLowerCase();
     });
     if (exists) return;
-    var task = normalizeTask(Object.assign({}, item, {
-      id:'task_' + Date.now().toString(36) + '_' + index,
-      dl:date, done:false, start_time:null, repeat_rule:'none'
+    var task = normalizeTask(Object.assign({start_time:null, repeat_rule:'none'}, item, {
+      id:'task_' + Date.now().toString(36) + '_' + index, dl:date, done:false
     }));
     state.tasks.push(task);
     clearTombstone('task', task.id);
@@ -4630,10 +4712,67 @@ function applyDayTemplate(templateId) {
     saveState();
     created.forEach(function(task) { apiCall('POST', '/api/tasks', task); });
   }
+  return created;
+}
+
+function finishTemplateApply(created) {
   closeModal('modal-day-template');
   renderTasks();
   renderHome();
   showTaskTemplateStatus(created.length ? 'Добавлено задач: ' + created.length : 'Этот шаблон уже добавлен на сегодня');
+}
+
+function applyDayTemplate(templateId) {
+  var created = addTemplateTasksToToday(dayTemplateCatalog()[templateId] || []);
+  finishTemplateApply(created);
+}
+
+function applyCustomTaskTemplate(id) {
+  var template = (state.taskTemplates || []).find(function(item) { return String(item.id || item.client_id) === String(id); });
+  if (!template) return;
+  finishTemplateApply(addTemplateTasksToToday(template.tasks));
+}
+
+async function saveCurrentDayTemplate() {
+  var input = document.getElementById('custom-template-name');
+  var name = String(input?.value || '').trim();
+  var date = todayStr();
+  var source = (state.tasks || []).filter(function(task) { return !task.done && (!task.dl || asDateStr(task.dl) === date); }).slice(0, 20);
+  if (!name) {
+    if (input) { input.focus(); input.setAttribute('placeholder', 'Введите название'); }
+    return;
+  }
+  if (!source.length) {
+    closeModal('modal-day-template');
+    showTaskTemplateStatus('Сначала добавьте задачи на сегодня');
+    return;
+  }
+  var clientId = 'tpl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var template = normalizeTaskTemplate({id:clientId, client_id:clientId, name:name, tasks:source});
+  state.taskTemplates.push(template);
+  saveStateLocal();
+  renderCustomTaskTemplates();
+  if (input) input.value = '';
+  var saved = await apiCall('POST', '/api/task-templates', template);
+  if (saved?.id) template.id = saved.id;
+  saveStateLocal();
+}
+
+async function deleteTaskTemplate(id) {
+  var template = (state.taskTemplates || []).find(function(item) { return String(item.id || item.client_id) === String(id); });
+  if (!template) return;
+  state.taskTemplates = state.taskTemplates.filter(function(item) { return item !== template; });
+  var localId = String(template.id || '').indexOf('tpl_') === 0;
+  if (localId) {
+    saveOutbox(getOutbox().filter(function(item) {
+      return !(item.method === 'POST' && item.path === '/api/task-templates' && item.body?.client_id === template.client_id);
+    }));
+  } else {
+    addTombstone('task_template', template.id);
+    await apiCall('DELETE', '/api/task-templates/' + encodeURIComponent(template.id));
+  }
+  saveStateLocal();
+  renderCustomTaskTemplates();
 }
 
 var taskViewFilter = 'today';
