@@ -1006,6 +1006,15 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .prio-l { background: var(--green-soft); color: var(--green); }
 .task-dl { font-size: 10px; color: var(--text-muted); }
 .task-cat { font-size: 10px; color: var(--text-sub); }
+.task-filter {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 10px 12px 0; padding: 3px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--card2);
+}
+.task-filter-btn {
+  min-width: 0; height: 36px; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted);
+  font: 700 10.5px/1 'Manrope', sans-serif; cursor: pointer;
+}
+.task-filter-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(20,20,20,.08); }
 .task-template-launch {
   margin: 10px 12px 2px; min-height: 44px; width: calc(100% - 24px); padding: 0 13px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1683,14 +1692,19 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       </div>
     </div>
 
+    <div class="task-filter" role="tablist" aria-label="Период задач">
+      <button class="task-filter-btn active" role="tab" aria-selected="true" data-task-view="today" onclick="setTaskView('today',this)">Сегодня</button>
+      <button class="task-filter-btn" role="tab" aria-selected="false" data-task-view="upcoming" onclick="setTaskView('upcoming',this)">Предстоящие</button>
+      <button class="task-filter-btn" role="tab" aria-selected="false" data-task-view="all" onclick="setTaskView('all',this)">Все</button>
+    </div>
     <button class="task-template-launch" onclick="openDayTemplates()"><span>Собрать день по шаблону</span><span>+</span></button>
     <div class="task-template-status" id="task-template-status"></div>
 
-    <div class="section-label">Активные задачи</div>
+    <div class="section-label" id="task-active-label">На сегодня</div>
     <div class="card">
       <div id="task-list-active"></div>
     </div>
-    <div class="section-label">Выполненные</div>
+    <div class="section-label" id="task-done-label">Выполнено сегодня</div>
     <div class="card">
       <div id="task-list-done"></div>
     </div>
@@ -4216,9 +4230,32 @@ function applyDayTemplate(templateId) {
   showTaskTemplateStatus(created.length ? 'Добавлено задач: ' + created.length : 'Этот шаблон уже добавлен на сегодня');
 }
 
+var taskViewFilter = 'today';
+
+function taskMatchesView(task) {
+  if (taskViewFilter === 'all') return true;
+  var date = asDateStr(task.dl);
+  var today = todayStr();
+  if (taskViewFilter === 'upcoming') return !!date && date > today;
+  if (task.done) return date === today;
+  return !date || date <= today;
+}
+
+function setTaskView(view, button) {
+  taskViewFilter = ['today','upcoming','all'].indexOf(view) >= 0 ? view : 'today';
+  document.querySelectorAll('[data-task-view]').forEach(function(item) {
+    var active = item.dataset.taskView === taskViewFilter;
+    item.classList.toggle('active', active);
+    item.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  if (button) button.blur();
+  renderTasks();
+}
+
 function renderTasks() {
-  const total = state.tasks.length;
-  const done = state.tasks.filter(t=>t.done).length;
+  const visibleTasks = state.tasks.filter(taskMatchesView);
+  const total = visibleTasks.length;
+  const done = visibleTasks.filter(t=>t.done).length;
   const left = total - done;
   const pct = total ? Math.round(done/total*100) : 0;
   document.getElementById('t-total').textContent = total;
@@ -4226,15 +4263,22 @@ function renderTasks() {
   document.getElementById('t-left').textContent = left;
   document.getElementById('t-pct').textContent = pct+'%';
 
-  const active = state.tasks.filter(t=>!t.done);
-  const completed = state.tasks.filter(t=>t.done);
+  const active = visibleTasks.filter(t=>!t.done);
+  const completed = visibleTasks.filter(t=>t.done);
+  const labels = {
+    today:['На сегодня','Выполнено сегодня','На сегодня задач нет'],
+    upcoming:['Предстоящие','Выполненные заранее','Будущих задач пока нет'],
+    all:['Все активные','Все выполненные','Активных задач нет']
+  }[taskViewFilter];
+  document.getElementById('task-active-label').textContent = labels[0];
+  document.getElementById('task-done-label').textContent = labels[1];
   const prioLabel = {h:'Высокий',m:'Средний',l:'Низкий'};
   const prioClass = {h:'prio-h',m:'prio-m',l:'prio-l'};
   const repeatLabel = {daily:'Ежедневно',weekdays:'По будням',weekly:'Еженедельно'};
 
-  function renderList(arr, container) {
+  function renderList(arr, container, emptyText) {
     if (!arr.length) {
-      document.getElementById(container).innerHTML = '<div class="empty-state">Пусто</div>';
+      document.getElementById(container).innerHTML = '<div class="empty-state">' + emptyText + '</div>';
       return;
     }
     document.getElementById(container).innerHTML = arr.map(t=>`
@@ -4256,8 +4300,8 @@ function renderTasks() {
         </div>
       </div>`).join('');
   }
-  renderList(active, 'task-list-active');
-  renderList(completed, 'task-list-done');
+  renderList(active, 'task-list-active', labels[2]);
+  renderList(completed, 'task-list-done', 'Пока пусто');
 }
 
 async function deleteTask(id, event) {
