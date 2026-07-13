@@ -92,6 +92,7 @@ function renderFoodScreen() {
   if(el) el.textContent = label;
   var lbl = document.getElementById('food-date-label');
   if(lbl) lbl.textContent = label;
+  renderFoodFavorites();
   loadFoodLog();
 }
 
@@ -156,23 +157,119 @@ function renderFoodLog(entries) {
   container.innerHTML = MEAL_ORDER.map(function(meal){
     var items = byMeal[meal]||[];
     var mealCal = items.reduce(function(a,e){return a+(parseFloat(e.calories)||0);},0);
+    var repeatAction = !items.length ? '<button class="food-meal-action" onclick="repeatPreviousMeal(\''+meal+'\')">Из вчера</button>' : '';
     return '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;overflow:hidden">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:'+(items.length?'1px solid var(--border)':'none')+'">' +
         '<div style="font-size:13px;font-weight:700;color:var(--text)">'+MEAL_NAMES[meal]+'</div>' +
-        '<div style="font-size:12px;color:var(--text-muted)">'+(items.length?Math.round(mealCal)+' ккал':'пусто')+'</div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><div style="font-size:12px;color:var(--text-muted)">'+(items.length?Math.round(mealCal)+' ккал':'пусто')+'</div>'+repeatAction+'</div>' +
       '</div>' +
       items.map(function(e){
+        var favorite = isFoodFavorite(e);
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">' +
           '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+escapeHtml(e.food_name)+'</div>' +
           '<div style="font-size:10px;color:var(--text-muted)">'+(e.amount||100)+'г</div></div>' +
-          '<div style="display:flex;align-items:center;gap:10px">' +
+          '<div style="display:flex;align-items:center;gap:7px">' +
             '<div style="font-size:12px;font-weight:600;color:var(--text)">'+Math.round(parseFloat(e.calories)||0)+'</div>' +
+            '<button class="food-item-action '+(favorite?'active':'')+'" aria-label="'+(favorite?'Убрать из избранного':'Добавить в избранное')+'" onclick="toggleFoodFavoriteFromLog(decodeURIComponent(\''+encodeToken(e.id)+'\'),event)">'+(favorite?'★':'☆')+'</button>' +
             '<span onclick="deleteFoodLog(decodeURIComponent(\''+encodeToken(e.id)+'\'))" style="color:var(--red);cursor:pointer;font-size:18px;line-height:1">×</span>' +
           '</div>' +
         '</div>';
       }).join('') +
     '</div>';
   }).join('');
+}
+
+function foodFavoriteKey(item) {
+  var foodId = String(item?.food_id || '').trim();
+  if (foodId && foodId !== 'manual' && foodId !== 'repeat') return 'id:' + foodId;
+  return 'name:' + String(item?.food_name || '').trim().toLowerCase();
+}
+
+function isFoodFavorite(item) {
+  var key = foodFavoriteKey(item);
+  return !!key && (state.foodFavorites || []).some(function(favorite) { return foodFavoriteKey(favorite) === key; });
+}
+
+function normalizeFoodFavorite(item) {
+  return {
+    ...item,
+    client_id:item.client_id || ('fav_' + Date.now().toString(36) + Math.random().toString(36).slice(2)),
+    food_id:item.food_id || 'manual', food_name:String(item.food_name || '').trim(),
+    serving_desc:item.serving_desc || 'на 100г', calories:asNumber(item.calories),
+    protein:asNumber(item.protein), fat:asNumber(item.fat), carbs:asNumber(item.carbs),
+    amount:asNumber(item.amount, 100), meal_type:MEAL_ORDER.includes(item.meal_type) ? item.meal_type : 'перекус'
+  };
+}
+
+function favoriteFromFoodLog(entry) {
+  var amount = Math.max(1, asNumber(entry.amount, 100));
+  var per100 = 100 / amount;
+  return normalizeFoodFavorite({
+    id:'fav_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
+    client_id:'fav_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
+    food_id:entry.food_id || 'manual', food_name:entry.food_name, serving_desc:'на 100г',
+    calories:round1(asNumber(entry.calories) * per100), protein:round1(asNumber(entry.protein) * per100),
+    fat:round1(asNumber(entry.fat) * per100), carbs:round1(asNumber(entry.carbs) * per100),
+    amount:amount, meal_type:entry.meal_type || 'перекус'
+  });
+}
+
+function renderFoodFavorites() {
+  var list = document.getElementById('food-favorites-list');
+  var count = document.getElementById('food-favorites-count');
+  if (!list) return;
+  var favorites = state.foodFavorites || [];
+  if (count) count.textContent = favorites.length;
+  if (!favorites.length) {
+    list.innerHTML = '<div class="food-favorites-empty">Пока пусто</div>';
+    return;
+  }
+  list.innerHTML = favorites.map(function(favorite) {
+    var token = encodeToken(favorite.id || favorite.client_id);
+    return '<div class="food-favorite-card" role="button" tabindex="0" onclick="openFoodFavorite(decodeURIComponent(\''+token+'\'))" onkeydown="if(event.key===\'Enter\')openFoodFavorite(decodeURIComponent(\''+token+'\'))">' +
+      '<div class="food-favorite-name">'+escapeHtml(favorite.food_name)+'</div>' +
+      '<div class="food-favorite-meta">'+Math.round(asNumber(favorite.amount,100))+' г · '+Math.round(asNumber(favorite.calories)*asNumber(favorite.amount,100)/100)+' ккал</div>' +
+      '<button class="food-favorite-remove" aria-label="Убрать из избранного" onclick="removeFoodFavorite(decodeURIComponent(\''+token+'\'),event)">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+async function removeFoodFavorite(id, event) {
+  if (event) event.stopPropagation();
+  var favorite = (state.foodFavorites || []).find(function(item) { return String(item.id || item.client_id) === String(id); });
+  if (!favorite) return;
+  state.foodFavorites = state.foodFavorites.filter(function(item) { return item !== favorite; });
+  var localId = String(favorite.id || '').indexOf('fav_') === 0;
+  if (localId) {
+    saveOutbox(getOutbox().filter(function(item) {
+      return !(item.method === 'POST' && item.path === '/api/food/favorites' && item.body?.client_id === favorite.client_id);
+    }));
+  } else {
+    addTombstone('food_favorite', favorite.id);
+    await apiCall('DELETE', '/api/food/favorites/' + encodeURIComponent(favorite.id));
+  }
+  saveStateLocal();
+  renderFoodFavorites();
+  renderFoodLog((state.foodLog || []).filter(function(item) { return item.date === currentFoodDate; }));
+}
+
+async function toggleFoodFavoriteFromLog(id, event) {
+  if (event) event.stopPropagation();
+  var entry = (state.foodLog || []).find(function(item) { return String(item.id) === String(id); });
+  if (!entry) return;
+  var existing = (state.foodFavorites || []).find(function(item) { return foodFavoriteKey(item) === foodFavoriteKey(entry); });
+  if (existing) {
+    await removeFoodFavorite(existing.id || existing.client_id);
+    return;
+  }
+  var favorite = favoriteFromFoodLog(entry);
+  state.foodFavorites.push(favorite);
+  saveStateLocal();
+  renderFoodFavorites();
+  renderFoodLog((state.foodLog || []).filter(function(item) { return item.date === currentFoodDate; }));
+  var saved = await apiCall('POST', '/api/food/favorites', favorite);
+  if (saved?.id) favorite.id = saved.id;
+  saveStateLocal();
 }
 
 async function searchFood() {
@@ -223,13 +320,23 @@ async function searchFood() {
 }
 
 function openFoodModal(idx) {
-  selectedFood = (window._foodResults||[])[idx];
-  if(!selectedFood) return;
+  openFoodItem((window._foodResults||[])[idx], 100, 'обед');
+}
+
+function openFoodItem(food, amount, meal) {
+  selectedFood = food;
+  if (!selectedFood) return;
   var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
   setEl('mf-food-name', selectedFood.food_name+(selectedFood.brand_name?' ('+selectedFood.brand_name+')':''));
-  document.getElementById('mf-amount').value = 100;
+  document.getElementById('mf-amount').value = Math.max(1, asNumber(amount, 100));
+  document.getElementById('mf-meal-type').value = MEAL_ORDER.includes(meal) ? meal : 'перекус';
   updateFoodModalNutrition();
   document.getElementById('modal-food-add').classList.add('open');
+}
+
+function openFoodFavorite(id) {
+  var favorite = (state.foodFavorites || []).find(function(item) { return String(item.id || item.client_id) === String(id); });
+  if (favorite) openFoodItem(favorite, favorite.amount, favorite.meal_type);
 }
 
 function updateFoodModalNutrition() {
@@ -303,6 +410,57 @@ async function deleteFoodLog(id) {
   renderFoodLog(state.foodLog.filter(function(e){ return e.date === currentFoodDate; }));
 }
 
+async function loadPreviousFoodEntries() {
+  var yesterday = new Date(currentFoodDate + 'T00:00:00');
+  yesterday.setDate(yesterday.getDate() - 1);
+  var yesterdayStr = localDateISO(yesterday);
+  var source = (state.foodLog || []).filter(function(e){ return e.date === yesterdayStr; });
+  if (!source.length && navigator.onLine) {
+    try { source = await apiCall('GET', '/api/food/log?log_date=' + yesterdayStr) || []; } catch(e) {}
+  }
+  return source;
+}
+
+async function copyFoodEntriesToCurrent(source) {
+  var copies = source.map(function(entry, index) {
+    var clientId = 'food_' + Date.now().toString(36) + index.toString(36) + Math.random().toString(36).slice(2, 6);
+    return {
+      client_id:clientId, date:currentFoodDate, meal_type:entry.meal_type || 'перекус',
+      food_id:entry.food_id || 'repeat', food_name:entry.food_name, serving_desc:entry.serving_desc || null,
+      calories:asNumber(entry.calories), protein:asNumber(entry.protein), fat:asNumber(entry.fat),
+      carbs:asNumber(entry.carbs), amount:asNumber(entry.amount, 100)
+    };
+  });
+  copies.forEach(function(entry) { state.foodLog.push(Object.assign({id:entry.client_id}, entry)); });
+  saveStateLocal();
+  renderFoodLog((state.foodLog || []).filter(function(entry) { return entry.date === currentFoodDate; }));
+  await Promise.all(copies.map(async function(entry) {
+    var saved = await apiCall('POST', '/api/food/log', entry);
+    if (saved?.id) {
+      var localEntry = state.foodLog.find(function(item) { return item.client_id === entry.client_id; });
+      if (localEntry) localEntry.id = saved.id;
+    }
+  }));
+  saveStateLocal();
+  return copies.length;
+}
+
+async function repeatPreviousMeal(meal) {
+  var status = document.getElementById('repeat-food-status');
+  var existing = (state.foodLog || []).some(function(entry) { return entry.date === currentFoodDate && entry.meal_type === meal; });
+  if (existing) {
+    if (status) { status.style.display = 'block'; status.textContent = MEAL_NAMES[meal] + ' уже заполнен'; }
+    return;
+  }
+  var source = (await loadPreviousFoodEntries()).filter(function(entry) { return (entry.meal_type || 'перекус') === meal; });
+  if (!source.length) {
+    if (status) { status.style.display = 'block'; status.textContent = 'Вчера этот приём был пуст'; }
+    return;
+  }
+  var count = await copyFoodEntriesToCurrent(source);
+  if (status) { status.style.display = 'block'; status.textContent = MEAL_NAMES[meal] + ': добавлено ' + count; }
+}
+
 async function repeatYesterdayFood() {
   var status = document.getElementById('repeat-food-status');
   var button = document.getElementById('repeat-food-btn');
@@ -311,45 +469,14 @@ async function repeatYesterdayFood() {
     if (status) { status.style.display = 'block'; status.textContent = 'В этом дне уже есть записи'; }
     return;
   }
-  var yesterday = new Date(currentFoodDate + 'T00:00:00');
-  yesterday.setDate(yesterday.getDate() - 1);
-  var yesterdayStr = localDateISO(yesterday);
-  var source = (state.foodLog || []).filter(function(e){ return e.date === yesterdayStr; });
-  if (!source.length && navigator.onLine) {
-    try { source = await apiCall('GET', '/api/food/log?log_date=' + yesterdayStr) || []; } catch(e) {}
-  }
+  var source = await loadPreviousFoodEntries();
   if (!source.length) {
     if (status) { status.style.display = 'block'; status.textContent = 'Вчера записей не было'; }
     return;
   }
   if (button) button.disabled = true;
-  var copies = source.map(function(entry, index) {
-    var clientId = 'food_' + Date.now().toString(36) + index.toString(36) + Math.random().toString(36).slice(2, 6);
-    return {
-      client_id: clientId,
-      date: currentFoodDate,
-      meal_type: entry.meal_type || 'перекус',
-      food_id: entry.food_id || 'repeat',
-      food_name: entry.food_name,
-      calories: asNumber(entry.calories),
-      protein: asNumber(entry.protein),
-      fat: asNumber(entry.fat),
-      carbs: asNumber(entry.carbs),
-      amount: asNumber(entry.amount, 100)
-    };
-  });
-  copies.forEach(function(entry) { state.foodLog.push(Object.assign({id: entry.client_id}, entry)); });
-  saveStateLocal();
-  renderFoodLog(copies);
-  await Promise.all(copies.map(async function(entry) {
-    var saved = await apiCall('POST', '/api/food/log', entry);
-    if (saved && saved.id) {
-      var localEntry = state.foodLog.find(function(e){ return e.client_id === entry.client_id; });
-      if (localEntry) localEntry.id = saved.id;
-    }
-  }));
-  saveStateLocal();
-  if (status) { status.style.display = 'block'; status.textContent = 'Добавлено: ' + copies.length; }
+  var count = await copyFoodEntriesToCurrent(source);
+  if (status) { status.style.display = 'block'; status.textContent = 'Добавлено: ' + count; }
   if (button) button.disabled = false;
 }
 
@@ -894,6 +1021,33 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 }
 .food-search-btn:active { transform: scale(.97); box-shadow: none; }
 .food-search-btn:disabled { cursor: default; opacity: .62; transform: none; box-shadow: none; }
+.food-favorites-section { margin: 0 0 10px; }
+.food-favorites-head { display: flex; align-items: center; justify-content: space-between; padding: 0 12px 7px; }
+.food-favorites-title { color: var(--text); font-size: 12px; font-weight: 800; }
+.food-favorites-count { color: var(--text-muted); font-size: 9.5px; }
+.food-favorites-list { display: flex; gap: 7px; padding: 0 12px; overflow-x: auto; scrollbar-width: none; }
+.food-favorites-list::-webkit-scrollbar { display: none; }
+.food-favorite-card {
+  position: relative; min-width: 150px; max-width: 180px; min-height: 70px; padding: 11px 34px 10px 11px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text);
+  cursor: pointer; text-align: left;
+}
+.food-favorite-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 800; }
+.food-favorite-meta { margin-top: 6px; color: var(--text-muted); font-size: 9.5px; }
+.food-favorite-remove {
+  position: absolute; top: 7px; right: 7px; width: 24px; height: 24px; border: 0; border-radius: 6px;
+  background: var(--card2); color: var(--text-muted); cursor: pointer; font-size: 15px;
+}
+.food-favorites-empty { width: 100%; padding: 12px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-muted); font-size: 10.5px; text-align: center; }
+.food-meal-action {
+  height: 28px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--card2); color: var(--text); cursor: pointer; font: 700 9.5px/1 'Manrope', sans-serif;
+}
+.food-item-action {
+  width: 28px; height: 28px; border: 0; border-radius: 7px; background: var(--card2);
+  color: var(--text-muted); cursor: pointer; font-size: 15px;
+}
+.food-item-action.active { color: var(--orange); }
 
 /* ── DATA CENTER ── */
 .sync-overview {
@@ -1924,6 +2078,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <div id="fd-cal-bar" style="height:100%;border-radius:2px;background:var(--text);width:0%;transition:width .3s"></div>
       </div>
     </div>
+    <div class="food-favorites-section">
+      <div class="food-favorites-head"><div class="food-favorites-title">Избранное</div><div class="food-favorites-count" id="food-favorites-count">0</div></div>
+      <div class="food-favorites-list" id="food-favorites-list"><div class="food-favorites-empty">Пока пусто</div></div>
+    </div>
     <!-- Поиск -->
     <div class="food-search-card">
       <div class="food-search-row">
@@ -2719,6 +2877,7 @@ function queueWrite(method, path, body) {
   if (path === '/api/tasks') identity = body?.id || '';
   else if (path === '/api/settings/profile') identity = 'profile';
   else if (path === '/api/settings/notifications') identity = 'notifications';
+  else if (path === '/api/food/log' || path === '/api/food/favorites') identity = body?.client_id || '';
   else if (path.indexOf('/api/body/') === 0) identity = body?.date || '';
   else if (path === '/api/supplement_checks') {
     identity = [body?.date, body?.supp_name, body?.time_slot].filter(Boolean).join('|');
@@ -2833,6 +2992,7 @@ let state = {
   bodyCal: [],      // [{date, cal}]
   bodyMeasures: [], // [{date, weight, height, chest, waist, hips, fat?, muscle?}]
   foodLog: [],
+  foodFavorites: [],
   supps: {
     list: [
       { name: 'Витамин D3', emoji: '🌅', dose: '2000 МЕ', times: ['Утро'] },
@@ -2966,13 +3126,14 @@ function stateSnapshot() {
     body_weight: state.bodyWeight || [],
     body_cal: state.bodyCal || [],
     body_measures: state.bodyMeasures || [],
-    food_log: state.foodLog || []
+    food_log: state.foodLog || [],
+    food_favorites: state.foodFavorites || []
   };
 }
 
 function snapshotRecordCount(snapshot) {
   if (!snapshot) return 0;
-  return ['workouts','tasks','supps_list','body_weight','body_cal','body_measures','food_log']
+  return ['workouts','tasks','supps_list','body_weight','body_cal','body_measures','food_log','food_favorites']
     .reduce(function(total, key) { return total + (Array.isArray(snapshot[key]) ? snapshot[key].length : 0); }, 0) +
     Object.keys(snapshot.supps_checked || {}).length;
 }
@@ -3004,7 +3165,7 @@ function saveStateLocal() {
 }
 
 function loadStateLocal() {
-  const keys = ['workouts','tasks','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log'];
+  const keys = ['workouts','tasks','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log','food_favorites'];
   const vals = {};
   keys.forEach(k => vals[k] = localStorage.getItem(k + '_' + USER_ID));
   try {
@@ -3025,6 +3186,7 @@ function applyLoaded(vals) {
   if (vals.body_cal) state.bodyCal = JSON.parse(vals.body_cal).map(c => ({date: asDateStr(c.date), cal: parseInt(c.cal || c.calories) || 0, source: c.source || 'manual'}));
   if (vals.body_measures) state.bodyMeasures = JSON.parse(vals.body_measures).map(normalizeBodyMeasure);
   if (vals.food_log) state.foodLog = JSON.parse(vals.food_log);
+  if (vals.food_favorites) state.foodFavorites = JSON.parse(vals.food_favorites).map(normalizeFoodFavorite);
 }
 
 // Мгновенный локальный кэш для отзывчивого UI. Постоянная память пишется
@@ -3112,6 +3274,11 @@ async function recoverEmptyServerSections(bootstrap) {
       writes.push(apiCall('POST', '/api/food/log', item));
     });
   }
+  if (!(bootstrap.food_favorites || []).length) {
+    (state.foodFavorites || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/food/favorites', item));
+    });
+  }
   if (writes.length) await Promise.all(writes);
 }
 
@@ -3127,6 +3294,7 @@ function applyBootstrap(bootstrap) {
   var serverCalories = (bootstrap.body_calories || []).filter(function(item) { return keepServerItem('body_cal', asDateStr(item.date)); });
   var serverMeasures = (bootstrap.body_measures || []).filter(function(item) { return keepServerItem('body_measure', asDateStr(item.date)); });
   var serverFood = (bootstrap.food_log_recent || []).filter(function(item) { return keepServerItem('food', item.id); });
+  var serverFavorites = (bootstrap.food_favorites || []).filter(function(item) { return keepServerItem('food_favorite', item.id); });
   state.workouts = mergeRecords(state.workouts, serverWorkouts, function(item) {
     return itemIdentity(item, ['date','muscle','exercise','sets','reps','weight']);
   }, normalizeWorkout);
@@ -3145,6 +3313,7 @@ function applyBootstrap(bootstrap) {
   state.foodLog = mergeRecords(state.foodLog, serverFood, function(item) {
     return itemIdentity(item, ['date','meal_type','food_name','amount','calories']);
   });
+  state.foodFavorites = mergeRecords(state.foodFavorites, serverFavorites, foodFavoriteKey, normalizeFoodFavorite);
   saveStateLocal();
 }
 
@@ -3152,6 +3321,7 @@ function renderSyncedScreens() {
   renderHome();
   renderSupps();
   renderBody();
+  renderFoodFavorites();
   updateNotificationModeLabel();
   updateSyncCenter();
 }
@@ -3258,7 +3428,8 @@ function backupPayloadToSnapshot(raw) {
     body_weight: Array.isArray(source.body_weight) ? source.body_weight : (Array.isArray(source.bodyWeight) ? source.bodyWeight : []),
     body_cal: Array.isArray(source.body_cal) ? source.body_cal : (Array.isArray(source.bodyCal) ? source.bodyCal : []),
     body_measures: Array.isArray(source.body_measures) ? source.body_measures : (Array.isArray(source.bodyMeasures) ? source.bodyMeasures : []),
-    food_log: Array.isArray(source.food_log) ? source.food_log : (Array.isArray(source.foodLog) ? source.foodLog : [])
+    food_log: Array.isArray(source.food_log) ? source.food_log : (Array.isArray(source.foodLog) ? source.foodLog : []),
+    food_favorites: Array.isArray(source.food_favorites) ? source.food_favorites : (Array.isArray(source.foodFavorites) ? source.foodFavorites : [])
   };
 }
 
@@ -3279,6 +3450,7 @@ function mergeSnapshotIntoState(snapshot) {
   snapshot.body_cal.forEach(function(item) { clearTombstone('body_cal', asDateStr(item.date)); });
   snapshot.body_measures.forEach(function(item) { clearTombstone('body_measure', asDateStr(item.date)); });
   snapshot.food_log.forEach(function(item) { if (item.id && String(item.id).indexOf('food_') !== 0) clearTombstone('food', item.id); });
+  snapshot.food_favorites.forEach(function(item) { if (item.id && String(item.id).indexOf('fav_') !== 0) clearTombstone('food_favorite', item.id); });
   applyBootstrap({
     workouts: snapshot.workouts,
     tasks: snapshot.tasks,
@@ -3287,7 +3459,8 @@ function mergeSnapshotIntoState(snapshot) {
     body_weight: snapshot.body_weight,
     body_calories: snapshot.body_cal,
     body_measures: snapshot.body_measures,
-    food_log_recent: snapshot.food_log
+    food_log_recent: snapshot.food_log,
+    food_favorites: snapshot.food_favorites
   });
   renderSyncedScreens();
   renderTasks();
@@ -3304,6 +3477,7 @@ async function syncImportedSnapshot(snapshot) {
   snapshot.body_cal.filter(function(item) { return item.source !== 'food'; }).forEach(function(item) { writes.push(apiCall('POST', '/api/body/calories', {date:asDateStr(item.date), calories:parseInt(item.cal ?? item.calories) || 0})); });
   snapshot.body_measures.forEach(function(item) { writes.push(apiCall('POST', '/api/body/measures', normalizeBodyMeasure(item))); });
   snapshot.food_log.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/food/log', item)); });
+  snapshot.food_favorites.filter(function(item) { return item.client_id; }).forEach(function(item) { writes.push(apiCall('POST', '/api/food/favorites', normalizeFoodFavorite(item))); });
   checksObjectToRows(snapshot.supps_checked).forEach(function(item) { writes.push(apiCall('POST', '/api/supplement_checks', item)); });
   if (writes.length) await Promise.all(writes);
   updateSyncCenter();
@@ -3357,7 +3531,7 @@ async function restoreAutomaticBackup() {
 
 function exportData() {
   const payload = {
-    schema_version: 3,
+    schema_version: 4,
     exported_at: new Date().toISOString(),
     user_id: USER_ID,
     profile: userProfile,
