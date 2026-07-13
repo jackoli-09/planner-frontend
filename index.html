@@ -173,6 +173,8 @@ async function searchFood() {
   var q = document.getElementById('food-search-input').value.trim();
   if(!q) return;
   var resultsEl = document.getElementById('food-search-results');
+  var searchBtn = document.getElementById('food-search-btn');
+  if(searchBtn) { searchBtn.disabled = true; searchBtn.textContent = 'Ищем…'; }
   if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Поиск...</div>';
   try {
     var items = [];
@@ -209,6 +211,8 @@ async function searchFood() {
     }).join('');
   } catch(e) {
     if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--red);padding:8px 0">Ошибка поиска</div>';
+  } finally {
+    if(searchBtn) { searchBtn.disabled = false; searchBtn.textContent = 'Найти'; }
   }
 }
 
@@ -839,6 +843,50 @@ html[data-theme="dark"] .focus-card {
 .modal-hint strong { color: var(--neon2); }
 
 select.modal-input { appearance: none; -webkit-appearance: none; }
+
+/* ── FOOD SEARCH ── */
+.food-search-card {
+  margin: 0 12px 10px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.food-search-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 8px; }
+.food-search-input {
+  min-width: 0;
+  height: 48px;
+  flex: 1;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  font: 500 13px/1 'Manrope', sans-serif;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.food-search-input::placeholder { color: var(--text-muted); opacity: 1; }
+.food-search-input:focus {
+  border-color: var(--neon2);
+  box-shadow: 0 0 0 3px var(--neon-soft);
+  background: var(--card);
+}
+.food-search-btn {
+  width: 104px;
+  height: 48px;
+  flex: 0 0 104px;
+  border: 1px solid var(--ink);
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--bg);
+  font: 800 13px/1 'Manrope', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(0,0,0,.10);
+  transition: transform .14s ease, opacity .14s ease, box-shadow .14s ease;
+}
+.food-search-btn:active { transform: scale(.97); box-shadow: none; }
+.food-search-btn:disabled { cursor: default; opacity: .62; transform: none; box-shadow: none; }
 
 /* ── CHARTS ── */
 .chart-canvas-wrap { position: relative; height: 160px; padding: 0 4px 4px; }
@@ -1722,10 +1770,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       </div>
     </div>
     <!-- Поиск -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin:0 12px 10px;padding:12px">
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <input id="food-search-input" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text)" placeholder="Поиск продукта..." onkeydown="if(event.key==='Enter')searchFood()">
-        <button onclick="searchFood()" style="padding:10px 14px;background:var(--text);color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-size:13px">Найти</button>
+    <div class="food-search-card">
+      <div class="food-search-row">
+        <input class="food-search-input" id="food-search-input" placeholder="Поиск продукта..." aria-label="Поиск продукта" onkeydown="if(event.key==='Enter')searchFood()">
+        <button class="food-search-btn" id="food-search-btn" onclick="searchFood()">Найти</button>
       </div>
       <div id="food-search-results"></div>
     </div>
