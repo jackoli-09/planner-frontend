@@ -1006,6 +1006,23 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .prio-l { background: var(--green-soft); color: var(--green); }
 .task-dl { font-size: 10px; color: var(--text-muted); }
 .task-cat { font-size: 10px; color: var(--text-sub); }
+.task-template-launch {
+  margin: 10px 12px 2px; min-height: 44px; width: calc(100% - 24px); padding: 0 13px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text);
+  font: 800 12px/1.2 'Manrope', sans-serif; cursor: pointer; text-align: left;
+}
+.task-template-launch span:last-child { color: var(--text-muted); font-size: 18px; }
+.task-template-status { display: none; margin: 8px 12px 0; color: var(--green); font-size: 10.5px; }
+.template-options { display: grid; gap: 8px; }
+.template-option {
+  padding: 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--card2);
+  color: var(--text); cursor: pointer; text-align: left;
+}
+.template-option:active { border-color: var(--neon2); }
+.template-option-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 800; }
+.template-option-count { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
+.template-option-copy { margin-top: 5px; color: var(--text-muted); font-size: 10.5px; line-height: 1.45; }
 
 .fab-btn {
   position: fixed; bottom: 76px; right: 16px;
@@ -1666,6 +1683,9 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       </div>
     </div>
 
+    <button class="task-template-launch" onclick="openDayTemplates()"><span>Собрать день по шаблону</span><span>+</span></button>
+    <div class="task-template-status" id="task-template-status"></div>
+
     <div class="section-label">Активные задачи</div>
     <div class="card">
       <div id="task-list-active"></div>
@@ -2040,6 +2060,29 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="profile-error" id="profile-step3-error"></div>
       <div class="profile-actions"><button class="profile-back" onclick="profileSetStep(2)">←</button><button class="btn-primary" id="profile-save-btn" onclick="saveProfile()" style="margin:0">Сохранить профиль</button></div>
     </div>
+  </div>
+</div>
+
+<!-- Day Templates -->
+<div class="modal-overlay" id="modal-day-template">
+  <div class="modal-sheet">
+    <div class="modal-title">Шаблон дня</div>
+    <div class="profile-question">Выбери подходящий ритм</div>
+    <div class="template-options">
+      <button class="template-option" onclick="applyDayTemplate('balanced')">
+        <span class="template-option-title"><span>Сбалансированный</span><span class="template-option-count">3 шага</span></span>
+        <span class="template-option-copy">Главное дело, движение и подготовка питания.</span>
+      </button>
+      <button class="template-option" onclick="applyDayTemplate('focus')">
+        <span class="template-option-title"><span>Фокус</span><span class="template-option-count">3 шага</span></span>
+        <span class="template-option-copy">Глубокая работа, входящие и короткое подведение итогов.</span>
+      </button>
+      <button class="template-option" onclick="applyDayTemplate('recovery')">
+        <span class="template-option-title"><span>Восстановление</span><span class="template-option-count">3 шага</span></span>
+        <span class="template-option-copy">Прогулка, спокойное питание и свободный вечер.</span>
+      </button>
+    </div>
+    <button class="modal-close-btn" onclick="closeModal('modal-day-template')">Отмена</button>
   </div>
 </div>
 
@@ -4111,6 +4154,68 @@ async function deleteBodyEntry(type, date) {
 // ════════════════════════════════════════════════════════════════
 // TASKS
 // ════════════════════════════════════════════════════════════════
+function openDayTemplates() {
+  document.getElementById('modal-day-template').classList.add('open');
+}
+
+function dayTemplateCatalog() {
+  var movement = userProfile.goal === 'gain' ? 'Легкая прогулка 20 минут' : 'Движение 30 минут';
+  return {
+    balanced: [
+      {text:'Главная задача дня', prio:'h', cat:'Фокус', duration_minutes:60},
+      {text:movement, prio:'m', cat:'Здоровье', duration_minutes:30},
+      {text:'Подготовить питание на день', prio:'m', cat:'Питание', duration_minutes:30}
+    ],
+    focus: [
+      {text:'Фокус-блок без отвлечений', prio:'h', cat:'Работа', duration_minutes:90},
+      {text:'Разобрать входящие', prio:'m', cat:'Работа', duration_minutes:30},
+      {text:'Подвести итоги дня', prio:'l', cat:'Личное', duration_minutes:15}
+    ],
+    recovery: [
+      {text:'Прогулка без телефона', prio:'m', cat:'Здоровье', duration_minutes:30},
+      {text:'Спокойный прием пищи', prio:'m', cat:'Питание', duration_minutes:30},
+      {text:'Вечер без рабочих задач', prio:'l', cat:'Восстановление', duration_minutes:30}
+    ]
+  };
+}
+
+function showTaskTemplateStatus(message) {
+  var status = document.getElementById('task-template-status');
+  if (!status) return;
+  status.textContent = message;
+  status.style.display = 'block';
+  clearTimeout(showTaskTemplateStatus.timer);
+  showTaskTemplateStatus.timer = setTimeout(function() { status.style.display = 'none'; }, 4000);
+}
+
+function applyDayTemplate(templateId) {
+  var templates = dayTemplateCatalog();
+  var items = templates[templateId] || [];
+  var date = todayStr();
+  var created = [];
+  items.forEach(function(item, index) {
+    var exists = state.tasks.some(function(task) {
+      return !task.done && task.dl === date && task.text.trim().toLowerCase() === item.text.toLowerCase();
+    });
+    if (exists) return;
+    var task = normalizeTask(Object.assign({}, item, {
+      id:'task_' + Date.now().toString(36) + '_' + index,
+      dl:date, done:false, start_time:null, repeat_rule:'none'
+    }));
+    state.tasks.push(task);
+    clearTombstone('task', task.id);
+    created.push(task);
+  });
+  if (created.length) {
+    saveState();
+    created.forEach(function(task) { apiCall('POST', '/api/tasks', task); });
+  }
+  closeModal('modal-day-template');
+  renderTasks();
+  renderHome();
+  showTaskTemplateStatus(created.length ? 'Добавлено задач: ' + created.length : 'Этот шаблон уже добавлен на сегодня');
+}
+
 function renderTasks() {
   const total = state.tasks.length;
   const done = state.tasks.filter(t=>t.done).length;
