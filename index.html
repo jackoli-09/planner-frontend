@@ -854,6 +854,36 @@ html[data-theme="dark"] .focus-card {
 .home-task-meta { font-size: 9.5px; color: var(--text-muted); margin-top: 2px; }
 .home-task-badge { font-size: 9px; background: var(--red-soft); color: var(--red); border-radius: 999px; padding: 3px 7px; font-weight: 800; }
 .home-empty { padding: 18px 8px; color: var(--text-muted); font-size: 12px; text-align: center; }
+.home-nudge-list { display: grid; gap: 8px; margin: 12px 0 16px; }
+.home-nudge {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.home-nudge:active { transform: scale(.985); }
+.home-nudge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--card2);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 900;
+}
+.home-nudge-title { font-size: 12.5px; font-weight: 800; color: var(--text); line-height: 1.25; overflow-wrap: anywhere; }
+.home-nudge-meta { margin-top: 3px; font-size: 10px; color: var(--text-muted); line-height: 1.35; }
+.home-nudge-go { color: var(--text-muted); font-size: 16px; font-weight: 900; }
 .home-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .home-card-link {
   min-height: 124px;
@@ -1717,6 +1747,12 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
           </div>
         </div>
       </section>
+
+      <div class="home-section-head animate-in delay-2">
+        <div class="home-section-title">Что сделать сейчас</div>
+        <div class="home-section-link" onclick="go('sync')">Статус</div>
+      </div>
+      <div class="home-nudge-list animate-in delay-2" id="home-nudge-list"></div>
 
       <div class="home-section-head animate-in delay-2">
         <div class="home-section-title">На сегодня</div>
@@ -3911,6 +3947,8 @@ function renderHome() {
     }
   }
 
+  renderHomeNudges(todayStr_, todayTasks, done, total);
+
   // Список задач на сегодня
   var listEl = document.getElementById('home-tasks-list');
   if (listEl) {
@@ -3985,6 +4023,48 @@ function renderHome() {
       }
     } catch(e) {}
   }
+}
+
+function renderHomeNudges(todayStr_, todayTasks, done, total) {
+  var container = document.getElementById('home-nudge-list');
+  if (!container) return;
+
+  var nudges = [];
+  var pendingTasks = todayTasks.filter(function(t) { return !t.done; });
+  var todayCal = (state.bodyCal || []).find(function(e) { return e.date === todayStr_; });
+  var todayWeight = (state.bodyWeight || []).find(function(e) { return e.date === todayStr_; });
+  var suppTotal = (state.supps?.list || []).reduce(function(sum, supp) { return sum + (supp.times || []).length; }, 0);
+  var suppDone = (state.supps?.list || []).reduce(function(sum, supp) {
+    return sum + (supp.times || []).filter(function(slot) {
+      return state.supps.checked[todayStr_ + '_' + supp.name + '_' + slot];
+    }).length;
+  }, 0);
+
+  if (!total) {
+    nudges.push({icon:'+', title:'Добавить первое дело', meta:'1-3 главных задачи делают день понятным.', action:"go('tasks');setTimeout(openAddTask,120)"});
+  } else if (pendingTasks.length) {
+    nudges.push({icon:'✓', title:'Закрыть следующую задачу', meta:pendingTasks[0].text, action:"go('tasks')"});
+  }
+  if (!todayCal) {
+    nudges.push({icon:'◐', title:'Записать питание', meta:'Калории и БЖУ сразу попадут в прогресс дня.', action:"go('food')"});
+  }
+  if (!todayWeight) {
+    nudges.push({icon:'kg', title:'Добавить вес', meta:'Один замер в день лучше редких больших правок.', action:"go('body');setTimeout(function(){openAddBody('weight')},120)"});
+  }
+  if (suppTotal && suppDone < suppTotal) {
+    nudges.push({icon:'+', title:'Отметить добавки', meta:suppDone + ' из ' + suppTotal + ' приемов отмечено.', action:"go('supps')"});
+  }
+  if (!nudges.length) {
+    nudges.push({icon:'✓', title:'День выглядит собранным', meta:'Можно перейти к отчету или просто продолжать по плану.', action:"go('report')"});
+  }
+
+  container.innerHTML = nudges.slice(0, 3).map(function(nudge) {
+    return '<div class="home-nudge" role="button" tabindex="0" onclick="' + nudge.action + '" onkeydown="if(event.key===\'Enter\'){' + nudge.action + '}">' +
+      '<div class="home-nudge-icon">' + escapeHtml(nudge.icon) + '</div>' +
+      '<div><div class="home-nudge-title">' + escapeHtml(nudge.title) + '</div><div class="home-nudge-meta">' + escapeHtml(nudge.meta) + '</div></div>' +
+      '<div class="home-nudge-go">›</div>' +
+    '</div>';
+  }).join('');
 }
 
 
