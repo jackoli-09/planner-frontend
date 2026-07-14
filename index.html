@@ -88,9 +88,23 @@ async function runAiAnalysis() {
 // ════ ПИТАНИЕ ════
 var currentFoodDate = localDateISO();
 var selectedFood = null;
+var selectedFoodUnit = 'g';
+var selectedFoodPieceWeight = 50;
+var selectedFoodServingWeight = 100;
 var CALORIE_GOAL = 2500;
 var MEAL_ORDER = ['завтрак','обед','ужин','перекус'];
 var MEAL_NAMES = {завтрак:'Завтрак',обед:'Обед',ужин:'Ужин',перекус:'Перекус'};
+var LOCAL_FOOD_LIBRARY = [
+  {food_id:'local-egg', food_name:'Яйцо куриное', calories:155, protein:12.7, fat:10.9, carbs:0.7, serving_desc:'1 шт · 50 г'},
+  {food_id:'local-banana', food_name:'Банан', calories:89, protein:1.1, fat:0.3, carbs:23, serving_desc:'1 шт · 120 г'},
+  {food_id:'local-apple', food_name:'Яблоко', calories:52, protein:0.3, fat:0.2, carbs:14, serving_desc:'1 шт · 180 г'},
+  {food_id:'local-bread', food_name:'Хлеб пшеничный', calories:265, protein:9, fat:3.2, carbs:49, serving_desc:'1 кусок · 30 г'},
+  {food_id:'local-chicken-breast', food_name:'Куриная грудка', calories:165, protein:31, fat:3.6, carbs:0, serving_desc:'на 100г'},
+  {food_id:'local-rice', food_name:'Рис варёный', calories:130, protein:2.7, fat:0.3, carbs:28, serving_desc:'на 100г'},
+  {food_id:'local-buckwheat', food_name:'Гречка варёная', calories:110, protein:3.6, fat:1.1, carbs:21, serving_desc:'на 100г'},
+  {food_id:'local-oatmeal', food_name:'Овсянка варёная', calories:68, protein:2.4, fat:1.4, carbs:12, serving_desc:'на 100г'},
+  {food_id:'local-cottage-cheese', food_name:'Творог 5%', calories:121, protein:17, fat:5, carbs:1.8, serving_desc:'на 100г'}
+];
 
 function renderFoodScreen() {
   var d = new Date(currentFoodDate + 'T00:00:00');
@@ -175,7 +189,7 @@ function renderFoodLog(entries) {
         var favorite = isFoodFavorite(e);
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">' +
           '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+escapeHtml(e.food_name)+'</div>' +
-          '<div style="font-size:10px;color:var(--text-muted)">'+(e.amount||100)+'г</div></div>' +
+          '<div style="font-size:10px;color:var(--text-muted)">'+escapeHtml(foodAmountLabel(e))+'</div></div>' +
           '<div style="display:flex;align-items:center;gap:7px">' +
             '<div style="font-size:12px;font-weight:600;color:var(--text)">'+Math.round(parseFloat(e.calories)||0)+'</div>' +
             '<button class="food-item-action '+(favorite?'active':'')+'" aria-label="'+(favorite?'Убрать из избранного':'Добавить в избранное')+'" onclick="toggleFoodFavoriteFromLog(decodeURIComponent(\''+encodeToken(e.id)+'\'),event)">'+(favorite?'★':'☆')+'</button>' +
@@ -215,7 +229,7 @@ function favoriteFromFoodLog(entry) {
   return normalizeFoodFavorite({
     id:'fav_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
     client_id:'fav_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
-    food_id:entry.food_id || 'manual', food_name:entry.food_name, serving_desc:'на 100г',
+    food_id:entry.food_id || 'manual', food_name:entry.food_name, serving_desc:entry.serving_desc || 'на 100г',
     calories:round1(asNumber(entry.calories) * per100), protein:round1(asNumber(entry.protein) * per100),
     fat:round1(asNumber(entry.fat) * per100), carbs:round1(asNumber(entry.carbs) * per100),
     amount:amount, meal_type:entry.meal_type || 'перекус'
@@ -236,7 +250,7 @@ function renderFoodFavorites() {
     var token = encodeToken(favorite.id || favorite.client_id);
     return '<div class="food-favorite-card" role="button" tabindex="0" onclick="openFoodFavorite(decodeURIComponent(\''+token+'\'))" onkeydown="if(event.key===\'Enter\')openFoodFavorite(decodeURIComponent(\''+token+'\'))">' +
       '<div class="food-favorite-name">'+escapeHtml(favorite.food_name)+'</div>' +
-      '<div class="food-favorite-meta">'+Math.round(asNumber(favorite.amount,100))+' г · '+Math.round(asNumber(favorite.calories)*asNumber(favorite.amount,100)/100)+' ккал</div>' +
+      '<div class="food-favorite-meta">'+escapeHtml(foodAmountLabel(favorite))+' · '+Math.round(asNumber(favorite.calories)*asNumber(favorite.amount,100)/100)+' ккал</div>' +
       '<button class="food-favorite-remove" aria-label="Убрать из избранного" onclick="removeFoodFavorite(decodeURIComponent(\''+token+'\'),event)">×</button>' +
     '</div>';
   }).join('');
@@ -293,21 +307,27 @@ async function searchFood() {
       var data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
       items = data.results || [];
     } catch(e) {
-      var resp = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=10&fields=id,product_name,product_name_ru,brands,nutriments');
-      var d2 = await resp.json();
-      items = (d2.products||[]).map(function(p){
-        var n=p.nutriments||{};
-        return {
-          food_id: p.id||'',
-          food_name: p.product_name_ru||p.product_name||'',
-          brand_name: (p.brands||'').split(',')[0],
-          calories: Math.round(parseFloat(n['energy-kcal_100g']||0)),
-          protein: parseFloat((n.proteins_100g||0).toFixed(1)),
-          fat: parseFloat((n.fat_100g||0).toFixed(1)),
-          carbs: parseFloat((n.carbohydrates_100g||0).toFixed(1)),
-        };
-      }).filter(function(p){return p.food_name;});
+      try {
+        var resp = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=10&fields=id,product_name,product_name_ru,brands,nutriments,serving_size');
+        var d2 = await resp.json();
+        items = (d2.products||[]).map(function(p){
+          var n=p.nutriments||{};
+          return {
+            food_id: p.id||'',
+            food_name: p.product_name_ru||p.product_name||'',
+            brand_name: (p.brands||'').split(',')[0],
+            calories: Math.round(parseFloat(n['energy-kcal_100g']||0)),
+            protein: parseFloat((n.proteins_100g||0).toFixed(1)),
+            fat: parseFloat((n.fat_100g||0).toFixed(1)),
+            carbs: parseFloat((n.carbohydrates_100g||0).toFixed(1)),
+            serving_size: p.serving_size || '',
+          };
+        }).filter(function(p){return p.food_name;});
+      } catch(e2) {
+        items = findLocalFoodItems(q);
+      }
     }
+    if (!items.length) items = findLocalFoodItems(q);
     window._foodResults = items;
     if(!items.length) {
       if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Ничего не найдено</div>';
@@ -327,6 +347,21 @@ async function searchFood() {
   }
 }
 
+function findLocalFoodItems(query) {
+  var needle = String(query || '').trim().toLowerCase();
+  if (!needle) return [];
+  var aliases = {
+    'яйца':'яйц', 'яйцо':'яйц', 'egg':'яйц',
+    'бананы':'банан', 'banana':'банан',
+    'яблоки':'яблок', 'apple':'яблок'
+  };
+  var normalizedNeedle = aliases[needle] || needle;
+  return LOCAL_FOOD_LIBRARY.filter(function(item) {
+    var name = item.food_name.toLowerCase();
+    return name.indexOf(needle) !== -1 || name.indexOf(normalizedNeedle) !== -1;
+  }).slice(0, 8);
+}
+
 function openFoodModal(idx) {
   openFoodItem((window._foodResults||[])[idx], 100, 'обед');
 }
@@ -336,8 +371,15 @@ function openFoodItem(food, amount, meal) {
   if (!selectedFood) return;
   var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
   setEl('mf-food-name', selectedFood.food_name+(selectedFood.brand_name?' ('+selectedFood.brand_name+')':''));
-  document.getElementById('mf-amount').value = Math.max(1, asNumber(amount, 100));
+  var measure = inferFoodMeasure(selectedFood, amount);
+  selectedFoodUnit = measure.unit;
+  selectedFoodPieceWeight = measure.pieceWeight;
+  selectedFoodServingWeight = measure.servingWeight;
+  document.getElementById('mf-amount').value = measure.quantity;
+  var pieceInput = document.getElementById('mf-piece-weight');
+  if (pieceInput) pieceInput.value = selectedFoodUnit === 'serving' ? selectedFoodServingWeight : selectedFoodPieceWeight;
   document.getElementById('mf-meal-type').value = MEAL_ORDER.includes(meal) ? meal : 'перекус';
+  updateFoodUnitUI();
   updateFoodModalNutrition();
   document.getElementById('modal-food-add').classList.add('open');
 }
@@ -349,19 +391,20 @@ function openFoodFavorite(id) {
 
 function updateFoodModalNutrition() {
   if(!selectedFood) return;
-  var amount = parseFloat(document.getElementById('mf-amount').value)||100;
+  var amount = getFoodAmountGrams();
   var r = amount/100;
   var setEl = function(id,val){var e=document.getElementById(id);if(e)e.textContent=val;};
   setEl('mf-cal', Math.round((selectedFood.calories||0)*r));
   setEl('mf-prot', ((selectedFood.protein||0)*r).toFixed(1));
   setEl('mf-fat', ((selectedFood.fat||0)*r).toFixed(1));
   setEl('mf-carb', ((selectedFood.carbs||0)*r).toFixed(1));
-  setEl('mf-per100', 'на 100г: '+(selectedFood.calories||0)+' ккал');
+  setEl('mf-per100', foodServingDescription() + ' · на 100г: '+(selectedFood.calories||0)+' ккал');
 }
 
 function changeAmount(delta) {
   var inp = document.getElementById('mf-amount');
-  inp.value = Math.max(1,(parseFloat(inp.value)||100)+delta);
+  var step = selectedFoodUnit === 'g' ? 10 : 1;
+  inp.value = Math.max(1,(parseFloat(inp.value)||step) + (delta < 0 ? -step : step));
   updateFoodModalNutrition();
 }
 
@@ -370,9 +413,131 @@ function setAmount(val) {
   updateFoodModalNutrition();
 }
 
+function foodAmountLabel(entry) {
+  var desc = String(entry?.serving_desc || '').trim();
+  if (desc && desc !== 'на 100г') return desc;
+  return Math.round(asNumber(entry?.amount, 100)) + ' г';
+}
+
+function normalizeFoodName(food) {
+  return String(food?.food_name || food?.product_name || '').toLowerCase();
+}
+
+function getPiecePreset(food) {
+  var name = normalizeFoodName(food);
+  if (/яйц|egg/.test(name)) return { unit:'piece', pieceWeight:50, quantity:2, label:'яйцо' };
+  if (/банан|banana/.test(name)) return { unit:'piece', pieceWeight:120, quantity:1, label:'банан' };
+  if (/яблок|apple/.test(name)) return { unit:'piece', pieceWeight:180, quantity:1, label:'яблоко' };
+  if (/апельсин|orange/.test(name)) return { unit:'piece', pieceWeight:150, quantity:1, label:'апельсин' };
+  if (/хлеб|bread/.test(name)) return { unit:'piece', pieceWeight:30, quantity:1, label:'кусок' };
+  return null;
+}
+
+function parseWeightFromText(text) {
+  var match = String(text || '').replace(',', '.').match(/(\d+(?:\.\d+)?)\s*(г|g|гр|gram)/i);
+  return match ? Math.max(1, parseFloat(match[1])) : null;
+}
+
+function inferFoodMeasure(food, amount) {
+  var grams = Math.max(1, asNumber(amount, 100));
+  var servingWeight = parseWeightFromText(food?.serving_desc || food?.serving_size) || grams || 100;
+  var preset = getPiecePreset(food);
+  var desc = String(food?.serving_desc || '');
+  var pieceMatch = desc.match(/(\d+(?:[.,]\d+)?)\s*шт/i);
+  if (pieceMatch && preset) {
+    return {
+      unit:'piece',
+      pieceWeight:preset.pieceWeight,
+      servingWeight:servingWeight,
+      quantity:Math.max(1, parseFloat(pieceMatch[1].replace(',', '.')) || Math.round(grams / preset.pieceWeight) || preset.quantity)
+    };
+  }
+  if (preset) {
+    return {
+      unit:'piece',
+      pieceWeight:preset.pieceWeight,
+      servingWeight:servingWeight,
+      quantity:amount ? Math.max(1, Math.round(grams / preset.pieceWeight)) : preset.quantity
+    };
+  }
+  return { unit:'g', pieceWeight:50, servingWeight:servingWeight || 100, quantity:Math.round(grams) };
+}
+
+function setFoodUnit(unit) {
+  var currentGrams = getFoodAmountGrams();
+  selectedFoodUnit = unit;
+  if (unit === 'piece') {
+    var preset = getPiecePreset(selectedFood);
+    selectedFoodPieceWeight = preset?.pieceWeight || selectedFoodPieceWeight || 50;
+    document.getElementById('mf-amount').value = Math.max(1, Math.round(currentGrams / selectedFoodPieceWeight));
+  } else if (unit === 'serving') {
+    selectedFoodServingWeight = selectedFoodServingWeight || 100;
+    document.getElementById('mf-amount').value = Math.max(1, Math.round(currentGrams / selectedFoodServingWeight));
+  } else {
+    document.getElementById('mf-amount').value = Math.max(1, Math.round(currentGrams));
+  }
+  updateFoodUnitUI();
+  updateFoodModalNutrition();
+}
+
+function syncFoodUnitWeight() {
+  var input = document.getElementById('mf-piece-weight');
+  var value = Math.max(1, parseFloat(input?.value) || 50);
+  if (selectedFoodUnit === 'serving') selectedFoodServingWeight = value;
+  else selectedFoodPieceWeight = value;
+  updateFoodModalNutrition();
+}
+
+function getFoodAmountGrams() {
+  var quantity = Math.max(1, parseFloat(document.getElementById('mf-amount')?.value) || 1);
+  if (selectedFoodUnit === 'piece') return Math.round(quantity * Math.max(1, selectedFoodPieceWeight || 50));
+  if (selectedFoodUnit === 'serving') return Math.round(quantity * Math.max(1, selectedFoodServingWeight || 100));
+  return Math.round(quantity);
+}
+
+function foodServingDescription() {
+  var quantity = Math.max(1, parseFloat(document.getElementById('mf-amount')?.value) || 1);
+  var grams = getFoodAmountGrams();
+  if (selectedFoodUnit === 'piece') return quantity + ' шт · ' + grams + ' г';
+  if (selectedFoodUnit === 'serving') return quantity + ' порц. · ' + grams + ' г';
+  return grams + ' г';
+}
+
+function updateFoodUnitUI() {
+  ['g','piece','serving'].forEach(function(unit) {
+    var btn = document.querySelector('[data-food-unit="'+unit+'"]');
+    if (!btn) return;
+    btn.classList.toggle('active', selectedFoodUnit === unit);
+  });
+  var label = document.getElementById('mf-amount-label');
+  if (label) label.textContent = selectedFoodUnit === 'g' ? 'Количество в граммах' : (selectedFoodUnit === 'piece' ? 'Количество в штуках' : 'Количество порций');
+  var helper = document.getElementById('mf-unit-helper');
+  if (helper) helper.textContent = selectedFoodUnit === 'g' ? 'Можно быстро выбрать вес ниже.' : 'Вес одной штуки или порции можно поправить вручную.';
+  var weightRow = document.getElementById('mf-piece-weight-row');
+  if (weightRow) weightRow.style.display = selectedFoodUnit === 'g' ? 'none' : 'block';
+  var weightLabel = document.getElementById('mf-piece-weight-label');
+  if (weightLabel) weightLabel.textContent = selectedFoodUnit === 'serving' ? 'Грамм в порции' : 'Грамм в 1 шт';
+  var weightInput = document.getElementById('mf-piece-weight');
+  if (weightInput) weightInput.value = selectedFoodUnit === 'serving' ? selectedFoodServingWeight : selectedFoodPieceWeight;
+  renderFoodQuickAmounts();
+}
+
+function renderFoodQuickAmounts() {
+  var box = document.getElementById('mf-quick-amounts');
+  if (!box) return;
+  var values = selectedFoodUnit === 'g'
+    ? [{v:50,t:'50г'},{v:100,t:'100г'},{v:150,t:'150г'},{v:200,t:'200г'}]
+    : (selectedFoodUnit === 'piece'
+      ? [{v:1,t:'1 шт'},{v:2,t:'2 шт'},{v:3,t:'3 шт'},{v:4,t:'4 шт'}]
+      : [{v:1,t:'1 порц.'},{v:2,t:'2 порц.'},{v:3,t:'3 порц.'}]);
+  box.innerHTML = values.map(function(item) {
+    return '<button class="food-quick-amount" onclick="setAmount('+item.v+')">'+item.t+'</button>';
+  }).join('');
+}
+
 async function confirmAddFood() {
   if(!selectedFood) return;
-  var amount = parseFloat(document.getElementById('mf-amount').value)||100;
+  var amount = getFoodAmountGrams();
   var meal = document.getElementById('mf-meal-type').value;
   var r = amount/100;
   var clientId = 'food_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -387,6 +552,7 @@ async function confirmAddFood() {
     fat: parseFloat(((selectedFood.fat||0)*r).toFixed(1)),
     carbs: parseFloat(((selectedFood.carbs||0)*r).toFixed(1)),
     amount: amount,
+    serving_desc: foodServingDescription(),
   };
   state.foodLog.push(Object.assign({id: clientId}, entry));
   saveStateLocal();
@@ -1247,6 +1413,48 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   color: var(--text-muted); cursor: pointer; font-size: 15px;
 }
 .food-item-action.active { color: var(--orange); }
+.food-unit-tabs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+  padding: 4px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg); margin-bottom: 12px;
+}
+.food-unit-tab {
+  min-height: 36px; border: 0; border-radius: 9px; background: transparent;
+  color: var(--text-muted); cursor: pointer; font: 800 12px/1 'Manrope', sans-serif;
+}
+.food-unit-tab.active {
+  background: var(--text); color: var(--bg);
+  box-shadow: 0 6px 18px rgba(0,0,0,.10);
+}
+.food-amount-row { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+.food-step-btn {
+  width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card2); color: var(--text); cursor: pointer;
+  font: 800 18px/1 'Manrope', sans-serif;
+}
+.food-amount-input {
+  min-width: 0; flex: 1; height: 44px; padding: 0 10px; border: 1px solid var(--border);
+  border-radius: 12px; text-align: center; font: 800 18px/1 'Manrope', sans-serif;
+  background: var(--bg); color: var(--text);
+}
+.food-unit-helper { margin-top: 7px; color: var(--text-muted); font-size: 10.5px; line-height: 1.35; }
+.food-piece-row {
+  display: none; margin-top: 10px; padding: 10px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--card2);
+}
+.food-piece-row label {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  color: var(--text-muted); font-size: 11px; font-weight: 700;
+}
+.food-piece-input {
+  width: 86px; height: 34px; padding: 0 8px; border: 1px solid var(--border); border-radius: 9px;
+  text-align: center; background: var(--bg); color: var(--text); font: 800 13px/1 'Manrope', sans-serif;
+}
+.food-quick-amounts { display: flex; gap: 6px; margin-top: 8px; }
+.food-quick-amount {
+  flex: 1; min-height: 32px; padding: 0 6px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--card2); color: var(--text); cursor: pointer; font: 800 11px/1 'Manrope', sans-serif;
+}
 
 /* ── DATA CENTER ── */
 .sync-overview {
@@ -2359,18 +2567,25 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
           <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-top:6px" id="mf-per100">на 100г</div>
         </div>
         <div style="margin-bottom:12px">
-          <label style="font-size:11px;color:var(--text-muted)">Количество (г)</label>
-          <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-            <button onclick="changeAmount(-10)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:16px;font-family:inherit">−</button>
-            <input id="mf-amount" type="number" value="100" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;text-align:center;font-size:16px;font-weight:700;font-family:inherit;background:var(--bg);color:var(--text)" oninput="updateFoodModalNutrition()">
-            <button onclick="changeAmount(10)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;cursor:pointer;font-size:16px;font-family:inherit">+</button>
+          <div class="food-unit-tabs" role="tablist" aria-label="Единица продукта">
+            <button class="food-unit-tab active" type="button" data-food-unit="g" onclick="setFoodUnit('g')">г</button>
+            <button class="food-unit-tab" type="button" data-food-unit="piece" onclick="setFoodUnit('piece')">шт</button>
+            <button class="food-unit-tab" type="button" data-food-unit="serving" onclick="setFoodUnit('serving')">порция</button>
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px">
-            <button onclick="setAmount(50)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">50г</button>
-            <button onclick="setAmount(100)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">100г</button>
-            <button onclick="setAmount(150)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">150г</button>
-            <button onclick="setAmount(200)" style="flex:1;padding:6px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text)">200г</button>
+          <label id="mf-amount-label" style="font-size:11px;color:var(--text-muted)">Количество в граммах</label>
+          <div class="food-amount-row">
+            <button class="food-step-btn" type="button" onclick="changeAmount(-1)">−</button>
+            <input id="mf-amount" class="food-amount-input" type="number" value="100" min="1" inputmode="decimal" oninput="updateFoodModalNutrition()">
+            <button class="food-step-btn" type="button" onclick="changeAmount(1)">+</button>
           </div>
+          <div class="food-piece-row" id="mf-piece-weight-row">
+            <label>
+              <span id="mf-piece-weight-label">Грамм в 1 шт</span>
+              <input id="mf-piece-weight" class="food-piece-input" type="number" value="50" min="1" inputmode="decimal" oninput="syncFoodUnitWeight()">
+            </label>
+          </div>
+          <div class="food-quick-amounts" id="mf-quick-amounts"></div>
+          <div class="food-unit-helper" id="mf-unit-helper">Можно быстро выбрать вес ниже.</div>
         </div>
         <div style="margin-bottom:14px">
           <label style="font-size:11px;color:var(--text-muted)">Приём пищи</label>
