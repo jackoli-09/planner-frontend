@@ -981,6 +981,44 @@ html[data-theme="dark"] .focus-card {
   font-weight: 800;
   cursor: pointer;
 }
+.workout-session-panel {
+  margin: 0 12px 10px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.workout-session-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.workout-session-title { font-size: 14px; font-weight: 900; color: var(--text); line-height: 1.25; }
+.workout-session-meta { margin-top: 4px; font-size: 10.5px; color: var(--text-muted); line-height: 1.35; }
+.workout-session-badge {
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--neon-soft);
+  color: var(--neon2);
+  font-size: 10px;
+  font-weight: 900;
+}
+.workout-session-track {
+  height: 6px;
+  margin-top: 11px;
+  border-radius: 999px;
+  background: var(--card2);
+  overflow: hidden;
+}
+.workout-session-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--neon), var(--neon2));
+  transition: width .25s ease;
+}
 .workout-group-list { display: grid; gap: 8px; margin: 12px 0; }
 .workout-group-card {
   display: grid;
@@ -1040,6 +1078,49 @@ html[data-theme="dark"] .focus-card {
 }
 
 .ex-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 9px; }
+.exercise-plan-card .card-inner { padding: 13px; }
+.exercise-plan-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.exercise-plan-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--card2);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+.exercise-plan-status.done { background: var(--green-soft); color: var(--green); }
+.exercise-plan-add {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card2);
+  color: var(--text);
+  min-height: 34px;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.exercise-plan-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
 .ex-sets { display: flex; gap: 6px; flex-wrap: wrap; }
 .set-chip {
   font-size: 11px; padding: 5px 10px; border-radius: 9px;
@@ -1881,6 +1962,18 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <button class="workout-tool-btn" onclick="openWorkoutGroups()">Настроить группы</button>
       <button class="workout-tool-btn" onclick="openWorkoutGroupEditor()">+ Группа</button>
     </div>
+    <section class="workout-session-panel">
+      <div class="workout-session-top">
+        <div>
+          <div class="workout-session-title" id="workout-session-title">План тренировки</div>
+          <div class="workout-session-meta" id="workout-session-meta">Выбери группу и начни с первого упражнения.</div>
+        </div>
+        <div class="workout-session-badge" id="workout-session-badge">0%</div>
+      </div>
+      <div class="workout-session-track">
+        <div class="workout-session-fill" id="workout-session-fill"></div>
+      </div>
+    </section>
 
     <div id="exercise-list"></div>
 
@@ -4314,21 +4407,32 @@ function renderExercises() {
   todaySets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
 
   const exToShow = [...new Set([...Object.keys(byEx), ...exNames])];
+  renderWorkoutSessionSummary(exToShow, byEx);
 
   var html = exToShow.map(ex => {
     const sets = byEx[ex] || [];
-    if (!sets.length) return '';
-    const chips = sets.map(s => {
+    const chips = sets.length ? sets.map(s => {
       const orm = calc1rm(s.weight, s.reps);
       const isPR = isPRFor(ex, orm);
       return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' ★':''} <button onclick="deleteWorkout(${s._idx},${s.id||0})" style="margin-left:6px;border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></div>`;
-    }).join('');
-    const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
-    const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
-    return `<div class="card"><div class="card-inner">
-      <div class="ex-name">${ex}</div>
+    }).join('') : '<div class="set-chip" style="background:var(--card2);color:var(--text-muted)">пока нет подходов</div>';
+    const maxRM = sets.length ? Math.max(...sets.map(s=>calc1rm(s.weight,s.reps))) : 0;
+    const avgW = sets.length ? round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length) : 0;
+    const last = lastSetForExercise(ex);
+    const lastMeta = last ? ('Последний: ' + asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг') : 'Добавь первый рабочий подход';
+    return `<div class="card exercise-plan-card"><div class="card-inner">
+      <div class="exercise-plan-head">
+        <div>
+          <div class="ex-name">${escapeHtml(ex)}</div>
+          <div class="ex-stats">${sets.length ? ('1RM: <strong>' + maxRM + ' кг</strong> · Ср. вес: <strong>' + avgW + ' кг</strong>') : escapeHtml(lastMeta)}</div>
+        </div>
+        <div class="exercise-plan-status${sets.length ? ' done' : ''}">${sets.length ? '✓' : '•'}</div>
+      </div>
       <div class="ex-sets">${chips}</div>
-      <div class="ex-stats">1RM: <strong>${maxRM} кг</strong> · Ср. вес сессии: <strong>${avgW} кг</strong></div>
+      <div class="exercise-plan-foot">
+        <span>${sets.length ? escapeHtml(lastMeta) : 'Плановое упражнение'}</span>
+        <button class="exercise-plan-add" onclick="openAddSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">+ подход</button>
+      </div>
     </div></div>`;
   }).join('');
 
@@ -4338,6 +4442,21 @@ function renderExercises() {
       <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Выбери группу мышц и добавь первый подход. Рекорды и графики обновятся автоматически.</div>
     </div>
   </div>`;
+}
+
+function renderWorkoutSessionSummary(exercises, byEx) {
+  var title = document.getElementById('workout-session-title');
+  var meta = document.getElementById('workout-session-meta');
+  var badge = document.getElementById('workout-session-badge');
+  var fill = document.getElementById('workout-session-fill');
+  var total = exercises.length;
+  var done = exercises.filter(function(ex) { return (byEx[ex] || []).length > 0; }).length;
+  var sets = Object.values(byEx).reduce(function(sum, items) { return sum + items.length; }, 0);
+  var pct = total ? Math.round(done / total * 100) : 0;
+  if (title) title.textContent = currentMuscle;
+  if (meta) meta.textContent = total ? (done + ' из ' + total + ' упражнений · ' + sets + ' подходов сегодня') : 'Добавь упражнения в группу, чтобы собрать план занятия.';
+  if (badge) badge.textContent = pct + '%';
+  if (fill) fill.style.width = pct + '%';
 }
 
 function isPRFor(exercise, orm) {
@@ -4356,6 +4475,22 @@ function updateExerciseSelect() {
 
 function openAddSet() {
   updateExerciseSelect();
+  suggestLastSetForExercise(true);
+  updateRMPreview();
+  document.getElementById('modal-set').classList.add('open');
+}
+
+function openAddSetForExercise(exerciseName) {
+  updateExerciseSelect();
+  var sel = document.getElementById('m-exercise');
+  var hasOption = Array.from(sel.options).some(function(option) { return option.value === exerciseName; });
+  if (hasOption) {
+    sel.value = exerciseName;
+  } else {
+    sel.value = '__custom__';
+    document.getElementById('m-custom-exercise').value = exerciseName;
+  }
+  toggleCustomExerciseInput();
   suggestLastSetForExercise(true);
   updateRMPreview();
   document.getElementById('modal-set').classList.add('open');
