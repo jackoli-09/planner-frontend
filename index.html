@@ -6,9 +6,17 @@
 // открывается из локального кеша. На file:// Service Worker недоступен.
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js').catch(function(err) {
+    navigator.serviceWorker.register('./sw.js').then(function(registration) {
+      registration.update().catch(function() {});
+      if (registration.waiting) registration.waiting.postMessage({type:'SKIP_WAITING'});
+    }).catch(function(err) {
       console.warn('Офлайн-кеш пока недоступен:', err);
     });
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (sessionStorage.getItem('planner_sw_reloaded') === '1') return;
+    sessionStorage.setItem('planner_sw_reloaded', '1');
+    location.reload();
   });
 }
 
@@ -3129,8 +3137,12 @@ window.addEventListener('offline', function() { setSyncStatus(getOutbox().length
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') syncAcrossDevices();
 });
+window.addEventListener('focus', syncAcrossDevices);
+window.addEventListener('pageshow', function() {
+  setTimeout(syncAcrossDevices, 600);
+});
 setInterval(function() {
-  if (document.visibilityState === 'visible' && (getOutbox().length || currentSyncMode !== 'online')) syncAcrossDevices();
+  if (document.visibilityState === 'visible') syncAcrossDevices();
 }, 30000);
 
 // ════════════════════════════════════════════════════════════════
@@ -3521,7 +3533,10 @@ async function loadState(cb) {
   setSyncStatus(getOutbox().length ? 'pending' : 'offline');
   await ensureAuthSession(false);
   var flushed = await flushPendingWrites();
-  if (flushed) await loadStateFromServer();
+  if (flushed) {
+    var loaded = await loadStateFromServer();
+    if (loaded) cb();
+  }
   maybeImportHistory().then(function(imported) {
     if (imported) cb();
   });
