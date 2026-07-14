@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'planner-shell-v13';
+const CACHE_VERSION = 'planner-shell-v14';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -28,7 +28,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  if (url.hostname.includes('planner-backend')) return;
+  if (url.hostname.includes('planner-backend') || url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith((async () => {

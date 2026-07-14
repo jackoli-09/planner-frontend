@@ -415,7 +415,7 @@ async function loadPreviousFoodEntries() {
   yesterday.setDate(yesterday.getDate() - 1);
   var yesterdayStr = localDateISO(yesterday);
   var source = (state.foodLog || []).filter(function(e){ return e.date === yesterdayStr; });
-  if (!source.length && navigator.onLine) {
+  if (!source.length) {
     try { source = await apiCall('GET', '/api/food/log?log_date=' + yesterdayStr) || []; } catch(e) {}
   }
   return source;
@@ -2565,9 +2565,9 @@ if (tg) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// API CONFIG — поменяй на свой Railway-домен после деплоя бэкенда
+// На Vercel API идет через тот же домен. Это надежнее внутри Telegram WebView.
 // ════════════════════════════════════════════════════════════════
-var API_BASE = 'https://planner-backend-production-ad6d.up.railway.app';
+var API_BASE = location.hostname.endsWith('.vercel.app') ? '' : 'https://planner-backend-production-ad6d.up.railway.app';
 
 function getUserId() {
   const u = tg?.initDataUnsafe?.user;
@@ -2919,7 +2919,7 @@ async function ensureAuthSession(force) {
   if (authSessionInFlight) return authSessionInFlight;
   authSessionInFlight = (async function() {
     var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 7000);
+    var timeout = setTimeout(function() { controller.abort(); }, 15000);
     try {
       var response = await fetch(API_BASE + '/api/auth/session', {
         method:'POST',
@@ -3013,13 +3013,8 @@ async function apiCall(method, path, body, options) {
   options = options || {};
   var isWrite = method !== 'GET' && method !== 'HEAD';
   var outboxId = options.outboxId || (isWrite && !options.replay ? queueWrite(method, path, body) : null);
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    apiAvailable = false;
-    setSyncStatus(getOutbox().length ? 'pending' : 'offline');
-    return null;
-  }
   var controller = new AbortController();
-  var timeout = setTimeout(function() { controller.abort(); }, 7000);
+  var timeout = setTimeout(function() { controller.abort(); }, 15000);
   try {
     const res = await fetch(API_BASE + path, {
       method,
@@ -3033,6 +3028,7 @@ async function apiCall(method, path, body, options) {
       throw err;
     }
     apiAvailable = true;
+    localStorage.removeItem('planner_last_sync_error_' + USER_ID);
     localStorage.setItem('planner_last_server_sync_' + USER_ID, new Date().toISOString());
     if (isWrite) removeQueuedWrite(outboxId);
     if (!getOutbox().length) setSyncStatus('online');
@@ -3048,6 +3044,9 @@ async function apiCall(method, path, body, options) {
       }
     }
     apiAvailable = false;
+    localStorage.setItem('planner_last_sync_error_' + USER_ID, JSON.stringify({
+      at:new Date().toISOString(), path:path, status:e.status || 0, message:String(e.message || e.name || 'Network error')
+    }));
     if (isWrite && [400, 404, 409, 422].includes(e.status)) {
       removeQueuedWrite(outboxId);
     }
@@ -3071,7 +3070,7 @@ async function flushPendingWrites() {
 
 var backgroundSyncInFlight = false;
 async function syncAcrossDevices() {
-  if (backgroundSyncInFlight || !navigator.onLine) return false;
+  if (backgroundSyncInFlight) return false;
   backgroundSyncInFlight = true;
   try {
     await ensureAuthSession(false);
@@ -3540,7 +3539,7 @@ async function syncNow() {
   var flushed = await flushPendingWrites();
   var loaded = flushed ? await loadStateFromServer() : false;
   if (flushed && loaded) showSyncNotice('Данные на устройстве и сервере синхронизированы.', false);
-  else showSyncNotice(navigator.onLine ? 'Не удалось связаться с сервером. Изменения остаются на устройстве.' : 'Нет сети. Изменения остаются на устройстве.', true);
+  else showSyncNotice('Не удалось связаться с сервером. Изменения остаются на устройстве.', true);
   if (button) button.disabled = false;
   updateSyncCenter();
 }
