@@ -959,6 +959,58 @@ html[data-theme="dark"] .focus-card {
   color: #fff; border-color: transparent;
   box-shadow: 0 0 16px var(--neon-glow);
 }
+.mtab.add {
+  border-style: dashed;
+  color: var(--neon2);
+  background: var(--neon-soft2);
+}
+.workout-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 10px;
+}
+.workout-tool-btn {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.workout-group-list { display: grid; gap: 8px; margin: 12px 0; }
+.workout-group-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+}
+.workout-group-name { font-size: 13px; color: var(--text); font-weight: 800; }
+.workout-group-meta { margin-top: 3px; font-size: 10px; color: var(--text-muted); line-height: 1.35; }
+.workout-group-actions { display: flex; gap: 6px; }
+.workout-mini-btn {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--card);
+  color: var(--text);
+  min-width: 34px;
+  height: 32px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.workout-mini-btn.danger { color: var(--red); }
+.exercise-editor-list { display: grid; gap: 7px; margin-top: 8px; }
+.exercise-editor-row { display: grid; grid-template-columns: 1fr 34px; gap: 7px; align-items: center; }
+.exercise-editor-row input { min-width: 0; }
 
 .ex-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 9px; }
 .ex-sets { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -1797,13 +1849,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <div class="ph-sub" id="wo-date-label"></div>
     </div>
 
-    <div class="muscle-tabs" id="muscle-tabs">
-      <div class="mtab active" onclick="selectMuscle('Грудь + Трицепс',this)">Грудь+Три</div>
-      <div class="mtab" onclick="selectMuscle('Спина + Бицепс',this)">Спина+Би</div>
-      <div class="mtab" onclick="selectMuscle('Ноги + Ягодицы',this)">Ноги</div>
-      <div class="mtab" onclick="selectMuscle('Плечи + Трапеции',this)">Плечи</div>
-      <div class="mtab" onclick="selectMuscle('Руки (Би + Три)',this)">Руки</div>
-      <div class="mtab" onclick="selectMuscle('Пресс + Кор',this)">Пресс</div>
+    <div class="muscle-tabs" id="muscle-tabs"></div>
+    <div class="workout-toolbar">
+      <button class="workout-tool-btn" onclick="openWorkoutGroups()">Настроить группы</button>
+      <button class="workout-tool-btn" onclick="openWorkoutGroupEditor()">+ Группа</button>
     </div>
 
     <div id="exercise-list"></div>
@@ -2424,6 +2473,40 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   </div>
 </div>
 
+<!-- Workout Groups Modal -->
+<div class="modal-overlay" id="modal-workout-groups">
+  <div class="modal-sheet">
+    <div class="modal-title">Группы тренировок</div>
+    <div class="profile-question">Собери свои комбинации: грудь + бицепс, ноги + плечи, фулбоди или любой другой сплит.</div>
+    <div class="workout-group-list" id="workout-group-list"></div>
+    <button class="btn-primary" onclick="openWorkoutGroupEditor()">Добавить группу</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-workout-groups')">Закрыть</button>
+  </div>
+</div>
+
+<!-- Workout Group Editor Modal -->
+<div class="modal-overlay" id="modal-workout-group-editor">
+  <div class="modal-sheet">
+    <div class="modal-title" id="workout-group-editor-title">Новая группа</div>
+    <div class="modal-row">
+      <div class="modal-label">Название</div>
+      <input class="modal-input" id="workout-group-name" maxlength="80" placeholder="Грудь + Бицепс">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Коротко для вкладки</div>
+      <input class="modal-input" id="workout-group-short" maxlength="24" placeholder="Грудь+Би">
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Упражнения</div>
+      <div class="exercise-editor-list" id="exercise-editor-list"></div>
+      <button class="sync-action" type="button" onclick="addExerciseEditorRow('')"><span>Добавить упражнение</span><span class="sync-action-icon">+</span></button>
+    </div>
+    <div class="profile-error" id="workout-group-error"></div>
+    <button class="btn-primary" onclick="saveWorkoutGroupEditor()">Сохранить группу</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-workout-group-editor')">Отмена</button>
+  </div>
+</div>
+
 <!-- Add Set Modal -->
 <div class="modal-overlay" id="modal-set">
   <div class="modal-sheet">
@@ -2431,6 +2514,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     <div class="modal-row">
       <div class="modal-label">Упражнение</div>
       <select class="modal-input" id="m-exercise"></select>
+    </div>
+    <div class="modal-row" id="m-custom-exercise-row" style="display:none">
+      <div class="modal-label">Новое упражнение</div>
+      <input class="modal-input" id="m-custom-exercise" maxlength="120" placeholder="Например: Жим в хаммере">
     </div>
     <div class="modal-grid">
       <div class="modal-row">
@@ -2642,6 +2729,7 @@ function migrateLegacyDeviceData(userId) {
   var prefixes = [
     'workouts_', 'tasks_', 'task_templates_', 'supps_list_', 'supps_checked_',
     'body_weight_', 'body_cal_', 'body_measures_', 'food_log_', 'food_favorites_',
+    'workout_groups_',
     'planner_profile_', 'planner_notifications_', 'planner_outbox_', 'planner_tombstones_',
     'planner_state_backup_', 'planner_state_backup_previous_', 'planner_last_local_save_'
   ];
@@ -3047,6 +3135,7 @@ function queueWrite(method, path, body) {
   else if (path === '/api/task-templates') identity = body?.client_id || '';
   else if (path === '/api/settings/profile') identity = 'profile';
   else if (path === '/api/settings/notifications') identity = 'notifications';
+  else if (path === '/api/settings/workout-groups') identity = 'workout_groups';
   else if (path === '/api/food/log' || path === '/api/food/favorites') identity = body?.client_id || '';
   else if (path.indexOf('/api/body/') === 0) identity = body?.date || '';
   else if (path === '/api/supplement_checks') {
@@ -3216,14 +3305,16 @@ let selectedSuppDate = localDateISO();
 let reportMonthOffset = 0; // 0 = current month
 let progChart=null, avgChart=null, weightChart=null, calChart=null;
 
-const EXERCISES = {
-  'Грудь + Трицепс':  ['Жим штанги лёжа','Жим штанги на наклонной скамье','Жим гантелей на наклонной скамье','Разводка гантелей лёжа','Сведение в тренажёре (Бабочка)','Французский жим','Разгибание на трицепс (блок)'],
-  'Спина + Бицепс':   ['Становая тяга','Румынская тяга','Тяга штанги в наклоне','Тяга верхнего блока к груди','Тяга нижнего блока к поясу','Тяга нижнего блока одной рукой','Тяга в хаммере','Подъём штанги на бицепс','Подъём EZ-штанги на бицепс','Подъём гантелей на бицепс сидя','Подъём гантелей на бицепс стоя','Сгибание на скамье Скотта','Молотки (Hammer Curl)'],
-  'Ноги + Ягодицы':   ['Приседания со штангой','Жим ногами','Разгибание ног (тренажёр)','Сгибание ног (тренажёр)','Выпады с гантелями','Подъём на носки'],
-  'Плечи + Трапеции': ['Жим гантелей сидя (плечи)','Жим штанги стоя','Подъём гантелей в стороны','Подъём гантелей перед собой','Разведение в тренажёре (задние дельты)','Тяга к подбородку','Шраги'],
-  'Руки (Би + Три)':  ['Подъём штанги на бицепс','Молотки (Hammer Curl)','Французский жим','Разгибание на трицепс (блок)'],
-  'Пресс + Кор':      ['Скручивания','Подъём ног в висе','Планка','Боковая планка','Велосипед','Русский твист'],
-};
+const DEFAULT_WORKOUT_GROUPS = [
+  {name:'Грудь + Трицепс', short:'Грудь+Три', exercises:['Жим штанги лёжа','Жим штанги на наклонной скамье','Жим гантелей на наклонной скамье','Разводка гантелей лёжа','Сведение в тренажёре (Бабочка)','Французский жим','Разгибание на трицепс (блок)']},
+  {name:'Спина + Бицепс', short:'Спина+Би', exercises:['Становая тяга','Румынская тяга','Тяга штанги в наклоне','Тяга верхнего блока к груди','Тяга нижнего блока к поясу','Тяга нижнего блока одной рукой','Тяга в хаммере','Подъём штанги на бицепс','Подъём EZ-штанги на бицепс','Подъём гантелей на бицепс сидя','Подъём гантелей на бицепс стоя','Сгибание на скамье Скотта','Молотки (Hammer Curl)']},
+  {name:'Ноги + Ягодицы', short:'Ноги', exercises:['Приседания со штангой','Жим ногами','Разгибание ног (тренажёр)','Сгибание ног (тренажёр)','Выпады с гантелями','Подъём на носки']},
+  {name:'Плечи + Трапеции', short:'Плечи', exercises:['Жим гантелей сидя (плечи)','Жим штанги стоя','Подъём гантелей в стороны','Подъём гантелей перед собой','Разведение в тренажёре (задние дельты)','Тяга к подбородку','Шраги']},
+  {name:'Руки (Би + Три)', short:'Руки', exercises:['Подъём штанги на бицепс','Молотки (Hammer Curl)','Французский жим','Разгибание на трицепс (блок)']},
+  {name:'Пресс + Кор', short:'Пресс', exercises:['Скручивания','Подъём ног в висе','Планка','Боковая планка','Велосипед','Русский твист']},
+];
+let workoutGroups = loadWorkoutGroupsLocal();
+let editingWorkoutGroupIndex = null;
 
 function todayStr() { return localDateISO(); }
 function formatDate(d) {
@@ -3317,6 +3408,71 @@ if (window.Chart) {
 let apiAvailable = false;
 var currentSyncMode = 'offline';
 
+function normalizeWorkoutGroup(group) {
+  var name = String(group?.name || '').trim();
+  var short = String(group?.short || name).trim();
+  var seen = new Set();
+  var exercises = (Array.isArray(group?.exercises) ? group.exercises : [])
+    .map(function(ex) { return String(ex || '').trim(); })
+    .filter(function(ex) {
+      var key = ex.toLowerCase();
+      if (!ex || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return {name:name, short:(short || name).slice(0, 24), exercises:exercises};
+}
+
+function defaultWorkoutGroups() {
+  return DEFAULT_WORKOUT_GROUPS.map(function(group) {
+    return normalizeWorkoutGroup({
+      name:group.name,
+      short:group.short,
+      exercises:group.exercises.slice()
+    });
+  });
+}
+
+function loadWorkoutGroupsLocal() {
+  try {
+    var parsed = JSON.parse(localStorage.getItem('workout_groups_' + USER_ID) || 'null');
+    if (Array.isArray(parsed) && parsed.length) {
+      var groups = parsed.map(normalizeWorkoutGroup).filter(function(group) { return group.name; });
+      if (groups.length) return groups;
+    }
+  } catch(e) {}
+  return defaultWorkoutGroups();
+}
+
+function saveWorkoutGroupsLocal() {
+  localStorage.setItem('workout_groups_' + USER_ID, JSON.stringify(workoutGroups));
+}
+
+function applyServerWorkoutGroups(settings) {
+  var incoming = settings?.workout_groups;
+  if (typeof incoming === 'string') {
+    try { incoming = JSON.parse(incoming); } catch(e) { incoming = null; }
+  }
+  if (!Array.isArray(incoming) || !incoming.length) return;
+  var groups = incoming.map(normalizeWorkoutGroup).filter(function(group) { return group.name; });
+  if (!groups.length) return;
+  workoutGroups = groups;
+  if (!workoutGroups.some(function(group) { return group.name === currentMuscle; })) {
+    currentMuscle = workoutGroups[0].name;
+  }
+  saveWorkoutGroupsLocal();
+}
+
+async function syncWorkoutGroups() {
+  saveWorkoutGroupsLocal();
+  await apiCall('POST', '/api/settings/workout-groups', {groups:workoutGroups});
+}
+
+function getExerciseList(muscle) {
+  var group = workoutGroups.find(function(item) { return item.name === muscle; });
+  return group ? group.exercises : [];
+}
+
 function stateSnapshot() {
   return {
     workouts: state.workouts || [],
@@ -3328,13 +3484,14 @@ function stateSnapshot() {
     body_cal: state.bodyCal || [],
     body_measures: state.bodyMeasures || [],
     food_log: state.foodLog || [],
-    food_favorites: state.foodFavorites || []
+    food_favorites: state.foodFavorites || [],
+    workout_groups: workoutGroups || []
   };
 }
 
 function snapshotRecordCount(snapshot) {
   if (!snapshot) return 0;
-  return ['workouts','tasks','task_templates','supps_list','body_weight','body_cal','body_measures','food_log','food_favorites']
+  return ['workouts','tasks','task_templates','supps_list','body_weight','body_cal','body_measures','food_log','food_favorites','workout_groups']
     .reduce(function(total, key) { return total + (Array.isArray(snapshot[key]) ? snapshot[key].length : 0); }, 0) +
     Object.keys(snapshot.supps_checked || {}).length;
 }
@@ -3373,7 +3530,7 @@ function saveStateLocal() {
 }
 
 function loadStateLocal() {
-  const keys = ['workouts','tasks','task_templates','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log','food_favorites'];
+  const keys = ['workouts','tasks','task_templates','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log','food_favorites','workout_groups'];
   const vals = {};
   keys.forEach(k => vals[k] = localStorage.getItem(k + '_' + USER_ID));
   try {
@@ -3396,6 +3553,10 @@ function applyLoaded(vals) {
   if (vals.body_measures) state.bodyMeasures = JSON.parse(vals.body_measures).map(normalizeBodyMeasure);
   if (vals.food_log) state.foodLog = JSON.parse(vals.food_log);
   if (vals.food_favorites) state.foodFavorites = JSON.parse(vals.food_favorites).map(normalizeFoodFavorite);
+  if (vals.workout_groups) {
+    var groups = JSON.parse(vals.workout_groups).map(normalizeWorkoutGroup).filter(function(group) { return group.name; });
+    if (groups.length) workoutGroups = groups;
+  }
 }
 
 // Мгновенный локальный кэш для отзывчивого UI. Постоянная память пишется
@@ -3503,6 +3664,7 @@ function applyBootstrap(bootstrap) {
   localStorage.setItem('planner_last_server_count_' + USER_ID, String(lastServerSnapshotCount || 0));
   applyServerProfile(bootstrap.settings);
   applyServerNotifications(bootstrap.settings);
+  applyServerWorkoutGroups(bootstrap.settings);
   var deletedKeys = new Set(getTombstones().map(function(item) { return item.kind + '|' + item.key; }));
   var keepServerItem = function(kind, key) { return !deletedKeys.has(kind + '|' + String(key)); };
   var serverWorkouts = (bootstrap.workouts || []).filter(function(item) { return keepServerItem('workout', item.id); });
@@ -4074,19 +4236,41 @@ function renderHomeNudges(todayStr_, todayTasks, done, total) {
 function selectMuscle(muscle, el) {
   currentMuscle = muscle;
   document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  renderExercises();
-}
-
-function renderWorkout() {
-  document.getElementById('wo-date-label').textContent = formatDate(todayStr());
+  if (el) el.classList.add('active');
+  renderMuscleTabs();
   renderExercises();
   updateExerciseSelect();
 }
 
+function renderWorkout() {
+  document.getElementById('wo-date-label').textContent = formatDate(todayStr());
+  renderMuscleTabs();
+  renderExercises();
+  updateExerciseSelect();
+}
+
+function renderMuscleTabs() {
+  var tabs = document.getElementById('muscle-tabs');
+  if (!tabs) return;
+  if (!workoutGroups.length) workoutGroups = defaultWorkoutGroups();
+  if (!workoutGroups.some(function(group) { return group.name === currentMuscle; })) {
+    currentMuscle = workoutGroups[0].name;
+  }
+  tabs.innerHTML = workoutGroups.map(function(group) {
+    var active = group.name === currentMuscle ? ' active' : '';
+    return '<div class="mtab' + active + '" onclick="selectWorkoutGroup(' + workoutGroups.indexOf(group) + ',this)">' + escapeHtml(group.short || group.name) + '</div>';
+  }).join('') + '<div class="mtab add" onclick="openWorkoutGroupEditor()">+ группа</div>';
+}
+
+function selectWorkoutGroup(index, el) {
+  var group = workoutGroups[index];
+  if (!group) return;
+  selectMuscle(group.name, el);
+}
+
 function renderExercises() {
   const today = todayStr();
-  const exNames = EXERCISES[currentMuscle] || [];
+  const exNames = getExerciseList(currentMuscle);
   const container = document.getElementById('exercise-list');
 
   const todaySets = state.workouts
@@ -4130,8 +4314,10 @@ function isPRFor(exercise, orm) {
 
 function updateExerciseSelect() {
   const sel = document.getElementById('m-exercise');
-  const exList = EXERCISES[currentMuscle] || [];
-  sel.innerHTML = exList.map(ex=>`<option value="${ex}">${ex}</option>`).join('');
+  const exList = getExerciseList(currentMuscle);
+  sel.innerHTML = exList.map(ex=>`<option value="${escapeHtml(ex)}">${escapeHtml(ex)}</option>`).join('') +
+    '<option value="__custom__">+ Новое упражнение</option>';
+  toggleCustomExerciseInput();
 }
 
 function openAddSet() {
@@ -4140,25 +4326,50 @@ function openAddSet() {
   document.getElementById('modal-set').classList.add('open');
 }
 
+function toggleCustomExerciseInput() {
+  var select = document.getElementById('m-exercise');
+  var row = document.getElementById('m-custom-exercise-row');
+  if (row && select) row.style.display = select.value === '__custom__' ? 'block' : 'none';
+}
+
 function updateRMPreview() {
   const w = parseFloat(document.getElementById('m-weight').value)||0;
   const r = parseInt(document.getElementById('m-reps').value)||0;
-  const ex = document.getElementById('m-exercise').value;
+  const ex = readSelectedExerciseName();
   const orm = calc1rm(w,r);
   document.getElementById('m-1rm-preview').textContent = orm + ' кг';
   const prevSets = state.workouts.filter(s=>s.exercise===ex);
   const avgW = prevSets.length ? round1(prevSets.reduce((a,s)=>a+s.weight,0)/prevSets.length) : w;
   document.getElementById('m-avg-preview').textContent = avgW + ' кг';
 }
+
+function readSelectedExerciseName() {
+  var selected = document.getElementById('m-exercise').value;
+  if (selected === '__custom__') return document.getElementById('m-custom-exercise').value.trim();
+  return selected;
+}
+
 ['m-weight','m-reps','m-exercise'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input', updateRMPreview);
+  document.getElementById(id)?.addEventListener('change', function() {
+    toggleCustomExerciseInput();
+    updateRMPreview();
+  });
 });
+document.getElementById('m-custom-exercise')?.addEventListener('input', updateRMPreview);
 
 async function saveSet() {
+  var exerciseName = readSelectedExerciseName();
+  if (!exerciseName) return;
+  var group = workoutGroups.find(function(item) { return item.name === currentMuscle; });
+  if (group && !group.exercises.some(function(ex) { return ex.toLowerCase() === exerciseName.toLowerCase(); })) {
+    group.exercises.push(exerciseName);
+    syncWorkoutGroups();
+  }
   const entry = {
     client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
     date: todayStr(), muscle: currentMuscle,
-    exercise: document.getElementById('m-exercise').value,
+    exercise: exerciseName,
     sets: parseInt(document.getElementById('m-sets').value)||1,
     reps: parseInt(document.getElementById('m-reps').value)||1,
     weight: parseFloat(document.getElementById('m-weight').value)||0,
@@ -4171,6 +4382,98 @@ async function saveSet() {
     saveState();
   }
   closeModal('modal-set');
+  renderExercises();
+  updateExerciseSelect();
+}
+
+function openWorkoutGroups() {
+  renderWorkoutGroupList();
+  document.getElementById('modal-workout-groups').classList.add('open');
+}
+
+function renderWorkoutGroupList() {
+  var list = document.getElementById('workout-group-list');
+  if (!list) return;
+  list.innerHTML = workoutGroups.map(function(group, index) {
+    var meta = (group.exercises || []).slice(0, 4).join(', ');
+    if ((group.exercises || []).length > 4) meta += ' +' + ((group.exercises || []).length - 4);
+    return '<div class="workout-group-card">' +
+      '<div><div class="workout-group-name">' + escapeHtml(group.name) + '</div><div class="workout-group-meta">' + escapeHtml(meta || 'Упражнения пока не добавлены') + '</div></div>' +
+      '<div class="workout-group-actions">' +
+        '<button class="workout-mini-btn" onclick="openWorkoutGroupEditor(' + index + ')">Изм.</button>' +
+        '<button class="workout-mini-btn danger" onclick="deleteWorkoutGroup(' + index + ')">×</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openWorkoutGroupEditor(index) {
+  editingWorkoutGroupIndex = Number.isInteger(index) ? index : null;
+  var group = editingWorkoutGroupIndex === null ? {name:'', short:'', exercises:['']} : workoutGroups[editingWorkoutGroupIndex];
+  document.getElementById('workout-group-editor-title').textContent = editingWorkoutGroupIndex === null ? 'Новая группа' : 'Изменить группу';
+  document.getElementById('workout-group-name').value = group.name || '';
+  document.getElementById('workout-group-short').value = group.short || '';
+  document.getElementById('workout-group-error').textContent = '';
+  renderExerciseEditorRows(group.exercises && group.exercises.length ? group.exercises : ['']);
+  document.getElementById('modal-workout-groups').classList.remove('open');
+  document.getElementById('modal-workout-group-editor').classList.add('open');
+}
+
+function renderExerciseEditorRows(exercises) {
+  var list = document.getElementById('exercise-editor-list');
+  if (!list) return;
+  list.innerHTML = exercises.map(function(ex) {
+    return '<div class="exercise-editor-row">' +
+      '<input class="modal-input workout-exercise-input" value="' + escapeHtml(ex) + '" placeholder="Жим гантелей">' +
+      '<button class="workout-mini-btn danger" onclick="removeExerciseEditorRow(this)">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+function addExerciseEditorRow(value) {
+  var list = document.getElementById('exercise-editor-list');
+  if (!list) return;
+  list.insertAdjacentHTML('beforeend', '<div class="exercise-editor-row">' +
+    '<input class="modal-input workout-exercise-input" value="' + escapeHtml(value || '') + '" placeholder="Новое упражнение">' +
+    '<button class="workout-mini-btn danger" onclick="removeExerciseEditorRow(this)">×</button>' +
+  '</div>');
+}
+
+function removeExerciseEditorRow(button) {
+  var row = button?.closest('.exercise-editor-row');
+  if (row) row.remove();
+}
+
+async function saveWorkoutGroupEditor() {
+  var name = document.getElementById('workout-group-name').value.trim();
+  var short = document.getElementById('workout-group-short').value.trim() || name;
+  var exercises = Array.from(document.querySelectorAll('.workout-exercise-input')).map(function(input) {
+    return input.value.trim();
+  }).filter(Boolean);
+  var errorEl = document.getElementById('workout-group-error');
+  if (!name) { errorEl.textContent = 'Укажи название группы'; return; }
+  var normalized = normalizeWorkoutGroup({name:name, short:short, exercises:exercises});
+  var duplicate = workoutGroups.some(function(group, index) {
+    return index !== editingWorkoutGroupIndex && group.name.toLowerCase() === normalized.name.toLowerCase();
+  });
+  if (duplicate) { errorEl.textContent = 'Такая группа уже есть'; return; }
+  if (editingWorkoutGroupIndex === null) workoutGroups.push(normalized);
+  else workoutGroups[editingWorkoutGroupIndex] = normalized;
+  currentMuscle = normalized.name;
+  await syncWorkoutGroups();
+  closeModal('modal-workout-group-editor');
+  renderMuscleTabs();
+  renderExercises();
+  updateExerciseSelect();
+}
+
+async function deleteWorkoutGroup(index) {
+  if (workoutGroups.length <= 1) return;
+  var removed = workoutGroups.splice(index, 1)[0];
+  if (removed && removed.name === currentMuscle) currentMuscle = workoutGroups[0].name;
+  await syncWorkoutGroups();
+  renderWorkoutGroupList();
+  renderMuscleTabs();
   renderExercises();
 }
 
