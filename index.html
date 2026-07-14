@@ -722,7 +722,8 @@ body { background: var(--bg); color: var(--text); }
   box-shadow: 0 0 0 4px var(--green-soft);
 }
 .home-sync-pill[data-sync="pending"]::before,
-.home-sync-pill[data-sync="offline"]::before {
+.home-sync-pill[data-sync="offline"]::before,
+.home-sync-pill[data-sync="auth"]::before {
   background: var(--orange);
   box-shadow: 0 0 0 4px var(--orange-soft);
 }
@@ -2577,6 +2578,26 @@ function getUserId() {
 }
 var USER_ID = getUserId();
 
+function migrateLegacyDeviceData(userId) {
+  var legacyId = localStorage.getItem('demo_user_id');
+  if (!tg?.initDataUnsafe?.user?.id || !legacyId || String(legacyId) === String(userId)) return;
+  var prefixes = [
+    'workouts_', 'tasks_', 'task_templates_', 'supps_list_', 'supps_checked_',
+    'body_weight_', 'body_cal_', 'body_measures_', 'food_log_', 'food_favorites_',
+    'planner_profile_', 'planner_notifications_', 'planner_outbox_', 'planner_tombstones_',
+    'planner_state_backup_', 'planner_state_backup_previous_', 'planner_last_local_save_'
+  ];
+  prefixes.forEach(function(prefix) {
+    var sourceKey = prefix + legacyId;
+    var targetKey = prefix + userId;
+    if (localStorage.getItem(targetKey) === null && localStorage.getItem(sourceKey) !== null) {
+      localStorage.setItem(targetKey, localStorage.getItem(sourceKey));
+    }
+  });
+}
+
+migrateLegacyDeviceData(USER_ID);
+
 function defaultUserProfile() {
   return {
     name: tg?.initDataUnsafe?.user?.first_name || '',
@@ -2879,11 +2900,46 @@ async function saveProfile() {
 }
 
 function getApiHeaders() {
-  return {
+  var headers = {
     'Content-Type': 'application/json',
     'X-User-Id': String(USER_ID || getUserId() || 0),
     'X-Telegram-Init-Data': tg?.initData || ''
   };
+  var token = localStorage.getItem('planner_session_token_' + USER_ID);
+  if (token) headers.Authorization = 'Bearer ' + token;
+  return headers;
+}
+
+var authSessionInFlight = null;
+
+async function ensureAuthSession(force) {
+  var key = 'planner_session_token_' + USER_ID;
+  if (!force && localStorage.getItem(key)) return true;
+  if (!tg?.initData) return false;
+  if (authSessionInFlight) return authSessionInFlight;
+  authSessionInFlight = (async function() {
+    var controller = new AbortController();
+    var timeout = setTimeout(function() { controller.abort(); }, 7000);
+    try {
+      var response = await fetch(API_BASE + '/api/auth/session', {
+        method:'POST',
+        headers:{'Content-Type':'application/json', 'X-Telegram-Init-Data':tg.initData},
+        signal:controller.signal
+      });
+      if (!response.ok) return false;
+      var session = await response.json();
+      if (!session?.token || String(session.user_id) !== String(USER_ID)) return false;
+      localStorage.setItem(key, session.token);
+      localStorage.setItem('planner_session_expires_' + USER_ID, String(session.expires_at || ''));
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      clearTimeout(timeout);
+      authSessionInFlight = null;
+    }
+  })();
+  return authSessionInFlight;
 }
 
 function getOutbox() {
@@ -2937,11 +2993,12 @@ function setSyncStatus(mode) {
   var labels = {
     online: 'Синхронизировано',
     pending: 'Сохранено на устройстве · ожидает сеть',
-    offline: 'Офлайн · данные на устройстве'
+    offline: 'Офлайн · данные на устройстве',
+    auth: 'Откройте планировщик через кнопку бота в Telegram'
   };
   currentSyncMode = mode;
   if (pill) {
-    pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : 'Офлайн');
+    pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : (mode === 'auth' ? 'Нужен Telegram' : 'Офлайн'));
     pill.dataset.sync = mode;
   }
   if (status) status.textContent = labels[mode] || labels.offline;
@@ -2981,11 +3038,20 @@ async function apiCall(method, path, body, options) {
     if (!getOutbox().length) setSyncStatus('online');
     return await res.json();
   } catch (e) {
+    if (e.status === 401 && !options.authRetried) {
+      localStorage.removeItem('planner_session_token_' + USER_ID);
+      var refreshed = await ensureAuthSession(true);
+      if (refreshed) {
+        return apiCall(method, path, body, Object.assign({}, options, {
+          replay:true, outboxId:outboxId, authRetried:true
+        }));
+      }
+    }
     apiAvailable = false;
     if (isWrite && [400, 404, 409, 422].includes(e.status)) {
       removeQueuedWrite(outboxId);
     }
-    setSyncStatus(getOutbox().length ? 'pending' : 'offline');
+    setSyncStatus(e.status === 401 ? 'auth' : (getOutbox().length ? 'pending' : 'offline'));
     console.warn('API недоступен, работаем в офлайн-режиме (localStorage):', e);
     return null;
   } finally {
@@ -3003,10 +3069,28 @@ async function flushPendingWrites() {
   return getOutbox().length === 0;
 }
 
-window.addEventListener('online', function() {
-  flushPendingWrites().then(function(ok) { if (ok) loadStateFromServer(); });
-});
+var backgroundSyncInFlight = false;
+async function syncAcrossDevices() {
+  if (backgroundSyncInFlight || !navigator.onLine) return false;
+  backgroundSyncInFlight = true;
+  try {
+    await ensureAuthSession(false);
+    var flushed = await flushPendingWrites();
+    if (flushed) await loadStateFromServer();
+    return flushed;
+  } finally {
+    backgroundSyncInFlight = false;
+  }
+}
+
+window.addEventListener('online', syncAcrossDevices);
 window.addEventListener('offline', function() { setSyncStatus(getOutbox().length ? 'pending' : 'offline'); });
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') syncAcrossDevices();
+});
+setInterval(function() {
+  if (document.visibilityState === 'visible' && (getOutbox().length || currentSyncMode !== 'online')) syncAcrossDevices();
+}, 30000);
 
 // ════════════════════════════════════════════════════════════════
 // STATE
@@ -3382,6 +3466,7 @@ async function loadState(cb) {
   loadStateLocal();
   cb();
   setSyncStatus(getOutbox().length ? 'pending' : 'offline');
+  await ensureAuthSession(false);
   var flushed = await flushPendingWrites();
   if (flushed) await loadStateFromServer();
   maybeImportHistory().then(function(imported) {
@@ -3421,11 +3506,14 @@ function updateSyncCenter() {
   var pending = document.getElementById('sync-pending-count');
   var backup = document.getElementById('sync-backup-state');
   var restoreButton = document.getElementById('restore-auto-backup-btn');
-  var labels = {online:'Все сохранено', pending:'Ожидает подключения', offline:'Работа без сети'};
+  var labels = {
+    online:'Все сохранено', pending:'Ожидает подключения', offline:'Работа без сети',
+    auth:'Откройте планировщик через кнопку бота в Telegram'
+  };
   if (status) status.textContent = labels[currentSyncMode] || labels.offline;
   if (icon) {
     icon.className = 'sync-state-icon ' + (currentSyncMode === 'online' ? '' : currentSyncMode);
-    icon.textContent = currentSyncMode === 'online' ? '✓' : (currentSyncMode === 'pending' ? '↻' : '−');
+    icon.textContent = currentSyncMode === 'online' ? '✓' : (currentSyncMode === 'pending' ? '↻' : (currentSyncMode === 'auth' ? '!' : '−'));
   }
   var localSaved = localStorage.getItem('planner_last_local_save_' + USER_ID);
   var serverSaved = localStorage.getItem('planner_last_server_sync_' + USER_ID);
@@ -3704,7 +3792,11 @@ function renderHome() {
   var focusAction = document.getElementById('home-focus-action');
   var syncPill = document.getElementById('home-sync-pill');
   var nextTask = todayTasks.filter(function(t) { return !t.done; })[0];
-  if (syncPill) syncPill.textContent = apiAvailable ? 'Синхр.' : 'Локально';
+  if (syncPill) {
+    syncPill.dataset.sync = currentSyncMode;
+    syncPill.textContent = currentSyncMode === 'online' ? 'Синхр.' :
+      (currentSyncMode === 'pending' ? 'В очереди' : (currentSyncMode === 'auth' ? 'Нужен Telegram' : 'Офлайн'));
+  }
   if (focusTitle && focusCopy && focusAction) {
     if (nextTask) {
       focusTitle.textContent = nextTask.prio === 'h' ? 'Закрой главное: ' + nextTask.text : 'Следующий шаг: ' + nextTask.text;
