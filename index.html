@@ -1087,6 +1087,16 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .sync-action-icon { font-size: 17px; line-height: 1; }
 .sync-notice { display: none; margin: 0 12px 12px; padding: 10px 12px; border-radius: 10px; background: var(--green-soft); color: var(--green); font-size: 11px; line-height: 1.45; }
 .sync-notice.error { background: var(--red-soft); color: var(--red); }
+.sync-debug {
+  margin: 0 12px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card2);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+.sync-debug b { color: var(--text); font-weight: 800; }
 
 /* ── PROFILE ONBOARDING ── */
 .profile-sheet { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
@@ -2062,12 +2072,14 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     </div>
     <div class="sync-actions">
       <button class="sync-action primary" id="sync-now-btn" onclick="syncNow()"><span>Синхронизировать сейчас</span><span class="sync-action-icon">↻</span></button>
+      <button class="sync-action" id="sync-pull-btn" onclick="pullFromServerNow()"><span>Загрузить с сервера</span><span class="sync-action-icon">⇣</span></button>
       <button class="sync-action" onclick="exportData()"><span>Скачать резервную копию</span><span class="sync-action-icon">↓</span></button>
       <button class="sync-action" onclick="document.getElementById('backup-file-input').click()"><span>Восстановить из файла</span><span class="sync-action-icon">↑</span></button>
       <input id="backup-file-input" type="file" accept="application/json,.json" style="display:none" onchange="importBackupFile(this)">
       <button class="sync-action" id="restore-auto-backup-btn" onclick="restoreAutomaticBackup()"><span>Восстановить автокопию</span><span class="sync-action-icon">↶</span></button>
     </div>
     <div class="sync-notice" id="sync-notice"></div>
+    <div class="sync-debug" id="sync-debug">Диагностика появится после проверки синхронизации.</div>
     <div style="height:80px"></div>
   </div>
 
@@ -2568,6 +2580,8 @@ if (tg) {
 // На Vercel API идет через тот же домен. Это надежнее внутри Telegram WebView.
 // ════════════════════════════════════════════════════════════════
 var API_BASE = location.hostname.endsWith('.vercel.app') ? '' : 'https://planner-backend-production-ad6d.up.railway.app';
+var lastServerSnapshotCount = 0;
+var lastServerUserId = null;
 
 function getUserId() {
   const u = tg?.initDataUnsafe?.user;
@@ -3277,6 +3291,13 @@ function snapshotRecordCount(snapshot) {
     Object.keys(snapshot.supps_checked || {}).length;
 }
 
+function bootstrapRecordCount(bootstrap) {
+  if (!bootstrap) return 0;
+  return ['workouts','tasks','task_templates','supplements','body_weight','body_calories','body_measures','food_log_recent','food_favorites']
+    .reduce(function(total, key) { return total + (Array.isArray(bootstrap[key]) ? bootstrap[key].length : 0); }, 0) +
+    (Array.isArray(bootstrap.supplement_checks) ? bootstrap.supplement_checks.length : 0);
+}
+
 function saveStateBackup(snapshot) {
   var key = 'planner_state_backup_' + USER_ID;
   var previousKey = 'planner_state_backup_previous_' + USER_ID;
@@ -3428,6 +3449,10 @@ async function recoverEmptyServerSections(bootstrap) {
 }
 
 function applyBootstrap(bootstrap) {
+  lastServerUserId = bootstrap?.user_id || null;
+  lastServerSnapshotCount = bootstrapRecordCount(bootstrap);
+  localStorage.setItem('planner_last_server_user_' + USER_ID, String(lastServerUserId || ''));
+  localStorage.setItem('planner_last_server_count_' + USER_ID, String(lastServerSnapshotCount || 0));
   applyServerProfile(bootstrap.settings);
   applyServerNotifications(bootstrap.settings);
   var deletedKeys = new Set(getTombstones().map(function(item) { return item.kind + '|' + item.key; }));
@@ -3479,6 +3504,7 @@ function renderSyncedScreens() {
 
 async function loadStateFromServer() {
   if (getOutbox().length) return false;
+  await ensureAuthSession(false);
   var bootstrap = await apiCall('GET', '/api/bootstrap');
   if (bootstrap === null) return false;
   await recoverEmptyServerSections(bootstrap);
@@ -3532,6 +3558,7 @@ function updateSyncCenter() {
   var records = document.getElementById('sync-record-count');
   var pending = document.getElementById('sync-pending-count');
   var backup = document.getElementById('sync-backup-state');
+  var debug = document.getElementById('sync-debug');
   var restoreButton = document.getElementById('restore-auto-backup-btn');
   var labels = {
     online:'Все сохранено', pending:'Ожидает подключения', offline:'Работа без сети',
@@ -3550,6 +3577,18 @@ function updateSyncCenter() {
   var hasBackup = !!(localStorage.getItem('planner_state_backup_previous_' + USER_ID) || localStorage.getItem('planner_state_backup_' + USER_ID));
   if (backup) backup.textContent = hasBackup ? 'есть' : 'нет';
   if (restoreButton) restoreButton.disabled = !hasBackup;
+  if (debug) {
+    var source = tg?.initData ? 'Telegram' : (localStorage.getItem('planner_session_token_' + USER_ID) ? 'сессия' : 'локально');
+    var serverUser = localStorage.getItem('planner_last_server_user_' + USER_ID) || lastServerUserId || '—';
+    var serverCount = localStorage.getItem('planner_last_server_count_' + USER_ID) || lastServerSnapshotCount || 0;
+    var lastError = {};
+    try { lastError = JSON.parse(localStorage.getItem('planner_last_sync_error_' + USER_ID) || '{}'); } catch (_) {}
+    debug.innerHTML = '<b>Вход:</b> ' + escapeHtml(source) +
+      ' · <b>ID:</b> ' + escapeHtml(USER_ID) +
+      ' · <b>сервер ID:</b> ' + escapeHtml(serverUser) +
+      ' · <b>на сервере:</b> ' + escapeHtml(serverCount) +
+      (lastError.code || lastError.status ? ' · <b>ошибка:</b> ' + escapeHtml(lastError.code || lastError.status) : '');
+  }
 }
 
 function showSyncNotice(message, isError) {
@@ -3568,6 +3607,18 @@ async function syncNow() {
   var flushed = await flushPendingWrites();
   var loaded = flushed ? await loadStateFromServer() : false;
   if (flushed && loaded) showSyncNotice('Данные на устройстве и сервере синхронизированы.', false);
+  else showSyncNotice(syncFailureMessage(), true);
+  if (button) button.disabled = false;
+  updateSyncCenter();
+}
+
+async function pullFromServerNow() {
+  var button = document.getElementById('sync-pull-btn');
+  if (button) button.disabled = true;
+  showSyncNotice('Загружаем актуальные данные с сервера…', false);
+  await ensureAuthSession(false);
+  var loaded = await loadStateFromServer();
+  if (loaded) showSyncNotice('Данные с сервера загружены на это устройство.', false);
   else showSyncNotice(syncFailureMessage(), true);
   if (button) button.disabled = false;
   updateSyncCenter();
