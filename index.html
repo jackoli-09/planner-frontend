@@ -1011,6 +1011,33 @@ html[data-theme="dark"] .focus-card {
 .exercise-editor-list { display: grid; gap: 7px; margin-top: 8px; }
 .exercise-editor-row { display: grid; grid-template-columns: 1fr 34px; gap: 7px; align-items: center; }
 .exercise-editor-row input { min-width: 0; }
+.last-set-card {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+}
+.last-set-copy { min-width: 0; }
+.last-set-title { font-size: 11px; font-weight: 800; color: var(--text); }
+.last-set-meta { margin-top: 3px; font-size: 10px; line-height: 1.35; color: var(--text-muted); }
+.last-set-btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  height: 34px;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
 
 .ex-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 9px; }
 .ex-sets { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -2518,6 +2545,13 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     <div class="modal-row" id="m-custom-exercise-row" style="display:none">
       <div class="modal-label">Новое упражнение</div>
       <input class="modal-input" id="m-custom-exercise" maxlength="120" placeholder="Например: Жим в хаммере">
+    </div>
+    <div class="last-set-card" id="m-last-set-card">
+      <div class="last-set-copy">
+        <div class="last-set-title">Последний рабочий подход</div>
+        <div class="last-set-meta" id="m-last-set-meta"></div>
+      </div>
+      <button class="last-set-btn" onclick="applyLastSetSuggestion()">Повторить</button>
     </div>
     <div class="modal-grid">
       <div class="modal-row">
@@ -4322,6 +4356,7 @@ function updateExerciseSelect() {
 
 function openAddSet() {
   updateExerciseSelect();
+  suggestLastSetForExercise(true);
   updateRMPreview();
   document.getElementById('modal-set').classList.add('open');
 }
@@ -4341,6 +4376,7 @@ function updateRMPreview() {
   const prevSets = state.workouts.filter(s=>s.exercise===ex);
   const avgW = prevSets.length ? round1(prevSets.reduce((a,s)=>a+s.weight,0)/prevSets.length) : w;
   document.getElementById('m-avg-preview').textContent = avgW + ' кг';
+  renderLastSetCard(ex);
 }
 
 function readSelectedExerciseName() {
@@ -4349,10 +4385,50 @@ function readSelectedExerciseName() {
   return selected;
 }
 
+function lastSetForExercise(exerciseName) {
+  if (!exerciseName) return null;
+  return (state.workouts || [])
+    .filter(function(item) { return item.exercise === exerciseName; })
+    .sort(function(a, b) {
+      var byDate = String(b.date || '').localeCompare(String(a.date || ''));
+      if (byDate) return byDate;
+      return (b.id || 0) - (a.id || 0);
+    })[0] || null;
+}
+
+function renderLastSetCard(exerciseName) {
+  var card = document.getElementById('m-last-set-card');
+  var meta = document.getElementById('m-last-set-meta');
+  if (!card || !meta) return;
+  var last = lastSetForExercise(exerciseName);
+  if (!last || document.getElementById('m-exercise').value === '__custom__') {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'flex';
+  meta.textContent = asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг';
+}
+
+function suggestLastSetForExercise(autofill) {
+  var ex = readSelectedExerciseName();
+  var last = lastSetForExercise(ex);
+  renderLastSetCard(ex);
+  if (!autofill || !last) return;
+  document.getElementById('m-sets').value = last.sets || 4;
+  document.getElementById('m-reps').value = last.reps || 8;
+  document.getElementById('m-weight').value = last.weight || 0;
+}
+
+function applyLastSetSuggestion() {
+  suggestLastSetForExercise(true);
+  updateRMPreview();
+}
+
 ['m-weight','m-reps','m-exercise'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input', updateRMPreview);
   document.getElementById(id)?.addEventListener('change', function() {
     toggleCustomExerciseInput();
+    suggestLastSetForExercise(true);
     updateRMPreview();
   });
 });
