@@ -2912,10 +2912,32 @@ function getApiHeaders() {
 
 var authSessionInFlight = null;
 
+function rememberSyncError(details) {
+  localStorage.setItem('planner_last_sync_error_' + USER_ID, JSON.stringify(Object.assign({
+    at:new Date().toISOString()
+  }, details || {})));
+}
+
+function syncFailureMessage() {
+  var token = localStorage.getItem('planner_session_token_' + USER_ID);
+  if (!tg?.initData && !token) {
+    return 'Telegram не передал авторизацию. Закройте страницу и откройте планировщик кнопкой «Открыть планировщик» в меню бота.';
+  }
+  var error = {};
+  try { error = JSON.parse(localStorage.getItem('planner_last_sync_error_' + USER_ID) || '{}'); } catch (_) {}
+  if (error.status === 401) return 'Авторизация Telegram устарела. Полностью закройте Mini App и откройте заново через меню бота.';
+  if (error.status === 422) return 'Одна запись в очереди имеет старый формат. Данные сохранены; требуется исправление очереди.';
+  if (!error.status) return 'Сервер не ответил. Данные сохранены на устройстве, повторная отправка продолжится автоматически.';
+  return 'Сервер вернул ошибку ' + error.status + '. Данные сохранены на устройстве.';
+}
+
 async function ensureAuthSession(force) {
   var key = 'planner_session_token_' + USER_ID;
   if (!force && localStorage.getItem(key)) return true;
-  if (!tg?.initData) return false;
+  if (!tg?.initData) {
+    rememberSyncError({code:'telegram_context_missing', status:401});
+    return false;
+  }
   if (authSessionInFlight) return authSessionInFlight;
   authSessionInFlight = (async function() {
     var controller = new AbortController();
@@ -2926,13 +2948,21 @@ async function ensureAuthSession(force) {
         headers:{'Content-Type':'application/json', 'X-Telegram-Init-Data':tg.initData},
         signal:controller.signal
       });
-      if (!response.ok) return false;
+      if (!response.ok) {
+        rememberSyncError({code:'session_rejected', status:response.status});
+        return false;
+      }
       var session = await response.json();
-      if (!session?.token || String(session.user_id) !== String(USER_ID)) return false;
+      if (!session?.token || String(session.user_id) !== String(USER_ID)) {
+        rememberSyncError({code:'session_user_mismatch', status:401});
+        return false;
+      }
       localStorage.setItem(key, session.token);
       localStorage.setItem('planner_session_expires_' + USER_ID, String(session.expires_at || ''));
+      localStorage.removeItem('planner_last_sync_error_' + USER_ID);
       return true;
-    } catch (_) {
+    } catch (error) {
+      rememberSyncError({code:'session_network_error', status:0, message:String(error?.message || error?.name || 'Network error')});
       return false;
     } finally {
       clearTimeout(timeout);
@@ -3044,9 +3074,7 @@ async function apiCall(method, path, body, options) {
       }
     }
     apiAvailable = false;
-    localStorage.setItem('planner_last_sync_error_' + USER_ID, JSON.stringify({
-      at:new Date().toISOString(), path:path, status:e.status || 0, message:String(e.message || e.name || 'Network error')
-    }));
+    rememberSyncError({path:path, status:e.status || 0, message:String(e.message || e.name || 'Network error')});
     if (isWrite && [400, 404, 409, 422].includes(e.status)) {
       removeQueuedWrite(outboxId);
     }
@@ -3536,10 +3564,11 @@ async function syncNow() {
   var button = document.getElementById('sync-now-btn');
   if (button) button.disabled = true;
   showSyncNotice('Проверяем и сохраняем изменения…', false);
+  await ensureAuthSession(false);
   var flushed = await flushPendingWrites();
   var loaded = flushed ? await loadStateFromServer() : false;
   if (flushed && loaded) showSyncNotice('Данные на устройстве и сервере синхронизированы.', false);
-  else showSyncNotice('Не удалось связаться с сервером. Изменения остаются на устройстве.', true);
+  else showSyncNotice(syncFailureMessage(), true);
   if (button) button.disabled = false;
   updateSyncCenter();
 }
