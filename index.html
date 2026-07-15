@@ -1190,7 +1190,8 @@ html[data-theme="dark"] .focus-card {
 .workout-day {
   position: relative;
   flex: 0 0 52px;
-  min-height: 64px;
+  min-height: 70px;
+  padding-bottom: 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--card);
@@ -1208,7 +1209,7 @@ html[data-theme="dark"] .focus-card {
 .workout-day.today:not(.active) { border-color: var(--neon2); }
 .workout-day-week {
   display: block;
-  margin-top: 9px;
+  margin-top: 8px;
   font-size: 9px;
   font-weight: 800;
   color: currentColor;
@@ -1217,14 +1218,15 @@ html[data-theme="dark"] .focus-card {
 }
 .workout-day-num {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 18px;
   font-weight: 900;
+  line-height: 1;
 }
 .workout-day-dot {
   position: absolute;
   left: 50%;
-  bottom: 7px;
+  bottom: 8px;
   width: 6px;
   height: 6px;
   transform: translateX(-50%);
