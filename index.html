@@ -3742,6 +3742,7 @@ var HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","e
 
 let currentMuscle = 'Грудь + Трицепс';
 let currentWorkoutDate = localDateISO();
+let currentWorkoutStripDate = localDateISO();
 let currentBodyTab = 'weight';
 let selectedSuppDate = localDateISO();
 let reportMonthOffset = 0; // 0 = current month
@@ -4715,7 +4716,8 @@ function renderWorkoutCalendar() {
   }
   if (!strip) return;
   var workoutDates = new Set((state.workouts || []).map(function(w) { return w.date; }));
-  var selectedDate = new Date(selected + 'T00:00:00');
+  var stripCenter = currentWorkoutStripDate || selected;
+  var selectedDate = new Date(stripCenter + 'T00:00:00');
   var days = [];
   for (var offset = -6; offset <= 6; offset++) {
     var d = new Date(selectedDate);
@@ -4741,7 +4743,9 @@ function selectWorkoutDate(dateStr) {
 function shiftWorkoutDate(delta) {
   var d = new Date((currentWorkoutDate || todayStr()) + 'T00:00:00');
   d.setDate(d.getDate() + delta);
-  selectWorkoutDate(localDateISO(d));
+  var nextDate = localDateISO(d);
+  currentWorkoutStripDate = nextDate;
+  selectWorkoutDate(nextDate);
 }
 
 function renderMuscleTabs() {
