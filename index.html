@@ -1147,6 +1147,94 @@ html[data-theme="dark"] .focus-card {
   font-weight: 800;
   cursor: pointer;
 }
+.workout-calendar {
+  margin: 0 0 10px;
+}
+.workout-calendar-head {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 8px;
+}
+.workout-date-title {
+  text-align: center;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+}
+.workout-date-title span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.workout-date-nav {
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font: 900 16px/1 'Manrope', sans-serif;
+  cursor: pointer;
+}
+.workout-day-strip {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 0 12px 2px;
+  scrollbar-width: none;
+}
+.workout-day-strip::-webkit-scrollbar { display: none; }
+.workout-day {
+  position: relative;
+  flex: 0 0 52px;
+  min-height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .14s ease, border-color .14s ease, background .14s ease;
+}
+.workout-day:active { transform: scale(.97); }
+.workout-day.active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+.workout-day.today:not(.active) { border-color: var(--neon2); }
+.workout-day-week {
+  display: block;
+  margin-top: 9px;
+  font-size: 9px;
+  font-weight: 800;
+  color: currentColor;
+  opacity: .62;
+  text-transform: uppercase;
+}
+.workout-day-num {
+  display: block;
+  margin-top: 5px;
+  font-size: 18px;
+  font-weight: 900;
+}
+.workout-day-dot {
+  position: absolute;
+  left: 50%;
+  bottom: 7px;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--neon2);
+  box-shadow: 0 0 8px var(--neon-soft);
+  opacity: 0;
+}
+.workout-day.has-workout .workout-day-dot { opacity: 1; }
+.workout-day.active .workout-day-dot { background: var(--bg); box-shadow: none; }
 .workout-session-panel {
   margin: 0 12px 10px;
   padding: 13px 14px;
@@ -2163,6 +2251,15 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     <div class="page-header">
       <div class="ph-title">Силовой дневник</div>
       <div class="ph-sub" id="wo-date-label"></div>
+    </div>
+
+    <div class="workout-calendar">
+      <div class="workout-calendar-head">
+        <button class="workout-date-nav" onclick="shiftWorkoutDate(-1)" aria-label="Предыдущий день">‹</button>
+        <div class="workout-date-title" id="workout-date-title">Сегодня<span>Выбери день тренировки</span></div>
+        <button class="workout-date-nav" onclick="shiftWorkoutDate(1)" aria-label="Следующий день">›</button>
+      </div>
+      <div class="workout-day-strip" id="workout-day-strip"></div>
     </div>
 
     <div class="muscle-tabs" id="muscle-tabs"></div>
@@ -3642,6 +3739,7 @@ var HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","e
 ;
 
 let currentMuscle = 'Грудь + Трицепс';
+let currentWorkoutDate = localDateISO();
 let currentBodyTab = 'weight';
 let selectedSuppDate = localDateISO();
 let reportMonthOffset = 0; // 0 = current month
@@ -4585,10 +4683,63 @@ function selectMuscle(muscle, el) {
 }
 
 function renderWorkout() {
-  document.getElementById('wo-date-label').textContent = formatDate(todayStr());
+  renderWorkoutCalendar();
   renderMuscleTabs();
   renderExercises();
   updateExerciseSelect();
+}
+
+function workoutDateLabel(dateStr) {
+  if (dateStr === todayStr()) return 'Сегодня';
+  var yesterday = new Date(todayStr() + 'T00:00:00');
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dateStr === localDateISO(yesterday)) return 'Вчера';
+  var tomorrow = new Date(todayStr() + 'T00:00:00');
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (dateStr === localDateISO(tomorrow)) return 'Завтра';
+  return asDateStr(dateStr);
+}
+
+function renderWorkoutCalendar() {
+  var label = document.getElementById('wo-date-label');
+  var title = document.getElementById('workout-date-title');
+  var strip = document.getElementById('workout-day-strip');
+  var selected = currentWorkoutDate || todayStr();
+  if (label) label.textContent = formatDate(selected);
+  var selectedSets = (state.workouts || []).filter(function(w) { return w.date === selected; });
+  if (title) {
+    title.innerHTML = escapeHtml(workoutDateLabel(selected)) +
+      '<span>' + selectedSets.length + ' подходов · ' + formatDate(selected) + '</span>';
+  }
+  if (!strip) return;
+  var workoutDates = new Set((state.workouts || []).map(function(w) { return w.date; }));
+  var selectedDate = new Date(selected + 'T00:00:00');
+  var days = [];
+  for (var offset = -6; offset <= 6; offset++) {
+    var d = new Date(selectedDate);
+    d.setDate(d.getDate() + offset);
+    var iso = localDateISO(d);
+    var active = iso === selected ? ' active' : '';
+    var today = iso === todayStr() ? ' today' : '';
+    var has = workoutDates.has(iso) ? ' has-workout' : '';
+    days.push('<button class="workout-day' + active + today + has + '" onclick="selectWorkoutDate(\'' + iso + '\')">' +
+      '<span class="workout-day-week">' + d.toLocaleDateString('ru-RU', {weekday:'short'}).replace('.', '') + '</span>' +
+      '<span class="workout-day-num">' + d.getDate() + '</span>' +
+      '<span class="workout-day-dot"></span>' +
+    '</button>');
+  }
+  strip.innerHTML = days.join('');
+}
+
+function selectWorkoutDate(dateStr) {
+  currentWorkoutDate = dateStr || todayStr();
+  renderWorkout();
+}
+
+function shiftWorkoutDate(delta) {
+  var d = new Date((currentWorkoutDate || todayStr()) + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  selectWorkoutDate(localDateISO(d));
 }
 
 function renderMuscleTabs() {
@@ -4611,15 +4762,15 @@ function selectWorkoutGroup(index, el) {
 }
 
 function renderExercises() {
-  const today = todayStr();
+  const selectedDate = currentWorkoutDate || todayStr();
   const exNames = getExerciseList(currentMuscle);
   const container = document.getElementById('exercise-list');
 
-  const todaySets = state.workouts
+  const selectedSets = state.workouts
     .map((w, idx) => ({...w, _idx: idx}))
-    .filter(w => w.date === today && w.muscle === currentMuscle);
+    .filter(w => w.date === selectedDate && w.muscle === currentMuscle);
   const byEx = {};
-  todaySets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
+  selectedSets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
 
   const exToShow = [...new Set([...Object.keys(byEx), ...exNames])];
   renderWorkoutSessionSummary(exToShow, byEx);
@@ -4634,12 +4785,13 @@ function renderExercises() {
     const maxRM = sets.length ? Math.max(...sets.map(s=>calc1rm(s.weight,s.reps))) : 0;
     const avgW = sets.length ? round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length) : 0;
     const last = lastSetForExercise(ex);
-    const lastMeta = last ? ('Последний: ' + asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг') : 'Добавь первый рабочий подход';
+    const lastMeta = last ? ('Последний: ' + asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг') : '';
+    const emptyMeta = selectedDate === todayStr() ? 'Нет подходов сегодня' : 'Нет подходов за выбранный день';
     return `<div class="card exercise-plan-card"><div class="card-inner">
       <div class="exercise-plan-head">
         <div>
           <div class="ex-name">${escapeHtml(ex)}</div>
-          <div class="ex-stats">${sets.length ? ('1RM: <strong>' + maxRM + ' кг</strong> · Ср. вес: <strong>' + avgW + ' кг</strong>') : escapeHtml(lastMeta)}</div>
+          <div class="ex-stats">${sets.length ? ('1RM: <strong>' + maxRM + ' кг</strong> · Ср. вес: <strong>' + avgW + ' кг</strong>') : escapeHtml(emptyMeta)}</div>
         </div>
         <div class="exercise-plan-status${sets.length ? ' done' : ''}">${sets.length ? '✓' : '•'}</div>
       </div>
@@ -4653,8 +4805,8 @@ function renderExercises() {
 
   container.innerHTML = html || `<div class="card">
     <div class="card-inner" style="text-align:center;padding:28px 18px">
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">Сегодня подходов пока нет</div>
-      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Выбери группу мышц и добавь первый подход. Рекорды и графики обновятся автоматически.</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">В этот день подходов пока нет</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Выбери дату, группу мышц и добавь первый подход. Записи останутся именно в выбранном дне.</div>
     </div>
   </div>`;
 }
@@ -4669,7 +4821,7 @@ function renderWorkoutSessionSummary(exercises, byEx) {
   var sets = Object.values(byEx).reduce(function(sum, items) { return sum + items.length; }, 0);
   var pct = total ? Math.round(done / total * 100) : 0;
   if (title) title.textContent = currentMuscle;
-  if (meta) meta.textContent = total ? (done + ' из ' + total + ' упражнений · ' + sets + ' подходов сегодня') : 'Добавь упражнения в группу, чтобы собрать план занятия.';
+  if (meta) meta.textContent = total ? (done + ' из ' + total + ' упражнений · ' + sets + ' подходов · ' + workoutDateLabel(currentWorkoutDate || todayStr()).toLowerCase()) : 'Добавь упражнения в группу, чтобы собрать план занятия.';
   if (badge) badge.textContent = pct + '%';
   if (fill) fill.style.width = pct + '%';
 }
@@ -4794,7 +4946,7 @@ async function saveSet() {
   }
   const entry = {
     client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
-    date: todayStr(), muscle: currentMuscle,
+    date: currentWorkoutDate || todayStr(), muscle: currentMuscle,
     exercise: exerciseName,
     sets: parseInt(document.getElementById('m-sets').value)||1,
     reps: parseInt(document.getElementById('m-reps').value)||1,
@@ -4808,6 +4960,7 @@ async function saveSet() {
     saveState();
   }
   closeModal('modal-set');
+  renderWorkoutCalendar();
   renderExercises();
   updateExerciseSelect();
 }
@@ -4916,6 +5069,7 @@ async function deleteWorkout(index, id) {
       item.method === 'POST' && item.path === '/api/workouts' && item.body?.client_id === workout.client_id
     )));
   }
+  renderWorkoutCalendar();
   renderExercises();
   renderHome();
 }
