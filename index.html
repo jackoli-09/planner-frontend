@@ -4763,7 +4763,6 @@ function selectWorkoutGroup(index, el) {
 
 function renderExercises() {
   const selectedDate = currentWorkoutDate || todayStr();
-  const exNames = getExerciseList(currentMuscle);
   const container = document.getElementById('exercise-list');
 
   const selectedSets = state.workouts
@@ -4772,32 +4771,31 @@ function renderExercises() {
   const byEx = {};
   selectedSets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
 
-  const exToShow = [...new Set([...Object.keys(byEx), ...exNames])];
+  const exToShow = Object.keys(byEx);
   renderWorkoutSessionSummary(exToShow, byEx);
 
   var html = exToShow.map(ex => {
     const sets = byEx[ex] || [];
-    const chips = sets.length ? sets.map(s => {
+    const chips = sets.map(s => {
       const orm = calc1rm(s.weight, s.reps);
       const isPR = isPRFor(ex, orm);
       return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' ★':''} <button onclick="deleteWorkout(${s._idx},${s.id||0})" style="margin-left:6px;border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></div>`;
-    }).join('') : '<div class="set-chip" style="background:var(--card2);color:var(--text-muted)">пока нет подходов</div>';
-    const maxRM = sets.length ? Math.max(...sets.map(s=>calc1rm(s.weight,s.reps))) : 0;
-    const avgW = sets.length ? round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length) : 0;
+    }).join('');
+    const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
+    const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
     const last = lastSetForExercise(ex);
     const lastMeta = last ? ('Последний: ' + asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг') : '';
-    const emptyMeta = selectedDate === todayStr() ? 'Нет подходов сегодня' : 'Нет подходов за выбранный день';
     return `<div class="card exercise-plan-card"><div class="card-inner">
       <div class="exercise-plan-head">
         <div>
           <div class="ex-name">${escapeHtml(ex)}</div>
-          <div class="ex-stats">${sets.length ? ('1RM: <strong>' + maxRM + ' кг</strong> · Ср. вес: <strong>' + avgW + ' кг</strong>') : escapeHtml(emptyMeta)}</div>
+          <div class="ex-stats">1RM: <strong>${maxRM} кг</strong> · Ср. вес: <strong>${avgW} кг</strong></div>
         </div>
-        <div class="exercise-plan-status${sets.length ? ' done' : ''}">${sets.length ? '✓' : '•'}</div>
+        <div class="exercise-plan-status done">✓</div>
       </div>
       <div class="ex-sets">${chips}</div>
       <div class="exercise-plan-foot">
-        <span>${sets.length ? escapeHtml(lastMeta) : 'Плановое упражнение'}</span>
+        <span>${escapeHtml(lastMeta)}</span>
         <button class="exercise-plan-add" onclick="openAddSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">+ подход</button>
       </div>
     </div></div>`;
@@ -4805,8 +4803,8 @@ function renderExercises() {
 
   container.innerHTML = html || `<div class="card">
     <div class="card-inner" style="text-align:center;padding:28px 18px">
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">В этот день подходов пока нет</div>
-      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Выбери дату, группу мышц и добавь первый подход. Записи останутся именно в выбранном дне.</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">В этот день упражнений пока нет</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Нажми “Добавить подход”, выбери упражнение и сохрани — только после этого оно появится в дневнике.</div>
     </div>
   </div>`;
 }
@@ -4821,7 +4819,7 @@ function renderWorkoutSessionSummary(exercises, byEx) {
   var sets = Object.values(byEx).reduce(function(sum, items) { return sum + items.length; }, 0);
   var pct = total ? Math.round(done / total * 100) : 0;
   if (title) title.textContent = currentMuscle;
-  if (meta) meta.textContent = total ? (done + ' из ' + total + ' упражнений · ' + sets + ' подходов · ' + workoutDateLabel(currentWorkoutDate || todayStr()).toLowerCase()) : 'Добавь упражнения в группу, чтобы собрать план занятия.';
+  if (meta) meta.textContent = total ? (done + ' упражнений · ' + sets + ' подходов · ' + workoutDateLabel(currentWorkoutDate || todayStr()).toLowerCase()) : 'Упражнения появятся после выбора и сохранения подхода.';
   if (badge) badge.textContent = pct + '%';
   if (fill) fill.style.width = pct + '%';
 }
