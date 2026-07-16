@@ -3007,6 +3007,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     <div class="modal-hint">
       1RM: <strong id="m-1rm-preview">—</strong> · Ср. вес: <strong id="m-avg-preview">—</strong>
     </div>
+    <div class="profile-error" id="m-set-error"></div>
     <button class="btn-primary" onclick="saveSet()">Сохранить подход</button>
     <button class="modal-close-btn" onclick="closeModal('modal-set')">Отмена</button>
   </div>
@@ -4888,9 +4889,15 @@ function updateWorkoutSetDateLabel() {
   label.textContent = workoutDateLabel(value) + ' · ' + formatDate(value);
 }
 
+function setWorkoutSetError(message) {
+  var error = document.getElementById('m-set-error');
+  if (error) error.textContent = message || '';
+}
+
 function openAddSet() {
   updateExerciseSelect();
   syncWorkoutSetDateInput();
+  setWorkoutSetError('');
   suggestLastSetForExercise(true);
   updateRMPreview();
   document.getElementById('modal-set').classList.add('open');
@@ -4899,6 +4906,7 @@ function openAddSet() {
 function openAddSetForExercise(exerciseName) {
   updateExerciseSelect();
   syncWorkoutSetDateInput();
+  setWorkoutSetError('');
   var sel = document.getElementById('m-exercise');
   var hasOption = Array.from(sel.options).some(function(option) { return option.value === exerciseName; });
   if (hasOption) {
@@ -4976,20 +4984,43 @@ function applyLastSetSuggestion() {
   updateRMPreview();
 }
 
-['m-weight','m-reps','m-exercise'].forEach(id=>{
-  document.getElementById(id)?.addEventListener('input', updateRMPreview);
+['m-sets','m-weight','m-reps','m-exercise','m-workout-date'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input', function() {
+    setWorkoutSetError('');
+    updateRMPreview();
+  });
   document.getElementById(id)?.addEventListener('change', function() {
+    setWorkoutSetError('');
     toggleCustomExerciseInput();
     suggestLastSetForExercise(true);
+    updateWorkoutSetDateLabel();
     updateRMPreview();
   });
 });
-document.getElementById('m-custom-exercise')?.addEventListener('input', updateRMPreview);
+document.getElementById('m-custom-exercise')?.addEventListener('input', function() {
+  setWorkoutSetError('');
+  updateRMPreview();
+});
 
 async function saveSet() {
+  setWorkoutSetError('');
   var exerciseName = readSelectedExerciseName();
-  if (!exerciseName) return;
   var entryDate = document.getElementById('m-workout-date')?.value || currentWorkoutDate || todayStr();
+  var sets = parseInt(document.getElementById('m-sets').value, 10);
+  var reps = parseInt(document.getElementById('m-reps').value, 10);
+  var weight = parseFloat(document.getElementById('m-weight').value);
+  if (!entryDate) {
+    setWorkoutSetError('Укажи дату тренировки.');
+    return;
+  }
+  if (!exerciseName) {
+    setWorkoutSetError('Выбери или введи упражнение.');
+    return;
+  }
+  if (!Number.isFinite(sets) || sets < 1 || !Number.isFinite(reps) || reps < 1 || !Number.isFinite(weight) || weight < 0) {
+    setWorkoutSetError('Проверь подходы, повторения и вес.');
+    return;
+  }
   var group = workoutGroups.find(function(item) { return item.name === currentMuscle; });
   if (group && !group.exercises.some(function(ex) { return ex.toLowerCase() === exerciseName.toLowerCase(); })) {
     group.exercises.push(exerciseName);
@@ -4999,9 +5030,9 @@ async function saveSet() {
     client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
     date: entryDate, muscle: currentMuscle,
     exercise: exerciseName,
-    sets: parseInt(document.getElementById('m-sets').value)||1,
-    reps: parseInt(document.getElementById('m-reps').value)||1,
-    weight: parseFloat(document.getElementById('m-weight').value)||0,
+    sets: sets,
+    reps: reps,
+    weight: weight,
   };
   state.workouts.push(entry);
   saveState();
