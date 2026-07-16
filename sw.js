@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'planner-shell-v25';
+const CACHE_VERSION = 'planner-shell-v26';
 const CORE_ASSETS = [
   './',
   './index.html',

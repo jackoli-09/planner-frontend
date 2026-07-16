@@ -1332,6 +1332,29 @@ html[data-theme="dark"] .focus-card {
   cursor: pointer;
   white-space: nowrap;
 }
+.workout-date-field {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+}
+.workout-date-field-title { color: var(--text); font-size: 12px; font-weight: 900; }
+.workout-date-field-sub { margin-top: 3px; color: var(--text-muted); font-size: 10px; line-height: 1.35; }
+.workout-date-input {
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: 800 12px/1 'Manrope', sans-serif;
+}
 
 .ex-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 9px; }
 .exercise-plan-card .card-inner { padding: 13px; }
@@ -2945,6 +2968,13 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 <div class="modal-overlay" id="modal-set">
   <div class="modal-sheet">
     <div class="modal-title">Добавить подход</div>
+    <div class="workout-date-field">
+      <div>
+        <div class="workout-date-field-title">Дата записи</div>
+        <div class="workout-date-field-sub" id="m-workout-date-label">Выбранный день календаря</div>
+      </div>
+      <input class="workout-date-input" type="date" id="m-workout-date" onchange="updateWorkoutSetDateLabel()">
+    </div>
     <div class="modal-row">
       <div class="modal-label">Упражнение</div>
       <select class="modal-input" id="m-exercise"></select>
@@ -4844,8 +4874,23 @@ function updateExerciseSelect() {
   toggleCustomExerciseInput();
 }
 
+function syncWorkoutSetDateInput() {
+  var input = document.getElementById('m-workout-date');
+  if (input) input.value = currentWorkoutDate || todayStr();
+  updateWorkoutSetDateLabel();
+}
+
+function updateWorkoutSetDateLabel() {
+  var input = document.getElementById('m-workout-date');
+  var label = document.getElementById('m-workout-date-label');
+  if (!label) return;
+  var value = input?.value || currentWorkoutDate || todayStr();
+  label.textContent = workoutDateLabel(value) + ' · ' + formatDate(value);
+}
+
 function openAddSet() {
   updateExerciseSelect();
+  syncWorkoutSetDateInput();
   suggestLastSetForExercise(true);
   updateRMPreview();
   document.getElementById('modal-set').classList.add('open');
@@ -4853,6 +4898,7 @@ function openAddSet() {
 
 function openAddSetForExercise(exerciseName) {
   updateExerciseSelect();
+  syncWorkoutSetDateInput();
   var sel = document.getElementById('m-exercise');
   var hasOption = Array.from(sel.options).some(function(option) { return option.value === exerciseName; });
   if (hasOption) {
@@ -4943,6 +4989,7 @@ document.getElementById('m-custom-exercise')?.addEventListener('input', updateRM
 async function saveSet() {
   var exerciseName = readSelectedExerciseName();
   if (!exerciseName) return;
+  var entryDate = document.getElementById('m-workout-date')?.value || currentWorkoutDate || todayStr();
   var group = workoutGroups.find(function(item) { return item.name === currentMuscle; });
   if (group && !group.exercises.some(function(ex) { return ex.toLowerCase() === exerciseName.toLowerCase(); })) {
     group.exercises.push(exerciseName);
@@ -4950,7 +4997,7 @@ async function saveSet() {
   }
   const entry = {
     client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
-    date: currentWorkoutDate || todayStr(), muscle: currentMuscle,
+    date: entryDate, muscle: currentMuscle,
     exercise: exerciseName,
     sets: parseInt(document.getElementById('m-sets').value)||1,
     reps: parseInt(document.getElementById('m-reps').value)||1,
@@ -4964,6 +5011,8 @@ async function saveSet() {
     saveState();
   }
   closeModal('modal-set');
+  currentWorkoutDate = entryDate;
+  currentWorkoutStripDate = entryDate;
   renderWorkoutCalendar();
   renderExercises();
   updateExerciseSelect();
