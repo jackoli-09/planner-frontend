@@ -1237,6 +1237,28 @@ html[data-theme="dark"] .focus-card {
 }
 .workout-day.has-workout .workout-day-dot { opacity: 1; }
 .workout-day.active .workout-day-dot { background: var(--bg); box-shadow: none; }
+.workout-today-btn {
+  display: block;
+  width: calc(100% - 24px);
+  min-height: 36px;
+  margin: 8px 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .14s ease, color .14s ease, border-color .14s ease, background .14s ease;
+}
+.workout-today-btn:active { transform: scale(.98); }
+.workout-today-btn.is-current {
+  color: var(--text);
+  border-color: var(--border);
+  opacity: .62;
+  cursor: default;
+}
 .workout-session-panel {
   margin: 0 12px 10px;
   padding: 13px 14px;
@@ -2285,6 +2307,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <button class="workout-date-nav" onclick="shiftWorkoutDate(1)" aria-label="Следующий день">›</button>
       </div>
       <div class="workout-day-strip" id="workout-day-strip"></div>
+      <button class="workout-today-btn" id="workout-today-btn" onclick="jumpWorkoutToday()">Вернуться к сегодня</button>
     </div>
 
     <div class="muscle-tabs" id="muscle-tabs"></div>
@@ -4738,12 +4761,19 @@ function renderWorkoutCalendar() {
   var label = document.getElementById('wo-date-label');
   var title = document.getElementById('workout-date-title');
   var strip = document.getElementById('workout-day-strip');
+  var todayBtn = document.getElementById('workout-today-btn');
   var selected = currentWorkoutDate || todayStr();
   if (label) label.textContent = formatDate(selected);
   var selectedSets = (state.workouts || []).filter(function(w) { return w.date === selected; });
   if (title) {
     title.innerHTML = escapeHtml(workoutDateLabel(selected)) +
       '<span>' + selectedSets.length + ' подходов · ' + formatDate(selected) + '</span>';
+  }
+  if (todayBtn) {
+    var isToday = selected === todayStr();
+    todayBtn.classList.toggle('is-current', isToday);
+    todayBtn.disabled = isToday;
+    todayBtn.textContent = isToday ? 'Сегодня открыто' : 'Вернуться к сегодня';
   }
   if (!strip) return;
   var workoutDates = new Set((state.workouts || []).map(function(w) { return w.date; }));
@@ -4777,6 +4807,12 @@ function shiftWorkoutDate(delta) {
   var nextDate = localDateISO(d);
   currentWorkoutStripDate = nextDate;
   selectWorkoutDate(nextDate);
+}
+
+function jumpWorkoutToday() {
+  currentWorkoutDate = todayStr();
+  currentWorkoutStripDate = todayStr();
+  renderWorkout();
 }
 
 function renderMuscleTabs() {
