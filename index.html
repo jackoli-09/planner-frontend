@@ -1422,6 +1422,12 @@ html[data-theme="dark"] .focus-card {
   font-size: 10px;
   line-height: 1.35;
 }
+.exercise-plan-foot span { flex: 1; }
+.exercise-plan-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
 .ex-sets { display: flex; gap: 6px; flex-wrap: wrap; }
 .set-chip {
   font-size: 11px; padding: 5px 10px; border-radius: 9px;
@@ -4757,6 +4763,15 @@ function workoutDateLabel(dateStr) {
   return asDateStr(dateStr);
 }
 
+function pluralRu(count, one, few, many) {
+  var n = Math.abs(count) % 100;
+  var n1 = n % 10;
+  if (n > 10 && n < 20) return many;
+  if (n1 > 1 && n1 < 5) return few;
+  if (n1 === 1) return one;
+  return many;
+}
+
 function renderWorkoutCalendar() {
   var label = document.getElementById('wo-date-label');
   var title = document.getElementById('workout-date-title');
@@ -4767,7 +4782,7 @@ function renderWorkoutCalendar() {
   var selectedSets = (state.workouts || []).filter(function(w) { return w.date === selected; });
   if (title) {
     title.innerHTML = escapeHtml(workoutDateLabel(selected)) +
-      '<span>' + selectedSets.length + ' подходов · ' + formatDate(selected) + '</span>';
+      '<span>' + selectedSets.length + ' ' + pluralRu(selectedSets.length, 'подход', 'подхода', 'подходов') + ' · ' + formatDate(selected) + '</span>';
   }
   if (todayBtn) {
     var isToday = selected === todayStr();
@@ -4869,7 +4884,10 @@ function renderExercises() {
       <div class="ex-sets">${chips}</div>
       <div class="exercise-plan-foot">
         <span>${escapeHtml(lastMeta)}</span>
-        <button class="exercise-plan-add" onclick="openAddSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">+ подход</button>
+        <div class="exercise-plan-actions">
+          <button class="exercise-plan-add" onclick="repeatWorkoutSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">Повторить</button>
+          <button class="exercise-plan-add" onclick="openAddSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">+ подход</button>
+        </div>
       </div>
     </div></div>`;
   }).join('');
@@ -4892,7 +4910,11 @@ function renderWorkoutSessionSummary(exercises, byEx) {
   var sets = Object.values(byEx).reduce(function(sum, items) { return sum + items.length; }, 0);
   var pct = total ? Math.round(done / total * 100) : 0;
   if (title) title.textContent = currentMuscle;
-  if (meta) meta.textContent = total ? (done + ' упражнений · ' + sets + ' подходов · ' + workoutDateLabel(currentWorkoutDate || todayStr()).toLowerCase()) : 'Упражнения появятся после выбора и сохранения подхода.';
+  if (meta) {
+    meta.textContent = total
+      ? (done + ' ' + pluralRu(done, 'упражнение', 'упражнения', 'упражнений') + ' · ' + sets + ' ' + pluralRu(sets, 'подход', 'подхода', 'подходов') + ' · ' + workoutDateLabel(currentWorkoutDate || todayStr()).toLowerCase())
+      : 'Упражнения появятся после выбора и сохранения подхода.';
+  }
   if (badge) badge.textContent = pct + '%';
   if (fill) fill.style.width = pct + '%';
 }
@@ -5020,6 +5042,48 @@ function applyLastSetSuggestion() {
   updateRMPreview();
 }
 
+function ensureExerciseInCurrentGroup(exerciseName) {
+  var group = workoutGroups.find(function(item) { return item.name === currentMuscle; });
+  if (group && !group.exercises.some(function(ex) { return ex.toLowerCase() === exerciseName.toLowerCase(); })) {
+    group.exercises.push(exerciseName);
+    syncWorkoutGroups();
+  }
+}
+
+async function persistWorkoutEntry(entry) {
+  state.workouts.push(entry);
+  saveState();
+  var saved = await apiCall('POST', '/api/workouts', entry);
+  if (saved && saved.id) {
+    entry.id = saved.id;
+    saveState();
+  }
+  currentWorkoutDate = entry.date;
+  currentWorkoutStripDate = entry.date;
+  renderWorkoutCalendar();
+  renderExercises();
+  updateExerciseSelect();
+}
+
+async function repeatWorkoutSetForExercise(exerciseName) {
+  var last = lastSetForExercise(exerciseName);
+  if (!last) {
+    openAddSetForExercise(exerciseName);
+    return;
+  }
+  ensureExerciseInCurrentGroup(exerciseName);
+  var entry = {
+    client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
+    date: currentWorkoutDate || todayStr(),
+    muscle: currentMuscle,
+    exercise: exerciseName,
+    sets: parseInt(last.sets, 10) || 1,
+    reps: parseInt(last.reps, 10) || 1,
+    weight: parseFloat(last.weight) || 0,
+  };
+  await persistWorkoutEntry(entry);
+}
+
 ['m-sets','m-weight','m-reps','m-exercise','m-workout-date'].forEach(id=>{
   document.getElementById(id)?.addEventListener('input', function() {
     setWorkoutSetError('');
@@ -5057,11 +5121,7 @@ async function saveSet() {
     setWorkoutSetError('Проверь подходы, повторения и вес.');
     return;
   }
-  var group = workoutGroups.find(function(item) { return item.name === currentMuscle; });
-  if (group && !group.exercises.some(function(ex) { return ex.toLowerCase() === exerciseName.toLowerCase(); })) {
-    group.exercises.push(exerciseName);
-    syncWorkoutGroups();
-  }
+  ensureExerciseInCurrentGroup(exerciseName);
   const entry = {
     client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
     date: entryDate, muscle: currentMuscle,
@@ -5070,19 +5130,8 @@ async function saveSet() {
     reps: reps,
     weight: weight,
   };
-  state.workouts.push(entry);
-  saveState();
-  var saved = await apiCall('POST', '/api/workouts', entry);
-  if (saved && saved.id) {
-    entry.id = saved.id;
-    saveState();
-  }
+  await persistWorkoutEntry(entry);
   closeModal('modal-set');
-  currentWorkoutDate = entryDate;
-  currentWorkoutStripDate = entryDate;
-  renderWorkoutCalendar();
-  renderExercises();
-  updateExerciseSelect();
 }
 
 function openWorkoutGroups() {
