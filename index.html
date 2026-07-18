@@ -105,6 +105,14 @@ var LOCAL_FOOD_LIBRARY = [
   {food_id:'local-oatmeal', food_name:'Овсянка варёная', calories:68, protein:2.4, fat:1.4, carbs:12, serving_desc:'на 100г'},
   {food_id:'local-cottage-cheese', food_name:'Творог 5%', calories:121, protein:17, fat:5, carbs:1.8, serving_desc:'на 100г'}
 ];
+var QUICK_FOOD_PICKS = [
+  {food_id:'local-egg', amount:100, title:'Яйца', meta:'2 шт'},
+  {food_id:'local-banana', amount:120, title:'Банан', meta:'1 шт'},
+  {food_id:'local-cottage-cheese', amount:150, title:'Творог', meta:'150 г'},
+  {food_id:'local-chicken-breast', amount:150, title:'Курица', meta:'150 г'},
+  {food_id:'local-rice', amount:150, title:'Рис', meta:'150 г'},
+  {food_id:'local-buckwheat', amount:150, title:'Гречка', meta:'150 г'}
+];
 
 function renderFoodScreen() {
   var d = new Date(currentFoodDate + 'T00:00:00');
@@ -115,6 +123,7 @@ function renderFoodScreen() {
   var lbl = document.getElementById('food-date-label');
   if(lbl) lbl.textContent = label;
   renderFoodFavorites();
+  renderFoodQuickPicks();
   loadFoodLog();
 }
 
@@ -362,6 +371,36 @@ function findLocalFoodItems(query) {
   }).slice(0, 8);
 }
 
+function getDefaultMealType() {
+  var hour = new Date().getHours();
+  if (hour < 11) return 'завтрак';
+  if (hour < 16) return 'обед';
+  if (hour < 21) return 'ужин';
+  return 'перекус';
+}
+
+function renderFoodQuickPicks() {
+  var box = document.getElementById('food-quick-picks');
+  if (!box) return;
+  box.innerHTML = QUICK_FOOD_PICKS.map(function(pick, index) {
+    var food = LOCAL_FOOD_LIBRARY.find(function(item) { return item.food_id === pick.food_id; });
+    if (!food) return '';
+    var calories = Math.round(asNumber(food.calories) * asNumber(pick.amount, 100) / 100);
+    return '<button class="food-quick-pick" type="button" onclick="openQuickFoodPick('+index+')">' +
+      '<span class="food-quick-pick-title">'+escapeHtml(pick.title || food.food_name)+'</span>' +
+      '<span class="food-quick-pick-meta">'+escapeHtml(pick.meta || foodAmountLabel({amount:pick.amount}))+' · '+calories+' ккал</span>' +
+    '</button>';
+  }).join('');
+}
+
+function openQuickFoodPick(index) {
+  var pick = QUICK_FOOD_PICKS[index];
+  if (!pick) return;
+  var food = LOCAL_FOOD_LIBRARY.find(function(item) { return item.food_id === pick.food_id; });
+  if (!food) return;
+  openFoodItem(food, pick.amount || 100, pick.meal_type || getDefaultMealType());
+}
+
 function openFoodModal(idx) {
   openFoodItem((window._foodResults||[])[idx], 100, 'обед');
 }
@@ -445,11 +484,12 @@ function inferFoodMeasure(food, amount) {
   var desc = String(food?.serving_desc || '');
   var pieceMatch = desc.match(/(\d+(?:[.,]\d+)?)\s*шт/i);
   if (pieceMatch && preset) {
+    var quantityFromAmount = Math.max(1, Math.round(grams / preset.pieceWeight) || preset.quantity);
     return {
       unit:'piece',
       pieceWeight:preset.pieceWeight,
       servingWeight:servingWeight,
-      quantity:Math.max(1, parseFloat(pieceMatch[1].replace(',', '.')) || Math.round(grams / preset.pieceWeight) || preset.quantity)
+      quantity:amount ? quantityFromAmount : Math.max(1, parseFloat(pieceMatch[1].replace(',', '.')) || quantityFromAmount)
     };
   }
   if (preset) {
@@ -1527,6 +1567,43 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 }
 .food-search-btn:active { transform: scale(.97); box-shadow: none; }
 .food-search-btn:disabled { cursor: default; opacity: .62; transform: none; box-shadow: none; }
+.food-quick-picks {
+  display: flex;
+  gap: 7px;
+  margin: 2px -2px 9px;
+  padding: 0 2px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.food-quick-picks::-webkit-scrollbar { display: none; }
+.food-quick-pick {
+  min-width: 108px;
+  min-height: 58px;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .14s ease, border-color .14s ease, background .14s ease;
+}
+.food-quick-pick:active { transform: scale(.97); }
+.food-quick-pick-title {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.food-quick-pick-meta {
+  display: block;
+  margin-top: 7px;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
 .food-favorites-section { margin: 0 0 10px; }
 .food-favorites-head { display: flex; align-items: center; justify-content: space-between; padding: 0 12px 7px; }
 .food-favorites-title { color: var(--text); font-size: 12px; font-weight: 800; }
@@ -2690,6 +2767,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <input class="food-search-input" id="food-search-input" placeholder="Поиск продукта..." aria-label="Поиск продукта" onkeydown="if(event.key==='Enter')searchFood()">
         <button class="food-search-btn" id="food-search-btn" onclick="searchFood()">Найти</button>
       </div>
+      <div class="food-quick-picks" id="food-quick-picks" aria-label="Быстрые продукты"></div>
       <div id="food-search-results"></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin:0 12px 10px">
