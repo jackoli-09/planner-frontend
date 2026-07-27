@@ -49,6 +49,8 @@ function toggleTheme() {
 applyTheme();
 
 // ════ ИИ АНАЛИЗ ════
+var currentAiDayPlan = null;
+
 async function runAiAnalysis() {
   var btn = document.getElementById('ai-btn');
   var loading = document.getElementById('ai-loading');
@@ -83,6 +85,90 @@ async function runAiAnalysis() {
     if(em) em.textContent = 'Ошибка: ' + e.message;
   }
   if(btn) btn.disabled = false;
+}
+
+function renderAiList(items, emptyText) {
+  if (!Array.isArray(items) || !items.length) return '<div class="ai-plan-empty">' + escapeHtml(emptyText || 'Нет рекомендаций') + '</div>';
+  return items.map(function(item) {
+    if (typeof item === 'string') return '<div class="ai-plan-line">' + escapeHtml(item) + '</div>';
+    var title = item.text || item.idea || item.focus || item.meal || 'Пункт';
+    var meta = item.reason || item.cat || item.duration_minutes && (item.duration_minutes + ' мин') || '';
+    return '<div class="ai-plan-line"><div>' + escapeHtml(title) + '</div>' +
+      (meta ? '<span>' + escapeHtml(meta) + '</span>' : '') + '</div>';
+  }).join('');
+}
+
+function renderAiDayPlan(plan) {
+  currentAiDayPlan = plan || null;
+  var result = document.getElementById('ai-plan-result');
+  if (!result || !plan) return;
+  var workout = plan.workout || {};
+  result.style.display = 'block';
+  result.innerHTML =
+    '<div class="section-label">План дня</div>' +
+    '<div class="card"><div class="card-inner">' +
+      '<div class="ai-plan-title">' + escapeHtml(plan.title || 'План на сегодня') + '</div>' +
+      '<div class="ai-plan-summary">' + escapeHtml(plan.summary || 'Собрал практичный план по текущим данным.') + '</div>' +
+      '<div class="ai-plan-actions">' +
+        '<button class="ai-plan-action primary" onclick="applyAiPlanTasks()">Добавить задачи</button>' +
+        '<button class="ai-plan-action" onclick="go(\'food\')">К питанию</button>' +
+        '<button class="ai-plan-action" onclick="go(\'workout\')">К тренировке</button>' +
+      '</div>' +
+    '</div></div>' +
+    '<div class="ai-plan-grid">' +
+      '<div class="card"><div class="card-inner"><div class="ai-plan-card-title">Задачи</div>' + renderAiList(plan.tasks, 'Задач нет') + '</div></div>' +
+      '<div class="card"><div class="card-inner"><div class="ai-plan-card-title">Питание</div>' + renderAiList(plan.nutrition, 'Питание не предложено') + '</div></div>' +
+    '</div>' +
+    '<div class="card"><div class="card-inner"><div class="ai-plan-card-title">Тренировка</div>' +
+      '<div class="ai-plan-line"><div>' + escapeHtml(workout.group || 'По самочувствию') + '</div><span>' + escapeHtml(workout.focus || (workout.recommended === false ? 'Восстановление' : 'Рабочая тренировка')) + '</span></div>' +
+      renderAiList(workout.exercises || [], 'Упражнения не выбраны') +
+    '</div></div>' +
+    '<div class="card"><div class="card-inner"><div class="ai-plan-card-title">Восстановление</div>' + renderAiList(plan.recovery, 'Без дополнительных заметок') + '</div></div>' +
+    '<div class="task-template-status" id="ai-plan-status"></div>';
+}
+
+async function runAiDayPlan() {
+  var btn = document.getElementById('ai-plan-btn');
+  var loading = document.getElementById('ai-plan-loading');
+  var error = document.getElementById('ai-plan-error');
+  var result = document.getElementById('ai-plan-result');
+  if (btn) btn.disabled = true;
+  if (loading) loading.style.display = 'block';
+  if (error) error.style.display = 'none';
+  if (result) result.style.display = 'none';
+  try {
+    var plan = await apiCall('GET', '/api/ai/day-plan');
+    if (!plan) throw new Error(syncFailureMessage());
+    renderAiDayPlan(plan);
+  } catch (e) {
+    if (error) {
+      error.style.display = 'block';
+      error.textContent = 'Не удалось собрать план: ' + (e.message || e);
+    }
+  } finally {
+    if (loading) loading.style.display = 'none';
+    if (btn) btn.disabled = false;
+  }
+}
+
+function applyAiPlanTasks() {
+  if (!currentAiDayPlan) return;
+  var tasks = (currentAiDayPlan.tasks || []).map(function(item) {
+    return {
+      text:String(item.text || '').trim(),
+      prio:['h','m','l'].indexOf(item.prio) >= 0 ? item.prio : 'm',
+      cat:item.cat || 'ИИ-план',
+      duration_minutes:Math.max(5, Math.min(240, parseInt(item.duration_minutes) || 30))
+    };
+  }).filter(function(item) { return item.text; });
+  var created = addTemplateTasksToToday(tasks);
+  renderTasks();
+  renderHome();
+  var status = document.getElementById('ai-plan-status');
+  if (status) {
+    status.textContent = created.length ? 'Добавлено задач: ' + created.length : 'Эти задачи уже есть на сегодня';
+    status.style.display = 'block';
+  }
 }
 
 // ════ ПИТАНИЕ ════
@@ -2214,6 +2300,29 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   background: var(--neon-soft); padding: 3px 9px; border-radius: 8px;
   margin-left: auto;
 }
+.ai-plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ai-plan-title { font-size: 16px; font-weight: 900; color: var(--text); line-height: 1.25; }
+.ai-plan-summary { margin-top: 7px; color: var(--text-sub); font-size: 12px; line-height: 1.5; }
+.ai-plan-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-top: 13px; }
+.ai-plan-action {
+  min-height: 38px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card2); color: var(--text); font: 800 10.5px/1 'Manrope', sans-serif;
+  cursor: pointer;
+}
+.ai-plan-action.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.ai-plan-card-title { margin-bottom: 9px; color: var(--text); font-size: 12px; font-weight: 900; }
+.ai-plan-line {
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  color: var(--text); font-size: 11.5px; font-weight: 750; line-height: 1.35;
+}
+.ai-plan-line:last-child { border-bottom: 0; }
+.ai-plan-line span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 9.5px; font-weight: 700; }
+.ai-plan-empty { color: var(--text-muted); font-size: 11px; line-height: 1.4; }
+#ai-plan-error { display: none; margin: 0 12px 10px; color: var(--red); font-size: 12px; line-height: 1.45; }
+@media (max-width: 420px) {
+  .ai-plan-grid { grid-template-columns: 1fr; }
+  .ai-plan-actions { grid-template-columns: 1fr; }
+}
 
 /* ── MORE MENU ── */
 .more-grid {
@@ -2678,6 +2787,20 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       </div>
       <button class="btn-primary" id="ai-btn" onclick="runAiAnalysis()" style="margin-bottom:14px">Запустить анализ</button>
     </div>
+
+    <div class="card card-glow">
+      <div class="card-inner">
+        <div class="ai-title">ИИ-план на сегодня</div>
+        <div class="ai-desc" style="text-align:left;margin:6px 0 14px;max-width:none">Собирает задачи, питание и тренировочный фокус из текущих данных. Ничего не добавляет без подтверждения.</div>
+        <button class="btn-primary" id="ai-plan-btn" onclick="runAiDayPlan()">Собрать план дня</button>
+      </div>
+    </div>
+
+    <div class="card" id="ai-plan-loading" style="display:none">
+      <div class="card-inner" style="font-size:13px;color:var(--text-sub)">Собираю план дня...</div>
+    </div>
+    <div id="ai-plan-error"></div>
+    <div id="ai-plan-result" style="display:none"></div>
 
     <div class="card" id="ai-loading" style="display:none">
       <div class="card-inner" style="font-size:13px;color:var(--text-sub)">Собираю данные и готовлю рекомендации...</div>
