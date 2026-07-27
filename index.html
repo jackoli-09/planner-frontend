@@ -1452,6 +1452,11 @@ html[data-theme="dark"] .focus-card {
   font-weight: 900;
   cursor: pointer;
 }
+.exercise-plan-add.danger {
+  color: var(--red);
+  background: var(--red-soft);
+  border-color: var(--red-soft);
+}
 .exercise-plan-foot {
   display: flex;
   justify-content: space-between;
@@ -3305,19 +3310,44 @@ var USER_ID = getUserId();
 function migrateLegacyDeviceData(userId) {
   var legacyId = localStorage.getItem('demo_user_id');
   if (!tg?.initDataUnsafe?.user?.id || !legacyId || String(legacyId) === String(userId)) return;
+  var arrayPrefixes = new Set([
+    'workouts_', 'tasks_', 'task_templates_', 'supps_list_', 'body_weight_',
+    'body_cal_', 'body_measures_', 'food_log_', 'food_favorites_', 'workout_groups_',
+    'planner_outbox_', 'planner_tombstones_'
+  ]);
+  var objectPrefixes = new Set(['supps_checked_', 'planner_profile_', 'planner_notifications_']);
   var prefixes = [
-    'workouts_', 'tasks_', 'task_templates_', 'supps_list_', 'supps_checked_',
-    'body_weight_', 'body_cal_', 'body_measures_', 'food_log_', 'food_favorites_',
-    'workout_groups_',
-    'planner_profile_', 'planner_notifications_', 'planner_outbox_', 'planner_tombstones_',
+    ...arrayPrefixes, ...objectPrefixes,
     'planner_state_backup_', 'planner_state_backup_previous_', 'planner_last_local_save_'
   ];
+  function legacyItemKey(item) {
+    if (!item || typeof item !== 'object') return JSON.stringify(item);
+    if (item.client_id) return 'client:' + item.client_id;
+    if (item.id !== undefined && item.id !== null) return 'id:' + item.id;
+    return JSON.stringify(item);
+  }
+  function mergeLegacyValue(prefix, sourceRaw, targetRaw) {
+    if (targetRaw === null) return sourceRaw;
+    try {
+      var source = JSON.parse(sourceRaw);
+      var target = JSON.parse(targetRaw);
+      if (arrayPrefixes.has(prefix) && Array.isArray(source) && Array.isArray(target)) {
+        var map = new Map();
+        target.forEach(function(item) { map.set(legacyItemKey(item), item); });
+        source.forEach(function(item) { map.set(legacyItemKey(item), item); });
+        return JSON.stringify(Array.from(map.values()));
+      }
+      if (objectPrefixes.has(prefix) && source && target && typeof source === 'object' && typeof target === 'object' && !Array.isArray(source) && !Array.isArray(target)) {
+        return JSON.stringify(Object.assign({}, source, target));
+      }
+    } catch (_) {}
+    return targetRaw;
+  }
   prefixes.forEach(function(prefix) {
     var sourceKey = prefix + legacyId;
     var targetKey = prefix + userId;
-    if (localStorage.getItem(targetKey) === null && localStorage.getItem(sourceKey) !== null) {
-      localStorage.setItem(targetKey, localStorage.getItem(sourceKey));
-    }
+    var sourceRaw = localStorage.getItem(sourceKey);
+    if (sourceRaw !== null) localStorage.setItem(targetKey, mergeLegacyValue(prefix, sourceRaw, localStorage.getItem(targetKey)));
   });
 }
 
@@ -3712,6 +3742,7 @@ function queueWrite(method, path, body) {
   var identity = '';
   if (path === '/api/tasks') identity = body?.id || '';
   else if (path === '/api/task-templates') identity = body?.client_id || '';
+  else if (path === '/api/workouts') identity = body?.client_id || '';
   else if (path === '/api/settings/profile') identity = 'profile';
   else if (path === '/api/settings/notifications') identity = 'notifications';
   else if (path === '/api/settings/workout-groups') identity = 'workout_groups';
@@ -3923,6 +3954,7 @@ function encodeToken(value) {
 function normalizeWorkout(w) {
   return {
     ...w,
+    client_id: w.client_id || (w.id ? null : 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2)),
     date: asDateStr(w.date),
     sets: parseInt(w.sets) || 1,
     reps: parseInt(w.reps) || 1,
@@ -4121,6 +4153,7 @@ function loadStateLocal() {
     });
   } catch(e) {}
   applyLoaded(vals);
+  saveStateLocal();
 }
 
 function applyLoaded(vals) {
@@ -4963,6 +4996,7 @@ function renderExercises() {
       <div class="exercise-plan-foot">
         <span>${escapeHtml(lastMeta)}</span>
         <div class="exercise-plan-actions">
+          <button class="exercise-plan-add danger" onclick="deleteWorkoutExercise(decodeURIComponent('${encodeToken(ex)}'))">Удалить</button>
           <button class="exercise-plan-add" onclick="repeatWorkoutSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">Повторить</button>
           <button class="exercise-plan-add" onclick="openAddSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">+ подход</button>
         </div>
@@ -5316,6 +5350,34 @@ async function deleteWorkout(index, id) {
       item.method === 'POST' && item.path === '/api/workouts' && item.body?.client_id === workout.client_id
     )));
   }
+  renderWorkoutCalendar();
+  renderExercises();
+  renderHome();
+}
+
+async function deleteWorkoutExercise(exerciseName) {
+  var selectedDate = currentWorkoutDate || todayStr();
+  var matches = (state.workouts || []).filter(function(item) {
+    return item.date === selectedDate && item.muscle === currentMuscle && item.exercise === exerciseName;
+  });
+  if (!matches.length) return;
+  var ok = confirm('Удалить упражнение «' + exerciseName + '» за этот день? Будут удалены все подходы: ' + matches.length + '.');
+  if (!ok) return;
+  state.workouts = (state.workouts || []).filter(function(item) {
+    return !(item.date === selectedDate && item.muscle === currentMuscle && item.exercise === exerciseName);
+  });
+  matches.forEach(function(item) {
+    if (item.id) addTombstone('workout', item.id);
+  });
+  saveOutbox(getOutbox().filter(function(queued) {
+    return !matches.some(function(item) {
+      return queued.method === 'POST' && queued.path === '/api/workouts' && queued.body?.client_id && queued.body.client_id === item.client_id;
+    });
+  }));
+  saveState();
+  await Promise.all(matches.filter(function(item) { return item.id; }).map(function(item) {
+    return apiCall('DELETE', '/api/workouts/' + item.id);
+  }));
   renderWorkoutCalendar();
   renderExercises();
   renderHome();
