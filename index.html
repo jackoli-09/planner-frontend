@@ -98,6 +98,94 @@ function renderAiList(items, emptyText) {
   }).join('');
 }
 
+function getAiPlanFoodQuery(plan) {
+  var item = (plan?.nutrition || []).find(function(entry) {
+    return entry && (entry.idea || entry.meal || entry.text);
+  });
+  var raw = String(item?.idea || item?.text || item?.meal || 'белок').toLowerCase();
+  var known = ['яйц', 'творог', 'куриц', 'греч', 'рис', 'овсян', 'банан', 'яблок'];
+  var match = known.find(function(key) { return raw.indexOf(key) !== -1; });
+  if (match === 'яйц') return 'яйца';
+  if (match === 'куриц') return 'курица';
+  if (match === 'греч') return 'гречка';
+  if (match === 'овсян') return 'овсянка';
+  return match || raw.split(/[,.]/)[0].trim().slice(0, 36) || 'белок';
+}
+
+function openAiPlanFood() {
+  if (!currentAiDayPlan) return;
+  go('food');
+  setTimeout(function() {
+    var input = document.getElementById('food-search-input');
+    if (input) {
+      input.value = getAiPlanFoodQuery(currentAiDayPlan);
+      searchFood();
+      input.focus();
+    }
+  }, 80);
+}
+
+function openAiPlanWorkout() {
+  if (!currentAiDayPlan) return;
+  var workout = currentAiDayPlan.workout || {};
+  currentWorkoutDate = todayStr();
+  currentWorkoutStripDate = todayStr();
+  var groupName = String(workout.group || '').trim().toLowerCase();
+  var matchedGroup = workoutGroups.find(function(group) {
+    return group.name.toLowerCase() === groupName || String(group.short || '').toLowerCase() === groupName;
+  });
+  if (matchedGroup) currentMuscle = matchedGroup.name;
+  go('workout');
+  var firstExercise = (workout.exercises || []).find(function(ex) { return String(ex || '').trim(); });
+  if (firstExercise && workout.recommended !== false) {
+    setTimeout(function() { openAddSetForExercise(String(firstExercise).trim()); }, 120);
+  }
+}
+
+function buildLocalAiDayPlan() {
+  var today = todayStr();
+  var todayTasks = (state.tasks || []).filter(function(task) {
+    return !task.done && (!task.dl || asDateStr(task.dl) <= today);
+  }).slice(0, 3);
+  var todayFood = (state.foodLog || []).filter(function(item) { return item.date === today; });
+  var calories = todayFood.reduce(function(sum, item) { return sum + asNumber(item.calories); }, 0);
+  var yesterday = localDateISO(new Date(Date.now() - 86400000));
+  var trainedRecently = (state.workouts || []).some(function(item) {
+    return item.date === today || item.date === yesterday;
+  });
+  var lastMuscle = (state.workouts || []).slice().sort(function(a, b) {
+    return String(b.date || '').localeCompare(String(a.date || ''));
+  })[0]?.muscle;
+  var group = workoutGroups.find(function(item) { return item.name !== lastMuscle; }) || workoutGroups[0] || {name:'Тренировка', exercises:[]};
+  var tasks = todayTasks.map(function(task) {
+    return {text:task.text, prio:task.prio || 'm', cat:task.cat || 'Фокус', duration_minutes:task.duration_minutes || 30};
+  });
+  if (!tasks.length) {
+    tasks = [
+      {text:'Выбрать 1 главный фокус дня', prio:'h', cat:'Фокус', duration_minutes:10},
+      {text:'Записать питание после первого приема пищи', prio:'m', cat:'Питание', duration_minutes:5},
+      {text:trainedRecently ? 'Сделать восстановление 20 минут' : 'Запланировать тренировку на сегодня', prio:'m', cat:'Тренировка', duration_minutes:30}
+    ];
+  }
+  return {
+    title:'Базовый план дня',
+    summary:'Серверный ИИ сейчас недоступен, поэтому собрал локальный план из задач, питания и истории тренировок на устройстве.',
+    local_fallback:true,
+    tasks:tasks.slice(0, 5),
+    nutrition:[
+      {meal:'завтрак', idea: calories ? 'Добрать белок в следующем приеме пищи' : 'Начать с белкового приема пищи', reason: calories ? 'Сегодня уже есть записи питания' : 'Дневник питания пока пуст'},
+      {meal:'перекус', idea:'Держать быстрый вариант: творог, яйца или фрукт', reason:'Снижает шанс пропустить запись и уйти в случайный перекус'}
+    ],
+    workout:{
+      recommended:!trainedRecently,
+      group:trainedRecently ? 'Восстановление' : group.name,
+      focus:trainedRecently ? 'Легкая активность, сон и растяжка' : 'Рабочая тренировка без перегруза',
+      exercises:trainedRecently ? [] : (group.exercises || []).slice(0, 4)
+    },
+    recovery:['Вода и 7-8 часов сна', 'Короткая прогулка после еды']
+  };
+}
+
 function renderAiDayPlan(plan) {
   currentAiDayPlan = plan || null;
   var result = document.getElementById('ai-plan-result');
@@ -109,10 +197,11 @@ function renderAiDayPlan(plan) {
     '<div class="card"><div class="card-inner">' +
       '<div class="ai-plan-title">' + escapeHtml(plan.title || 'План на сегодня') + '</div>' +
       '<div class="ai-plan-summary">' + escapeHtml(plan.summary || 'Собрал практичный план по текущим данным.') + '</div>' +
+      (plan.local_fallback ? '<div class="ai-plan-note">Локальный режим: можно пользоваться без сети, ИИ-сервер подключится позже.</div>' : '') +
       '<div class="ai-plan-actions">' +
         '<button class="ai-plan-action primary" onclick="applyAiPlanTasks()">Добавить задачи</button>' +
-        '<button class="ai-plan-action" onclick="go(\'food\')">К питанию</button>' +
-        '<button class="ai-plan-action" onclick="go(\'workout\')">К тренировке</button>' +
+        '<button class="ai-plan-action" onclick="openAiPlanFood()">Открыть питание</button>' +
+        '<button class="ai-plan-action" onclick="openAiPlanWorkout()">Открыть тренировку</button>' +
       '</div>' +
     '</div></div>' +
     '<div class="ai-plan-grid">' +
@@ -134,16 +223,18 @@ async function runAiDayPlan() {
   var result = document.getElementById('ai-plan-result');
   if (btn) btn.disabled = true;
   if (loading) loading.style.display = 'block';
-  if (error) error.style.display = 'none';
+  if (error) { error.style.display = 'none'; error.classList.remove('soft'); }
   if (result) result.style.display = 'none';
   try {
     var plan = await apiCall('GET', '/api/ai/day-plan');
     if (!plan) throw new Error(syncFailureMessage());
     renderAiDayPlan(plan);
   } catch (e) {
+    renderAiDayPlan(buildLocalAiDayPlan());
     if (error) {
       error.style.display = 'block';
-      error.textContent = 'Не удалось собрать план: ' + (e.message || e);
+      error.classList.add('soft');
+      error.textContent = 'Серверный ИИ не ответил, показал локальный план. Причина: ' + (e.message || e);
     }
   } finally {
     if (loading) loading.style.display = 'none';
@@ -2303,6 +2394,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .ai-plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ai-plan-title { font-size: 16px; font-weight: 900; color: var(--text); line-height: 1.25; }
 .ai-plan-summary { margin-top: 7px; color: var(--text-sub); font-size: 12px; line-height: 1.5; }
+.ai-plan-note {
+  margin-top: 9px; padding: 9px 10px; border-radius: 10px;
+  background: var(--neon-soft); color: var(--text); font-size: 10.5px; font-weight: 750; line-height: 1.35;
+}
 .ai-plan-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-top: 13px; }
 .ai-plan-action {
   min-height: 38px; border: 1px solid var(--border); border-radius: 10px;
@@ -2319,6 +2414,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 .ai-plan-line span { display: block; margin-top: 3px; color: var(--text-muted); font-size: 9.5px; font-weight: 700; }
 .ai-plan-empty { color: var(--text-muted); font-size: 11px; line-height: 1.4; }
 #ai-plan-error { display: none; margin: 0 12px 10px; color: var(--red); font-size: 12px; line-height: 1.45; }
+#ai-plan-error.soft { color: var(--text-muted); }
 @media (max-width: 420px) {
   .ai-plan-grid { grid-template-columns: 1fr; }
   .ai-plan-actions { grid-template-columns: 1fr; }
