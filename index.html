@@ -5733,7 +5733,20 @@ function renderWorkoutCalendar() {
 
 function selectWorkoutDate(dateStr) {
   currentWorkoutDate = dateStr || todayStr();
+  syncWorkoutGroupForSelectedDate(currentWorkoutDate);
   renderWorkout();
+}
+
+function syncWorkoutGroupForSelectedDate(dateStr) {
+  var daySets = (state.workouts || []).filter(function(w) { return w.date === dateStr; });
+  if (daySets.length && !daySets.some(function(w) { return w.muscle === currentMuscle; })) {
+    currentMuscle = daySets[0].muscle;
+    return;
+  }
+  if (dateStr === todayStr() && !daySets.length) {
+    var plan = workoutProgramDay(new Date(dateStr + 'T00:00:00').getDay());
+    if (!plan.rest && plan.group) currentMuscle = plan.group;
+  }
 }
 
 function shiftWorkoutDate(delta) {
@@ -5779,7 +5792,8 @@ function renderExercises() {
   const byEx = {};
   selectedSets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
 
-  const plannedExercises = getExerciseList(currentMuscle);
+  const showPlannedExercises = selectedDate === todayStr();
+  const plannedExercises = showPlannedExercises ? getExerciseList(currentMuscle) : [];
   const customLogged = Object.keys(byEx).filter(function(ex) {
     return plannedExercises.indexOf(ex) === -1;
   });
@@ -5824,8 +5838,8 @@ function renderExercises() {
 
   container.innerHTML = html || `<div class="card">
     <div class="card-inner" style="text-align:center;padding:28px 18px">
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">В группе пока нет упражнений</div>
-      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Открой базу упражнений или настрой группу, чтобы собрать план тренировки.</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">${selectedDate === todayStr() ? 'В группе пока нет упражнений' : 'В этот день записей нет'}</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${selectedDate === todayStr() ? 'Открой базу упражнений или настрой группу, чтобы собрать план тренировки.' : 'Показываются только реально сохраненные подходы выбранной даты.'}</div>
     </div>
   </div>`;
 }
