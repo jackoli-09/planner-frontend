@@ -1514,6 +1514,119 @@ html[data-theme="dark"] .focus-card {
   background: linear-gradient(90deg, var(--neon), var(--neon2));
   transition: width .25s ease;
 }
+.workout-program-panel {
+  margin: 0 12px 10px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--card), var(--card2));
+}
+.workout-program-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.workout-program-kicker {
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.workout-program-title {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+.workout-program-meta {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.workout-program-actions {
+  display: flex;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.workout-program-btn {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font: 900 10.5px/1 'Manrope', sans-serif;
+  cursor: pointer;
+}
+.workout-program-btn.primary {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+}
+.workout-program-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0,1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+.workout-program-day {
+  min-width: 0;
+  min-height: 58px;
+  padding: 7px 5px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  text-align: center;
+}
+.workout-program-day.active {
+  border-color: var(--neon2);
+  box-shadow: inset 0 0 0 1px var(--neon-soft);
+}
+.workout-program-day.done .program-day-dot { background: var(--green); opacity: 1; }
+.program-day-week {
+  display: block;
+  color: var(--text-muted);
+  font-size: 8.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.program-day-name {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 9.5px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.program-day-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--border-light);
+  opacity: .7;
+}
+.workout-program-editor-list { display: grid; gap: 8px; margin: 12px 0; }
+.workout-program-editor-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0,1fr);
+  gap: 8px;
+  align-items: center;
+}
+.workout-program-editor-day {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 900;
+}
 .workout-group-list { display: grid; gap: 8px; margin: 12px 0; }
 .workout-group-card {
   display: grid;
@@ -2751,6 +2864,20 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <button class="workout-tool-btn" onclick="openExerciseLibrary()">База упражнений</button>
       <button class="workout-tool-btn" onclick="openWorkoutGroupEditor()">+ Группа</button>
     </div>
+    <section class="workout-program-panel">
+      <div class="workout-program-top">
+        <div>
+          <div class="workout-program-kicker">План недели</div>
+          <div class="workout-program-title" id="workout-program-title">Сегодня по плану</div>
+          <div class="workout-program-meta" id="workout-program-meta">Настрой дни тренировок под свой ритм.</div>
+        </div>
+        <div class="workout-program-actions">
+          <button class="workout-program-btn primary" id="workout-program-start" onclick="startProgramWorkout()">Начать</button>
+          <button class="workout-program-btn" onclick="openWorkoutProgramEditor()">План</button>
+        </div>
+      </div>
+      <div class="workout-program-week" id="workout-program-week"></div>
+    </section>
     <section class="workout-session-panel">
       <div class="workout-session-top">
         <div>
@@ -3411,6 +3538,19 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   </div>
 </div>
 
+<!-- Workout Program Modal -->
+<div class="modal-overlay" id="modal-workout-program">
+  <div class="modal-sheet">
+    <div class="modal-title">План тренировок на неделю</div>
+    <div class="profile-question">Выбери группу для каждого дня. Отдых можно оставить прямо в плане.</div>
+    <div class="workout-program-editor-list" id="workout-program-editor-list"></div>
+    <button class="sync-action" type="button" onclick="quickGenerateWorkoutProgram()"><span>Собрать 3 тренировки в неделю</span><span class="sync-action-icon">↻</span></button>
+    <div class="profile-error" id="workout-program-error"></div>
+    <button class="btn-primary" onclick="saveWorkoutProgramEditor()">Сохранить план</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-workout-program')">Отмена</button>
+  </div>
+</div>
+
 <!-- Workout Groups Modal -->
 <div class="modal-overlay" id="modal-workout-groups">
   <div class="modal-sheet">
@@ -3703,7 +3843,7 @@ function migrateLegacyDeviceData(userId) {
   if (!tg?.initDataUnsafe?.user?.id || !legacyId || String(legacyId) === String(userId)) return;
   var arrayPrefixes = new Set([
     'workouts_', 'tasks_', 'task_templates_', 'supps_list_', 'body_weight_',
-    'body_cal_', 'body_measures_', 'food_log_', 'food_favorites_', 'workout_groups_',
+    'body_cal_', 'body_measures_', 'food_log_', 'food_favorites_', 'workout_groups_', 'workout_program_',
     'planner_outbox_', 'planner_tombstones_'
   ]);
   var objectPrefixes = new Set(['supps_checked_', 'planner_profile_', 'planner_notifications_']);
@@ -4137,6 +4277,7 @@ function queueWrite(method, path, body) {
   else if (path === '/api/settings/profile') identity = 'profile';
   else if (path === '/api/settings/notifications') identity = 'notifications';
   else if (path === '/api/settings/workout-groups') identity = 'workout_groups';
+  else if (path === '/api/settings/workout-program') identity = 'workout_program';
   else if (path === '/api/food/log' || path === '/api/food/favorites') identity = body?.client_id || '';
   else if (path.indexOf('/api/body/') === 0) identity = body?.date || '';
   else if (path === '/api/supplement_checks') {
@@ -4365,6 +4506,16 @@ var exerciseLibraryFilter = 'Все';
 var exerciseLibraryEditorMode = false;
 let workoutGroups = loadWorkoutGroupsLocal();
 let editingWorkoutGroupIndex = null;
+const WORKOUT_WEEKDAYS = [
+  {index:0, label:'Вс', full:'Воскресенье'},
+  {index:1, label:'Пн', full:'Понедельник'},
+  {index:2, label:'Вт', full:'Вторник'},
+  {index:3, label:'Ср', full:'Среда'},
+  {index:4, label:'Чт', full:'Четверг'},
+  {index:5, label:'Пт', full:'Пятница'},
+  {index:6, label:'Сб', full:'Суббота'}
+];
+let workoutProgram = loadWorkoutProgramLocal();
 
 function todayStr() { return localDateISO(); }
 function formatDate(d) {
@@ -4499,6 +4650,70 @@ function saveWorkoutGroupsLocal() {
   localStorage.setItem('workout_groups_' + USER_ID, JSON.stringify(workoutGroups));
 }
 
+function defaultWorkoutProgram() {
+  var groups = workoutGroups.length ? workoutGroups : defaultWorkoutGroups();
+  var picks = [groups[0]?.name, groups[1]?.name, groups[2]?.name].filter(Boolean);
+  return WORKOUT_WEEKDAYS.map(function(day) {
+    if (day.index === 1 && picks[0]) return {weekday:day.index, rest:false, group:picks[0]};
+    if (day.index === 3 && picks[1]) return {weekday:day.index, rest:false, group:picks[1]};
+    if (day.index === 5 && picks[2]) return {weekday:day.index, rest:false, group:picks[2]};
+    return {weekday:day.index, rest:true, group:null};
+  });
+}
+
+function normalizeWorkoutProgram(program) {
+  var validGroups = new Set((workoutGroups || []).map(function(group) { return group.name; }));
+  var byDay = new Map();
+  if (typeof program === 'string') {
+    try { program = JSON.parse(program); } catch(e) { program = null; }
+  }
+  if (Array.isArray(program)) {
+    program.forEach(function(item) {
+      var weekday = parseInt(item?.weekday, 10);
+      if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return;
+      var groupName = String(item?.group || item?.name || '').trim();
+      var rest = item?.rest === true || !groupName || !validGroups.has(groupName);
+      byDay.set(weekday, {weekday:weekday, rest:rest, group:rest ? null : groupName});
+    });
+  }
+  var defaults = defaultWorkoutProgram();
+  return WORKOUT_WEEKDAYS.map(function(day) {
+    return byDay.get(day.index) || defaults.find(function(item) { return item.weekday === day.index; }) || {weekday:day.index, rest:true, group:null};
+  });
+}
+
+function loadWorkoutProgramLocal() {
+  try {
+    var parsed = JSON.parse(localStorage.getItem('workout_program_' + USER_ID) || 'null');
+    if (Array.isArray(parsed) && parsed.length) return normalizeWorkoutProgram(parsed);
+  } catch(e) {}
+  return normalizeWorkoutProgram(null);
+}
+
+function saveWorkoutProgramLocal() {
+  workoutProgram = normalizeWorkoutProgram(workoutProgram);
+  localStorage.setItem('workout_program_' + USER_ID, JSON.stringify(workoutProgram));
+}
+
+function workoutProgramDay(weekday) {
+  workoutProgram = normalizeWorkoutProgram(workoutProgram);
+  return workoutProgram.find(function(day) { return day.weekday === weekday; }) || {weekday:weekday, rest:true, group:null};
+}
+
+function applyServerWorkoutProgram(settings) {
+  var incoming = settings?.active_workout_program || settings?.workout_program;
+  if (!incoming) return;
+  var program = normalizeWorkoutProgram(incoming);
+  if (!program.length) return;
+  workoutProgram = program;
+  saveWorkoutProgramLocal();
+}
+
+async function syncWorkoutProgram() {
+  saveWorkoutProgramLocal();
+  await apiCall('POST', '/api/settings/workout-program', {days:workoutProgram});
+}
+
 function applyServerWorkoutGroups(settings) {
   var incoming = settings?.workout_groups;
   if (typeof incoming === 'string') {
@@ -4512,11 +4727,16 @@ function applyServerWorkoutGroups(settings) {
     currentMuscle = workoutGroups[0].name;
   }
   saveWorkoutGroupsLocal();
+  workoutProgram = normalizeWorkoutProgram(workoutProgram);
+  saveWorkoutProgramLocal();
 }
 
 async function syncWorkoutGroups() {
   saveWorkoutGroupsLocal();
+  workoutProgram = normalizeWorkoutProgram(workoutProgram);
+  saveWorkoutProgramLocal();
   await apiCall('POST', '/api/settings/workout-groups', {groups:workoutGroups});
+  await syncWorkoutProgram();
 }
 
 function getExerciseList(muscle) {
@@ -4536,13 +4756,14 @@ function stateSnapshot() {
     body_measures: state.bodyMeasures || [],
     food_log: state.foodLog || [],
     food_favorites: state.foodFavorites || [],
-    workout_groups: workoutGroups || []
+    workout_groups: workoutGroups || [],
+    workout_program: workoutProgram || []
   };
 }
 
 function snapshotRecordCount(snapshot) {
   if (!snapshot) return 0;
-  return ['workouts','tasks','task_templates','supps_list','body_weight','body_cal','body_measures','food_log','food_favorites','workout_groups']
+  return ['workouts','tasks','task_templates','supps_list','body_weight','body_cal','body_measures','food_log','food_favorites','workout_groups','workout_program']
     .reduce(function(total, key) { return total + (Array.isArray(snapshot[key]) ? snapshot[key].length : 0); }, 0) +
     Object.keys(snapshot.supps_checked || {}).length;
 }
@@ -4581,7 +4802,7 @@ function saveStateLocal() {
 }
 
 function loadStateLocal() {
-  const keys = ['workouts','tasks','task_templates','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log','food_favorites','workout_groups'];
+  const keys = ['workouts','tasks','task_templates','supps_list','supps_checked','body_weight','body_cal','body_measures','food_log','food_favorites','workout_groups','workout_program'];
   const vals = {};
   keys.forEach(k => vals[k] = localStorage.getItem(k + '_' + USER_ID));
   try {
@@ -4608,6 +4829,9 @@ function applyLoaded(vals) {
   if (vals.workout_groups) {
     var groups = JSON.parse(vals.workout_groups).map(normalizeWorkoutGroup).filter(function(group) { return group.name; });
     if (groups.length) workoutGroups = groups;
+  }
+  if (vals.workout_program) {
+    workoutProgram = normalizeWorkoutProgram(JSON.parse(vals.workout_program));
   }
 }
 
@@ -4665,6 +4889,12 @@ function isTombstoned(kind, key) {
 
 async function recoverEmptyServerSections(bootstrap) {
   var writes = [];
+  if (!bootstrap.settings?.workout_groups && (workoutGroups || []).length) {
+    writes.push(apiCall('POST', '/api/settings/workout-groups', {groups:workoutGroups}));
+  }
+  if (!bootstrap.settings?.active_workout_program && (workoutProgram || []).length) {
+    writes.push(apiCall('POST', '/api/settings/workout-program', {days:workoutProgram}));
+  }
   if (!(bootstrap.tasks || []).length) {
     (state.tasks || []).forEach(function(item) { writes.push(apiCall('POST', '/api/tasks', item)); });
   }
@@ -4728,6 +4958,7 @@ function applyBootstrap(bootstrap) {
   applyServerProfile(bootstrap.settings);
   applyServerNotifications(bootstrap.settings);
   applyServerWorkoutGroups(bootstrap.settings);
+  applyServerWorkoutProgram(bootstrap.settings);
   var deletedKeys = new Set(getTombstones().map(function(item) { return item.kind + '|' + item.key; }));
   var keepServerItem = function(kind, key) { return !deletedKeys.has(kind + '|' + String(key)); };
   var serverWorkouts = (bootstrap.workouts || []).filter(function(item) { return keepServerItem('workout', item.id); });
@@ -5238,15 +5469,10 @@ function renderHome() {
   // Тренировка сегодня
   var workoutNameEl = document.getElementById('home-workout-name');
   if (workoutNameEl) {
-    try {
-      var plan = JSON.parse(localStorage.getItem('planner_split') || 'null');
-      var dow = new Date().getDay();
-      if (plan && plan[dow]) {
-        workoutNameEl.textContent = plan[dow].rest ? 'День отдыха' : plan[dow].name;
-      } else {
-        workoutNameEl.textContent = uniqueDays ? 'Продолжить дневник' : 'Запланировать тренировку';
-      }
-    } catch(e) {}
+    var programToday = workoutProgramDay(new Date().getDay());
+    workoutNameEl.textContent = programToday.rest
+      ? 'День отдыха'
+      : (programToday.group || (uniqueDays ? 'Продолжить дневник' : 'Запланировать тренировку'));
   }
 }
 
@@ -5308,8 +5534,70 @@ function selectMuscle(muscle, el) {
 function renderWorkout() {
   renderWorkoutCalendar();
   renderMuscleTabs();
+  renderWorkoutProgramPanel();
   renderExercises();
   updateExerciseSelect();
+}
+
+function dateForWeekdayNearSelected(weekday) {
+  var selected = new Date((currentWorkoutDate || todayStr()) + 'T00:00:00');
+  var start = new Date(selected);
+  start.setDate(selected.getDate() - selected.getDay());
+  start.setDate(start.getDate() + weekday);
+  return localDateISO(start);
+}
+
+function renderWorkoutProgramPanel() {
+  var title = document.getElementById('workout-program-title');
+  var meta = document.getElementById('workout-program-meta');
+  var week = document.getElementById('workout-program-week');
+  var start = document.getElementById('workout-program-start');
+  if (!title || !meta || !week) return;
+  workoutProgram = normalizeWorkoutProgram(workoutProgram);
+  var selected = new Date((currentWorkoutDate || todayStr()) + 'T00:00:00');
+  var selectedDay = workoutProgramDay(selected.getDay());
+  var selectedSets = (state.workouts || []).filter(function(item) { return item.date === (currentWorkoutDate || todayStr()); });
+  if (selectedDay.rest) {
+    title.textContent = 'День отдыха';
+    meta.textContent = selectedSets.length ? 'В этот день уже есть запись тренировки.' : 'По плану восстановление. Можно поменять день в настройке.';
+    if (start) {
+      start.textContent = 'Выбрать';
+      start.disabled = false;
+    }
+  } else {
+    title.textContent = selectedDay.group;
+    meta.textContent = selectedSets.length
+      ? selectedSets.length + ' ' + pluralRu(selectedSets.length, 'подход', 'подхода', 'подходов') + ' уже записано за выбранный день.'
+      : 'Нажми “Начать”, чтобы открыть группу и добавить первый подход.';
+    if (start) {
+      start.textContent = 'Начать';
+      start.disabled = false;
+    }
+  }
+  var workoutDates = new Set((state.workouts || []).map(function(item) { return item.date; }));
+  week.innerHTML = WORKOUT_WEEKDAYS.map(function(day) {
+    var plan = workoutProgramDay(day.index);
+    var date = dateForWeekdayNearSelected(day.index);
+    var active = day.index === selected.getDay() ? ' active' : '';
+    var done = workoutDates.has(date) ? ' done' : '';
+    var label = plan.rest ? 'Отдых' : (plan.group || 'План');
+    return '<div class="workout-program-day' + active + done + '">' +
+      '<span class="program-day-week">' + day.label + '</span>' +
+      '<span class="program-day-name">' + escapeHtml(label) + '</span>' +
+      '<span class="program-day-dot"></span>' +
+    '</div>';
+  }).join('');
+}
+
+function startProgramWorkout() {
+  var selected = new Date((currentWorkoutDate || todayStr()) + 'T00:00:00');
+  var plan = workoutProgramDay(selected.getDay());
+  if (!plan.rest && plan.group) currentMuscle = plan.group;
+  renderMuscleTabs();
+  renderExercises();
+  updateExerciseSelect();
+  if (!plan.rest) setTimeout(openAddSet, 80);
+  else openWorkoutProgramEditor();
 }
 
 function workoutDateLabel(dateStr) {
@@ -5690,6 +5978,7 @@ async function persistWorkoutEntry(entry) {
   currentWorkoutDate = entry.date;
   currentWorkoutStripDate = entry.date;
   renderWorkoutCalendar();
+  renderWorkoutProgramPanel();
   renderExercises();
   renderHome();
   updateExerciseSelect();
@@ -5764,6 +6053,61 @@ async function saveSet() {
   };
   await persistWorkoutEntry(entry);
   closeModal('modal-set');
+}
+
+function openWorkoutProgramEditor() {
+  workoutProgram = normalizeWorkoutProgram(workoutProgram);
+  renderWorkoutProgramEditorRows();
+  var error = document.getElementById('workout-program-error');
+  if (error) error.textContent = '';
+  document.getElementById('modal-workout-program').classList.add('open');
+}
+
+function renderWorkoutProgramEditorRows() {
+  var list = document.getElementById('workout-program-editor-list');
+  if (!list) return;
+  var options = '<option value="__rest__">Отдых</option>' + workoutGroups.map(function(group) {
+    return '<option value="' + escapeHtml(group.name) + '">' + escapeHtml(group.name) + '</option>';
+  }).join('');
+  list.innerHTML = WORKOUT_WEEKDAYS.map(function(day) {
+    var plan = workoutProgramDay(day.index);
+    var value = plan.rest ? '__rest__' : plan.group;
+    return '<div class="workout-program-editor-row">' +
+      '<div class="workout-program-editor-day">' + day.label + '</div>' +
+      '<select class="modal-input workout-program-select" data-weekday="' + day.index + '">' + options + '</select>' +
+    '</div>';
+  }).join('');
+  Array.from(document.querySelectorAll('.workout-program-select')).forEach(function(select) {
+    var weekday = parseInt(select.dataset.weekday, 10);
+    var plan = workoutProgramDay(weekday);
+    select.value = plan.rest ? '__rest__' : plan.group;
+  });
+}
+
+async function saveWorkoutProgramEditor() {
+  var rows = Array.from(document.querySelectorAll('.workout-program-select'));
+  var days = rows.map(function(select) {
+    var weekday = parseInt(select.dataset.weekday, 10);
+    var value = select.value;
+    return {weekday:weekday, rest:value === '__rest__', group:value === '__rest__' ? null : value};
+  });
+  workoutProgram = normalizeWorkoutProgram(days);
+  await syncWorkoutProgram();
+  closeModal('modal-workout-program');
+  renderWorkoutProgramPanel();
+  renderHome();
+}
+
+async function quickGenerateWorkoutProgram() {
+  var groups = workoutGroups.length ? workoutGroups : defaultWorkoutGroups();
+  workoutProgram = WORKOUT_WEEKDAYS.map(function(day) {
+    if (day.index === 1 && groups[0]) return {weekday:1, rest:false, group:groups[0].name};
+    if (day.index === 3 && groups[1]) return {weekday:3, rest:false, group:groups[1].name};
+    if (day.index === 5 && groups[2]) return {weekday:5, rest:false, group:groups[2].name};
+    return {weekday:day.index, rest:true, group:null};
+  });
+  saveWorkoutProgramLocal();
+  renderWorkoutProgramEditorRows();
 }
 
 function openWorkoutGroups() {
@@ -5934,6 +6278,7 @@ async function saveWorkoutGroupEditor() {
   await syncWorkoutGroups();
   closeModal('modal-workout-group-editor');
   renderMuscleTabs();
+  renderWorkoutProgramPanel();
   renderExercises();
   updateExerciseSelect();
 }
@@ -5945,6 +6290,7 @@ async function deleteWorkoutGroup(index) {
   await syncWorkoutGroups();
   renderWorkoutGroupList();
   renderMuscleTabs();
+  renderWorkoutProgramPanel();
   renderExercises();
 }
 
@@ -5962,6 +6308,7 @@ async function deleteWorkout(index, id) {
     )));
   }
   renderWorkoutCalendar();
+  renderWorkoutProgramPanel();
   renderExercises();
   renderHome();
 }
