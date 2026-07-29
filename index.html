@@ -4458,6 +4458,17 @@ async function recoverEmptyServerSections(bootstrap) {
     (state.workouts || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
       writes.push(apiCall('POST', '/api/workouts', item));
     });
+  } else {
+    var serverWorkoutClientIds = new Set((bootstrap.workouts || []).map(function(item) { return item.client_id; }).filter(Boolean));
+    var serverWorkoutFingerprints = new Set((bootstrap.workouts || []).map(function(item) {
+      return itemIdentity(normalizeWorkout(item), ['date','muscle','exercise','sets','reps','weight']);
+    }));
+    (state.workouts || []).map(normalizeWorkout).filter(function(item) {
+      if (!item.client_id || serverWorkoutClientIds.has(item.client_id)) return false;
+      return !serverWorkoutFingerprints.has(itemIdentity(item, ['date','muscle','exercise','sets','reps','weight']));
+    }).forEach(function(item) {
+      writes.push(apiCall('POST', '/api/workouts', item));
+    });
   }
   if (!(bootstrap.supplements || []).length) {
     (state.supps.list || []).filter(function(item) { return item.client_id; }).forEach(function(item) {
@@ -5382,6 +5393,7 @@ function ensureExerciseInCurrentGroup(exerciseName) {
 }
 
 async function persistWorkoutEntry(entry) {
+  entry = normalizeWorkout(entry);
   state.workouts.push(entry);
   saveState();
   var saved = await apiCall('POST', '/api/workouts', entry);
@@ -5393,6 +5405,7 @@ async function persistWorkoutEntry(entry) {
   currentWorkoutStripDate = entry.date;
   renderWorkoutCalendar();
   renderExercises();
+  renderHome();
   updateExerciseSelect();
 }
 
