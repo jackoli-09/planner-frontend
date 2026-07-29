@@ -1646,6 +1646,40 @@ html[data-theme="dark"] .focus-card {
   cursor: pointer;
   white-space: nowrap;
 }
+.exercise-ai-card {
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+}
+.exercise-ai-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.exercise-ai-title { color: var(--text); font-size: 11.5px; font-weight: 900; }
+.exercise-ai-btn {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font: 900 10px/1 'Manrope', sans-serif;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.exercise-ai-result {
+  display: none;
+  margin-top: 9px;
+  color: var(--text-sub);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.exercise-ai-result strong { color: var(--text); }
+.exercise-ai-result ul { margin: 6px 0 0; padding-left: 16px; }
+.exercise-ai-result li { margin: 3px 0; }
 .workout-date-field {
   display: grid;
   grid-template-columns: 1fr 150px;
@@ -2039,6 +2073,39 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 
 /* ── CHARTS ── */
 .chart-canvas-wrap { position: relative; height: 160px; padding: 0 4px 4px; }
+.chart-control-panel {
+  margin: 0 12px 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.chart-control-title { color: var(--text); font-size: 12px; font-weight: 900; margin-bottom: 8px; }
+.chart-control-grid {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+.chart-control-grid::-webkit-scrollbar { display: none; }
+.chart-metric-pill {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card2);
+  color: var(--text-sub);
+  font: 800 10.5px/1 'Manrope', sans-serif;
+  cursor: pointer;
+}
+.chart-metric-pill.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.chart-control-hint { margin-top: 8px; color: var(--text-muted); font-size: 10px; line-height: 1.4; }
 .pr-row { display: flex; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
 .pr-row:last-child { border-bottom: none; }
 .pr-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
@@ -2728,7 +2795,14 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       </div>
     </div>
 
-    <div class="section-label">1RM — Большая тройка</div>
+    <div class="section-label">Данные на графике</div>
+    <div class="chart-control-panel">
+      <div class="chart-control-title">Что отслеживать</div>
+      <div class="chart-control-grid" id="chart-metric-controls"></div>
+      <div class="chart-control-hint">Можно выбрать упражнения, объём тренировки, вес тела и калории. Для упражнений график показывает расчетный 1RM.</div>
+    </div>
+
+    <div class="section-label">Выбранные показатели</div>
     <div class="card card-glow">
       <div class="card-inner">
         <div class="chart-canvas-wrap">
@@ -3411,6 +3485,13 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
         <div class="last-set-meta" id="m-last-set-meta"></div>
       </div>
       <button class="last-set-btn" onclick="applyLastSetSuggestion()">Повторить</button>
+    </div>
+    <div class="exercise-ai-card">
+      <div class="exercise-ai-top">
+        <div class="exercise-ai-title">ИИ-комплекс под упражнение</div>
+        <button class="exercise-ai-btn" id="exercise-ai-btn" onclick="runExerciseAiAdvice()">Совет</button>
+      </div>
+      <div class="exercise-ai-result" id="exercise-ai-result"></div>
     </div>
     <div class="modal-grid">
       <div class="modal-row">
@@ -4226,6 +4307,7 @@ let currentBodyTab = 'weight';
 let selectedSuppDate = localDateISO();
 let reportMonthOffset = 0; // 0 = current month
 let progChart=null, avgChart=null, weightChart=null, calChart=null;
+var chartMetricColors = ['#b026ff','#00e5a0','#ff9d3d','#4dabff','#ff4d6a','#d946ef','#22c55e','#f59e0b'];
 
 const DEFAULT_WORKOUT_GROUPS = [
   {name:'Грудь + Трицепс', short:'Грудь+Три', exercises:['Жим штанги лёжа','Жим штанги на наклонной скамье','Жим гантелей на наклонной скамье','Разводка гантелей лёжа','Сведение в тренажёре (Бабочка)','Французский жим','Разгибание на трицепс (блок)']},
@@ -5435,6 +5517,7 @@ function openAddSet() {
   updateExerciseSelect();
   syncWorkoutSetDateInput();
   setWorkoutSetError('');
+  clearExerciseAiAdvice();
   suggestLastSetForExercise(true);
   updateRMPreview();
   document.getElementById('modal-set').classList.add('open');
@@ -5453,6 +5536,7 @@ function openAddSetForExercise(exerciseName) {
     document.getElementById('m-custom-exercise').value = exerciseName;
   }
   toggleCustomExerciseInput();
+  clearExerciseAiAdvice();
   suggestLastSetForExercise(true);
   updateRMPreview();
   document.getElementById('modal-set').classList.add('open');
@@ -5474,6 +5558,71 @@ function updateRMPreview() {
   const avgW = prevSets.length ? round1(prevSets.reduce((a,s)=>a+s.weight,0)/prevSets.length) : w;
   document.getElementById('m-avg-preview').textContent = avgW + ' кг';
   renderLastSetCard(ex);
+}
+
+function clearExerciseAiAdvice() {
+  var result = document.getElementById('exercise-ai-result');
+  var btn = document.getElementById('exercise-ai-btn');
+  if (result) {
+    result.style.display = 'none';
+    result.innerHTML = '';
+  }
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Совет';
+  }
+}
+
+function localExerciseAdvice(exerciseName) {
+  var item = EXERCISE_LIBRARY.find(function(ex) { return ex.name.toLowerCase() === String(exerciseName || '').toLowerCase(); });
+  var group = item?.group || currentMuscle;
+  var pool = EXERCISE_LIBRARY.filter(function(ex) {
+    return ex.group === group && ex.name !== exerciseName;
+  }).slice(0, 4);
+  if (!pool.length) {
+    pool = (getExerciseList(currentMuscle) || []).filter(function(name) { return name !== exerciseName; }).slice(0, 4).map(function(name) {
+      return {name:name, cue:'Добавь как вспомогательное движение без отказа.'};
+    });
+  }
+  return {
+    summary:(item ? item.cue : 'Подбери 2-4 вспомогательных движения вокруг выбранного упражнения.') + ' Локальная подсказка работает без сети.',
+    companion_exercises:pool.map(function(ex) { return ex.name; }),
+    sets_reps:'База: 3-4 подхода по 6-10 повторений. Аксессуары: 2-3 подхода по 10-15.',
+    progression:'Добавляй вес только если техника стабильна во всех рабочих подходах.',
+    caution:'Не ставь рядом слишком много тяжелых движений на одну и ту же зону.'
+  };
+}
+
+function renderExerciseAiAdvice(advice, isFallback) {
+  var result = document.getElementById('exercise-ai-result');
+  if (!result || !advice) return;
+  var companions = Array.isArray(advice.companion_exercises) ? advice.companion_exercises : [];
+  result.style.display = 'block';
+  result.innerHTML =
+    (isFallback ? '<strong>Локальная подсказка.</strong> ' : '') + escapeHtml(advice.summary || 'Собрал вариант комплекса.') +
+    (companions.length ? '<ul>' + companions.slice(0, 5).map(function(item) { return '<li>' + escapeHtml(typeof item === 'string' ? item : (item.name || item.exercise || item.text || 'Упражнение')) + '</li>'; }).join('') + '</ul>' : '') +
+    '<div style="margin-top:7px"><strong>Схема:</strong> ' + escapeHtml(advice.sets_reps || '3-4 рабочих подхода') + '</div>' +
+    '<div><strong>Прогрессия:</strong> ' + escapeHtml(advice.progression || 'Увеличивай нагрузку постепенно') + '</div>' +
+    (advice.caution ? '<div><strong>Важно:</strong> ' + escapeHtml(advice.caution) + '</div>' : '');
+}
+
+async function runExerciseAiAdvice() {
+  var exerciseName = readSelectedExerciseName();
+  if (!exerciseName) {
+    setWorkoutSetError('Сначала выбери упражнение.');
+    return;
+  }
+  var btn = document.getElementById('exercise-ai-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Думаю...'; }
+  try {
+    var advice = await apiCall('GET', '/api/ai/exercise-advice?exercise=' + encodeURIComponent(exerciseName) + '&muscle=' + encodeURIComponent(currentMuscle));
+    if (!advice) throw new Error(syncFailureMessage());
+    renderExerciseAiAdvice(advice, false);
+  } catch (e) {
+    renderExerciseAiAdvice(localExerciseAdvice(exerciseName), true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Обновить'; }
+  }
 }
 
 function readSelectedExerciseName() {
@@ -5573,6 +5722,7 @@ async function repeatWorkoutSetForExercise(exerciseName) {
   document.getElementById(id)?.addEventListener('change', function() {
     setWorkoutSetError('');
     toggleCustomExerciseInput();
+    if (id === 'm-exercise') clearExerciseAiAdvice();
     suggestLastSetForExercise(true);
     updateWorkoutSetDateLabel();
     updateRMPreview();
@@ -5580,6 +5730,7 @@ async function repeatWorkoutSetForExercise(exerciseName) {
 });
 document.getElementById('m-custom-exercise')?.addEventListener('input', function() {
   setWorkoutSetError('');
+  clearExerciseAiAdvice();
   updateRMPreview();
 });
 
@@ -5846,6 +5997,103 @@ async function deleteWorkoutExercise(exerciseName) {
 // ════════════════════════════════════════════════════════════════
 // CHARTS
 // ════════════════════════════════════════════════════════════════
+function chartMetricStorageKey() {
+  return 'planner_chart_metrics_' + USER_ID;
+}
+
+function workoutExerciseStats() {
+  var stats = {};
+  (state.workouts || []).forEach(function(w) {
+    var name = String(w.exercise || '').trim();
+    if (!name) return;
+    if (!stats[name]) stats[name] = {name:name, count:0, maxRM:0, lastDate:''};
+    stats[name].count += 1;
+    stats[name].maxRM = Math.max(stats[name].maxRM, calc1rm(w.weight, w.reps));
+    stats[name].lastDate = String(w.date || '') > stats[name].lastDate ? String(w.date || '') : stats[name].lastDate;
+  });
+  return Object.values(stats).sort(function(a, b) {
+    return b.count - a.count || b.maxRM - a.maxRM || a.name.localeCompare(b.name);
+  });
+}
+
+function defaultChartMetricIds(options) {
+  var defaults = ['Жим штанги лёжа','Становая тяга','Приседания со штангой']
+    .map(function(name) { return 'ex:' + name; })
+    .filter(function(id) { return options.some(function(opt) { return opt.id === id; }); });
+  if (!defaults.length) defaults = options.filter(function(opt) { return opt.type === 'exercise'; }).slice(0, 3).map(function(opt) { return opt.id; });
+  return defaults.concat(options.some(function(opt) { return opt.id === 'volume'; }) ? ['volume'] : []).slice(0, 4);
+}
+
+function chartMetricOptions() {
+  var exerciseOptions = workoutExerciseStats().slice(0, 16).map(function(item) {
+    return {id:'ex:' + item.name, type:'exercise', name:item.name, label:item.name, short:item.name.replace(/^Жим штанги /, 'Жим ').slice(0, 18)};
+  });
+  return exerciseOptions.concat([
+    {id:'volume', type:'volume', label:'Объём тренировки', short:'Объём'},
+    {id:'weight', type:'weight', label:'Вес тела', short:'Вес'},
+    {id:'calories', type:'calories', label:'Калории', short:'Ккал'}
+  ]);
+}
+
+function selectedChartMetricIds(options) {
+  options = options || chartMetricOptions();
+  var allowed = new Set(options.map(function(opt) { return opt.id; }));
+  var parsed = null;
+  try { parsed = JSON.parse(localStorage.getItem(chartMetricStorageKey()) || 'null'); } catch(e) {}
+  var ids = Array.isArray(parsed) ? parsed.filter(function(id) { return allowed.has(id); }) : [];
+  if (!ids.length) ids = defaultChartMetricIds(options);
+  return ids;
+}
+
+function saveSelectedChartMetricIds(ids) {
+  localStorage.setItem(chartMetricStorageKey(), JSON.stringify(ids));
+}
+
+function toggleChartMetric(id) {
+  var options = chartMetricOptions();
+  var selected = selectedChartMetricIds(options);
+  if (selected.indexOf(id) >= 0) {
+    selected = selected.filter(function(item) { return item !== id; });
+  } else {
+    selected.push(id);
+  }
+  if (!selected.length) selected = defaultChartMetricIds(options).slice(0, 1);
+  saveSelectedChartMetricIds(selected.slice(0, 6));
+  renderCharts();
+}
+
+function renderChartMetricControls(options, selected) {
+  var box = document.getElementById('chart-metric-controls');
+  if (!box) return;
+  box.innerHTML = options.map(function(opt) {
+    var active = selected.indexOf(opt.id) >= 0 ? ' active' : '';
+    return '<button class="chart-metric-pill' + active + '" onclick="toggleChartMetric(decodeURIComponent(\'' + encodeToken(opt.id) + '\'))">' + escapeHtml(opt.short || opt.label) + '</button>';
+  }).join('');
+}
+
+function chartMetricValue(metric, date) {
+  if (metric.type === 'exercise') {
+    var exercise = metric.name;
+    var sets = (state.workouts || []).filter(function(w) { return w.date === date && w.exercise === exercise; });
+    return sets.length ? Math.max.apply(null, sets.map(function(w) { return calc1rm(w.weight, w.reps); })) : null;
+  }
+  if (metric.type === 'volume') {
+    var volume = (state.workouts || []).filter(function(w) { return w.date === date; }).reduce(function(sum, w) {
+      return sum + asNumber(w.weight) * (parseInt(w.sets) || 0) * (parseInt(w.reps) || 0);
+    }, 0);
+    return volume ? round1(volume / 1000) : null;
+  }
+  if (metric.type === 'weight') {
+    var weight = (state.bodyWeight || []).find(function(item) { return item.date === date; });
+    return weight ? asNumber(weight.weight) : null;
+  }
+  if (metric.type === 'calories') {
+    var cal = (state.bodyCal || []).find(function(item) { return item.date === date; });
+    return cal ? parseInt(cal.cal || cal.calories) || null : null;
+  }
+  return null;
+}
+
 function renderCharts() {
   const dates = [...new Set(state.workouts.map(w=>w.date))];
   const totalSets = state.workouts.reduce((a,w)=>a+w.sets,0);
@@ -5854,13 +6102,16 @@ function renderCharts() {
   document.getElementById('stat-sets').textContent = totalSets;
   document.getElementById('stat-volume').textContent = (totalVol/1000).toFixed(1)+'т';
 
-  const keyEx = [
-    {name:'Жим штанги лёжа', color:'#b026ff'},
-    {name:'Становая тяга', color:'#00e5a0'},
-    {name:'Приседания со штангой', color:'#ff9d3d'},
-    {name:'Румынская тяга', color:'#4dabff'},
-    {name:'Тяга штанги в наклоне', color:'#ff4d6a'},
-  ];
+  var options = chartMetricOptions();
+  var selectedIds = selectedChartMetricIds(options);
+  renderChartMetricControls(options, selectedIds);
+  var selectedOptions = selectedIds.map(function(id) {
+    return options.find(function(opt) { return opt.id === id; });
+  }).filter(Boolean);
+
+  const keyEx = selectedOptions.filter(function(opt) { return opt.type === 'exercise'; }).slice(0, 6).map(function(opt, index) {
+    return {name:opt.name, color:chartMetricColors[index % chartMetricColors.length]};
+  });
   const prHTML = keyEx.map(({name,color})=>{
     const sets = state.workouts.filter(w=>w.exercise===name);
     if (!sets.length) return `<div class="pr-row"><div class="pr-dot" style="background:${color};color:${color}"></div><div class="pr-ex">${name}</div><div class="pr-avg">нет данных</div><div class="pr-max" style="color:var(--text-muted)">—</div></div>`;
@@ -5872,27 +6123,26 @@ function renderCharts() {
       <div class="pr-avg">ср. ${avgW} кг</div>
       <div class="pr-max" style="color:${color}">${maxRM} кг</div>
     </div>`;
-  }).join('');
+  }).join('') || '<div class="empty-state">Выбери упражнение выше, чтобы увидеть рекорды.</div>';
   document.getElementById('pr-table').innerHTML = prHTML;
 
-  const big3 = [
-    {name:'Жим штанги лёжа', color:'#b026ff', label:'Жим'},
-    {name:'Становая тяга', color:'#00e5a0', label:'Становая'},
-    {name:'Приседания со штангой', color:'#ff9d3d', label:'Присед'},
-  ];
-  const allDates = [...new Set(state.workouts.map(w=>w.date))].sort();
+  const allDates = [...new Set(
+    (state.workouts || []).map(w=>w.date)
+      .concat((state.bodyWeight || []).map(w=>w.date))
+      .concat((state.bodyCal || []).map(c=>c.date))
+  )].filter(Boolean).sort();
 
   const lineData = {
     labels: allDates.map(d=>d.slice(5)),
-    datasets: big3.map(ex=>({
-      label: ex.label,
-      data: allDates.map(d=>{
-        const s = state.workouts.filter(w=>w.date===d&&w.exercise===ex.name);
-        return s.length ? Math.max(...s.map(w=>calc1rm(w.weight,w.reps))) : null;
-      }),
-      borderColor: ex.color, backgroundColor: ex.color+'22',
+    datasets: selectedOptions.map(function(metric, index) {
+      var color = chartMetricColors[index % chartMetricColors.length];
+      return {
+      label: metric.short || metric.label,
+      data: allDates.map(function(d) { return chartMetricValue(metric, d); }),
+      borderColor: color, backgroundColor: color+'22',
       tension: 0.3, pointRadius: 4, spanGaps: true,
-    }))
+    };
+    })
   };
 
   if (progChart) progChart.destroy();
@@ -5908,8 +6158,8 @@ function renderCharts() {
     }
   });
 
-  const avgExList = ['Жим штанги лёжа','Становая тяга','Приседания со штангой','Жим штанги стоя'];
-  const avgColors = ['#b026ff','#00e5a0','#ff9d3d','#4dabff'];
+  const avgExList = (keyEx.length ? keyEx.map(function(ex) { return ex.name; }) : workoutExerciseStats().slice(0, 4).map(function(item) { return item.name; }));
+  const avgColors = avgExList.map(function(_, index) { return chartMetricColors[index % chartMetricColors.length]; });
   const avgVals = avgExList.map(ex=>{
     const s = state.workouts.filter(w=>w.exercise===ex);
     return s.length ? round1(s.reduce((a,w)=>a+w.weight,0)/s.length) : 0;
@@ -5918,7 +6168,7 @@ function renderCharts() {
   if (avgChart) avgChart.destroy();
   avgChart = new Chart(document.getElementById('avgChart').getContext('2d'), {
     type:'bar',
-    data:{ labels:['Жим','Становая','Присед','Жим стоя'],
+    data:{ labels:avgExList.map(function(name) { return name.replace(/^Жим штанги /, 'Жим ').slice(0, 12); }),
       datasets:[{label:'Ср. вес кг',data:avgVals,backgroundColor:avgColors,borderRadius:6}] },
     options:{
       responsive:true,maintainAspectRatio:false,
