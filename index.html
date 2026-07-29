@@ -1544,6 +1544,81 @@ html[data-theme="dark"] .focus-card {
 .exercise-editor-list { display: grid; gap: 7px; margin-top: 8px; }
 .exercise-editor-row { display: grid; grid-template-columns: 1fr 34px; gap: 7px; align-items: center; }
 .exercise-editor-row input { min-width: 0; }
+.exercise-library-tools {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 12px 0;
+}
+.exercise-library-search {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+  color: var(--text);
+  font: 700 13px/1 'Manrope', sans-serif;
+}
+.exercise-library-search::placeholder { color: var(--text-muted); }
+.exercise-library-chips {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.exercise-library-chips::-webkit-scrollbar { display: none; }
+.exercise-library-chip {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card2);
+  color: var(--text-sub);
+  font: 800 10.5px/1 'Manrope', sans-serif;
+  cursor: pointer;
+}
+.exercise-library-chip.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.exercise-library-list { display: grid; gap: 8px; max-height: min(52vh, 430px); overflow-y: auto; padding-right: 2px; }
+.exercise-library-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+}
+.exercise-library-name { font-size: 12.5px; color: var(--text); font-weight: 900; line-height: 1.25; }
+.exercise-library-meta { margin-top: 5px; color: var(--text-muted); font-size: 10px; line-height: 1.35; }
+.exercise-library-cue { margin-top: 5px; color: var(--text-sub); font-size: 10.5px; line-height: 1.35; }
+.exercise-library-add {
+  min-width: 42px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font: 900 15px/1 'Manrope', sans-serif;
+  cursor: pointer;
+}
+.exercise-library-add.added { color: var(--green); }
+.exercise-library-empty {
+  padding: 18px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
 .last-set-card {
   display: none;
   align-items: center;
@@ -2606,6 +2681,7 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     <div class="muscle-tabs" id="muscle-tabs"></div>
     <div class="workout-toolbar">
       <button class="workout-tool-btn" onclick="openWorkoutGroups()">Настроить группы</button>
+      <button class="workout-tool-btn" onclick="openExerciseLibrary()">База упражнений</button>
       <button class="workout-tool-btn" onclick="openWorkoutGroupEditor()">+ Группа</button>
     </div>
     <section class="workout-session-panel">
@@ -3287,11 +3363,26 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
     <div class="modal-row">
       <div class="modal-label">Упражнения</div>
       <div class="exercise-editor-list" id="exercise-editor-list"></div>
+      <button class="sync-action" type="button" onclick="openExerciseLibrary({editor:true})"><span>Выбрать из базы</span><span class="sync-action-icon">⌕</span></button>
       <button class="sync-action" type="button" onclick="addExerciseEditorRow('')"><span>Добавить упражнение</span><span class="sync-action-icon">+</span></button>
     </div>
     <div class="profile-error" id="workout-group-error"></div>
     <button class="btn-primary" onclick="saveWorkoutGroupEditor()">Сохранить группу</button>
     <button class="modal-close-btn" onclick="closeModal('modal-workout-group-editor')">Отмена</button>
+  </div>
+</div>
+
+<!-- Exercise Library Modal -->
+<div class="modal-overlay" id="modal-exercise-library">
+  <div class="modal-sheet">
+    <div class="modal-title">База упражнений</div>
+    <div class="profile-question" id="exercise-library-target">Добавляй упражнения в текущую группу или используй поиск при создании своей программы.</div>
+    <div class="exercise-library-tools">
+      <input class="exercise-library-search" id="exercise-library-search" placeholder="Поиск: жим, тяга, ноги..." oninput="renderExerciseLibrary()">
+      <div class="exercise-library-chips" id="exercise-library-chips"></div>
+    </div>
+    <div class="exercise-library-list" id="exercise-library-list"></div>
+    <button class="modal-close-btn" onclick="closeModal('modal-exercise-library')">Закрыть</button>
   </div>
 </div>
 
@@ -4144,6 +4235,52 @@ const DEFAULT_WORKOUT_GROUPS = [
   {name:'Руки (Би + Три)', short:'Руки', exercises:['Подъём штанги на бицепс','Молотки (Hammer Curl)','Французский жим','Разгибание на трицепс (блок)']},
   {name:'Пресс + Кор', short:'Пресс', exercises:['Скручивания','Подъём ног в висе','Планка','Боковая планка','Велосипед','Русский твист']},
 ];
+const EXERCISE_LIBRARY = [
+  {name:'Жим штанги лёжа', group:'Грудь', equipment:'штанга, скамья', level:'база', cue:'Лопатки сведены, стопы в пол, штанга к нижней части груди.'},
+  {name:'Жим гантелей лёжа', group:'Грудь', equipment:'гантели, скамья', level:'база', cue:'Контролируй нижнюю точку и не теряй плечи вперед.'},
+  {name:'Жим штанги на наклонной скамье', group:'Грудь', equipment:'штанга, скамья', level:'средний', cue:'Угол 20-35 градусов, движение к верхней части груди.'},
+  {name:'Жим гантелей на наклонной скамье', group:'Грудь', equipment:'гантели, скамья', level:'средний', cue:'Держи предплечья вертикально и не бей гантели сверху.'},
+  {name:'Отжимания', group:'Грудь', equipment:'без оборудования', level:'начальный', cue:'Корпус прямой, локти под контролем, грудь идет к полу.'},
+  {name:'Сведение рук в кроссовере', group:'Грудь', equipment:'кроссовер', level:'средний', cue:'Веди локти по дуге, не превращай движение в жим.'},
+  {name:'Разводка гантелей лёжа', group:'Грудь', equipment:'гантели, скамья', level:'средний', cue:'Локти мягкие, растяжение без боли в плечах.'},
+  {name:'Подтягивания', group:'Спина', equipment:'турник', level:'средний', cue:'Начинай с опускания лопаток, тяни грудь к перекладине.'},
+  {name:'Тяга верхнего блока к груди', group:'Спина', equipment:'верхний блок', level:'начальный', cue:'Тяни локти вниз, корпус слегка отклонен, плечи не поднимай.'},
+  {name:'Тяга штанги в наклоне', group:'Спина', equipment:'штанга', level:'средний', cue:'Спина нейтральная, тяга локтями к поясу.'},
+  {name:'Тяга гантели одной рукой', group:'Спина', equipment:'гантель, скамья', level:'начальный', cue:'Не разворачивай корпус, веди локоть назад.'},
+  {name:'Тяга нижнего блока к поясу', group:'Спина', equipment:'нижний блок', level:'начальный', cue:'Сначала лопатки, затем локти, без рывка корпусом.'},
+  {name:'Становая тяга', group:'Спина', equipment:'штанга', level:'продвинутый', cue:'Гриф близко к ногам, нейтральная спина, толкай пол ногами.'},
+  {name:'Румынская тяга', group:'Ноги', equipment:'штанга или гантели', level:'средний', cue:'Таз назад, колени мягкие, растяжение задней поверхности бедра.'},
+  {name:'Приседания со штангой', group:'Ноги', equipment:'штанга, стойки', level:'средний', cue:'Колени по линии носков, корпус стабилен, глубина под контроль.'},
+  {name:'Фронтальные приседания', group:'Ноги', equipment:'штанга', level:'средний', cue:'Локти высоко, корпус вертикальнее, вес на середине стопы.'},
+  {name:'Жим ногами', group:'Ноги', equipment:'тренажёр', level:'начальный', cue:'Поясница прижата, колени не заваливаются внутрь.'},
+  {name:'Болгарские выпады', group:'Ноги', equipment:'гантели, скамья', level:'средний', cue:'Передняя стопа устойчива, корпус слегка вперед.'},
+  {name:'Выпады с гантелями', group:'Ноги', equipment:'гантели', level:'начальный', cue:'Шаг достаточный, колено передней ноги стабильно.'},
+  {name:'Разгибание ног в тренажёре', group:'Ноги', equipment:'тренажёр', level:'начальный', cue:'Пауза сверху, опускай вес подконтрольно.'},
+  {name:'Сгибание ног в тренажёре', group:'Ноги', equipment:'тренажёр', level:'начальный', cue:'Не отрывай таз, сгибай без рывка.'},
+  {name:'Подъём на носки стоя', group:'Ноги', equipment:'тренажёр или гантели', level:'начальный', cue:'Полная амплитуда, пауза в верхней точке.'},
+  {name:'Жим штанги стоя', group:'Плечи', equipment:'штанга', level:'средний', cue:'Корпус жесткий, гриф идет близко к лицу.'},
+  {name:'Жим гантелей сидя', group:'Плечи', equipment:'гантели, скамья', level:'начальный', cue:'Не прогибай поясницу, опускай гантели до комфортной глубины.'},
+  {name:'Подъём гантелей в стороны', group:'Плечи', equipment:'гантели', level:'начальный', cue:'Локти чуть выше кистей, движение без раскачки.'},
+  {name:'Разведение на задние дельты', group:'Плечи', equipment:'гантели или тренажёр', level:'начальный', cue:'Веди локти в стороны, не зажимай шею.'},
+  {name:'Тяга к подбородку', group:'Плечи', equipment:'штанга или EZ-гриф', level:'средний', cue:'Поднимай до комфортной высоты, локти мягко в стороны.'},
+  {name:'Face Pull', group:'Плечи', equipment:'блок, канат', level:'начальный', cue:'Тяни к лицу, локти высоко, лопатки назад.'},
+  {name:'Шраги', group:'Плечи', equipment:'гантели или штанга', level:'начальный', cue:'Плечи вверх и чуть назад, без круговых движений.'},
+  {name:'Подъём штанги на бицепс', group:'Руки', equipment:'штанга', level:'начальный', cue:'Локти рядом с корпусом, не раскачивайся.'},
+  {name:'Подъём гантелей на бицепс', group:'Руки', equipment:'гантели', level:'начальный', cue:'Полный контроль вниз, кисти не ломай.'},
+  {name:'Молотки', group:'Руки', equipment:'гантели', level:'начальный', cue:'Нейтральный хват, локти не уходят вперед.'},
+  {name:'Сгибание на скамье Скотта', group:'Руки', equipment:'скамья Скотта, EZ-гриф', level:'средний', cue:'Не проваливай локти внизу, работай без рывков.'},
+  {name:'Французский жим', group:'Руки', equipment:'EZ-гриф или гантели', level:'средний', cue:'Плечо фиксировано, сгибание только в локте.'},
+  {name:'Разгибание на трицепс в блоке', group:'Руки', equipment:'блок', level:'начальный', cue:'Локти прижаты, внизу полностью напряги трицепс.'},
+  {name:'Отжимания на брусьях', group:'Руки', equipment:'брусья', level:'средний', cue:'Опускайся подконтрольно, плечи не проваливай.'},
+  {name:'Планка', group:'Кор', equipment:'без оборудования', level:'начальный', cue:'Ребра вниз, таз не провисает, дыши спокойно.'},
+  {name:'Боковая планка', group:'Кор', equipment:'без оборудования', level:'начальный', cue:'Тело одной линией, плечо над локтем.'},
+  {name:'Dead Bug', group:'Кор', equipment:'без оборудования', level:'начальный', cue:'Поясница прижата, двигай конечности медленно.'},
+  {name:'Подъём ног в висе', group:'Кор', equipment:'турник', level:'средний', cue:'Без раскачки, начинай движение тазом.'},
+  {name:'Русский твист', group:'Кор', equipment:'мяч или диск', level:'начальный', cue:'Поворачивай грудную клетку, не дергай шеей.'},
+  {name:'Гиперэкстензия', group:'Кор', equipment:'римский стул', level:'начальный', cue:'Поднимай корпус до линии тела, не переразгибай поясницу.'}
+];
+var exerciseLibraryFilter = 'Все';
+var exerciseLibraryEditorMode = false;
 let workoutGroups = loadWorkoutGroupsLocal();
 let editingWorkoutGroupIndex = null;
 
@@ -5509,6 +5646,97 @@ function openWorkoutGroupEditor(index) {
   renderExerciseEditorRows(group.exercises && group.exercises.length ? group.exercises : ['']);
   document.getElementById('modal-workout-groups').classList.remove('open');
   document.getElementById('modal-workout-group-editor').classList.add('open');
+}
+
+function exerciseLibraryGroups() {
+  return ['Все'].concat(Array.from(new Set(EXERCISE_LIBRARY.map(function(item) { return item.group; }))));
+}
+
+function openExerciseLibrary(options) {
+  options = options || {};
+  exerciseLibraryEditorMode = !!options.editor;
+  var target = document.getElementById('exercise-library-target');
+  if (target) {
+    target.textContent = exerciseLibraryEditorMode
+      ? 'Выбранные упражнения добавятся в редактируемую группу.'
+      : 'Выбранные упражнения добавятся в текущую группу: ' + currentMuscle + '.';
+  }
+  var search = document.getElementById('exercise-library-search');
+  if (search) search.value = '';
+  exerciseLibraryFilter = 'Все';
+  renderExerciseLibrary();
+  document.getElementById('modal-exercise-library').classList.add('open');
+}
+
+function setExerciseLibraryFilter(group) {
+  exerciseLibraryFilter = group || 'Все';
+  renderExerciseLibrary();
+}
+
+function currentEditorExerciseNames() {
+  return Array.from(document.querySelectorAll('.workout-exercise-input')).map(function(input) {
+    return input.value.trim().toLowerCase();
+  }).filter(Boolean);
+}
+
+function currentTargetExerciseNames() {
+  if (exerciseLibraryEditorMode) return currentEditorExerciseNames();
+  var group = workoutGroups.find(function(item) { return item.name === currentMuscle; });
+  return (group?.exercises || []).map(function(name) { return String(name).trim().toLowerCase(); });
+}
+
+function renderExerciseLibrary() {
+  var chips = document.getElementById('exercise-library-chips');
+  var list = document.getElementById('exercise-library-list');
+  if (!chips || !list) return;
+  chips.innerHTML = exerciseLibraryGroups().map(function(group) {
+    var active = group === exerciseLibraryFilter ? ' active' : '';
+    return '<button class="exercise-library-chip' + active + '" onclick="setExerciseLibraryFilter(decodeURIComponent(\'' + encodeToken(group) + '\'))">' + escapeHtml(group) + '</button>';
+  }).join('');
+  var query = String(document.getElementById('exercise-library-search')?.value || '').trim().toLowerCase();
+  var targetNames = currentTargetExerciseNames();
+  var items = EXERCISE_LIBRARY.filter(function(item) {
+    var byGroup = exerciseLibraryFilter === 'Все' || item.group === exerciseLibraryFilter;
+    var haystack = [item.name, item.group, item.equipment, item.level, item.cue].join(' ').toLowerCase();
+    return byGroup && (!query || haystack.indexOf(query) !== -1);
+  });
+  if (!items.length) {
+    list.innerHTML = '<div class="exercise-library-empty">Ничего не найдено. Попробуй “жим”, “тяга”, “гантели” или выбери другую группу.</div>';
+    return;
+  }
+  list.innerHTML = items.map(function(item) {
+    var added = targetNames.indexOf(item.name.toLowerCase()) !== -1;
+    return '<div class="exercise-library-card">' +
+      '<div>' +
+        '<div class="exercise-library-name">' + escapeHtml(item.name) + '</div>' +
+        '<div class="exercise-library-meta">' + escapeHtml(item.group) + ' · ' + escapeHtml(item.equipment) + ' · ' + escapeHtml(item.level) + '</div>' +
+        '<div class="exercise-library-cue">' + escapeHtml(item.cue) + '</div>' +
+      '</div>' +
+      '<button class="exercise-library-add' + (added ? ' added' : '') + '" onclick="addExerciseFromLibrary(decodeURIComponent(\'' + encodeToken(item.name) + '\'))">' + (added ? '✓' : '+') + '</button>' +
+    '</div>';
+  }).join('');
+}
+
+async function addExerciseFromLibrary(name) {
+  name = String(name || '').trim();
+  if (!name) return;
+  if (exerciseLibraryEditorMode) {
+    var existsInEditor = currentEditorExerciseNames().indexOf(name.toLowerCase()) !== -1;
+    if (!existsInEditor) addExerciseEditorRow(name);
+    renderExerciseLibrary();
+    return;
+  }
+  var group = workoutGroups.find(function(item) { return item.name === currentMuscle; });
+  if (!group) return;
+  var exists = (group.exercises || []).some(function(ex) { return ex.toLowerCase() === name.toLowerCase(); });
+  if (!exists) {
+    group.exercises.push(name);
+    await syncWorkoutGroups();
+    renderMuscleTabs();
+    renderExercises();
+    updateExerciseSelect();
+  }
+  renderExerciseLibrary();
 }
 
 function renderExerciseEditorRows(exercises) {
