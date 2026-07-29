@@ -1839,6 +1839,8 @@ html[data-theme="dark"] .focus-card {
   font-weight: 900;
 }
 .exercise-plan-status.done { background: var(--green-soft); color: var(--green); }
+.exercise-plan-status.pending { background: var(--orange-soft); color: var(--orange); }
+.exercise-plan-card.pending { opacity: .96; }
 .exercise-plan-add {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1870,6 +1872,8 @@ html[data-theme="dark"] .focus-card {
 .exercise-plan-actions {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   flex-shrink: 0;
 }
 .ex-sets { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -1878,6 +1882,14 @@ html[data-theme="dark"] .focus-card {
   background: var(--neon-soft); color: var(--neon2); font-weight: 600;
 }
 .set-chip.pr { background: var(--orange-soft); color: var(--orange); }
+.ex-sets-empty {
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
 .ex-stats { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
 .ex-stats strong { color: var(--neon2); }
 
@@ -5707,34 +5719,43 @@ function renderExercises() {
   const byEx = {};
   selectedSets.forEach(w => { (byEx[w.exercise] = byEx[w.exercise]||[]).push(w); });
 
-  const exToShow = Object.keys(byEx);
+  const plannedExercises = getExerciseList(currentMuscle);
+  const customLogged = Object.keys(byEx).filter(function(ex) {
+    return plannedExercises.indexOf(ex) === -1;
+  });
+  const exToShow = plannedExercises.concat(customLogged);
   renderWorkoutSessionSummary(exToShow, byEx);
 
   var html = exToShow.map(ex => {
     const sets = byEx[ex] || [];
-    const chips = sets.map(s => {
+    const isDone = sets.length > 0;
+    const chips = sets.length ? sets.map(s => {
       const orm = calc1rm(s.weight, s.reps);
       const isPR = isPRFor(ex, orm);
       return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' ★':''} <button onclick="deleteWorkout(${s._idx},${s.id||0})" style="margin-left:6px;border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></div>`;
-    }).join('');
-    const maxRM = Math.max(...sets.map(s=>calc1rm(s.weight,s.reps)));
-    const avgW = round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length);
+    }).join('') : '<div class="ex-sets-empty">Подходы еще не записаны</div>';
+    const maxRM = sets.length ? Math.max(...sets.map(s=>calc1rm(s.weight,s.reps))) : 0;
+    const avgW = sets.length ? round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length) : 0;
     const last = lastSetForExercise(ex);
-    const lastMeta = last ? ('Последний: ' + asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг') : '';
-    return `<div class="card exercise-plan-card"><div class="card-inner">
+    const lastMeta = last ? ('Последний: ' + asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг') : 'Новое упражнение в плане. Начни с комфортного веса.';
+    const statLine = isDone
+      ? `1RM: <strong>${maxRM} кг</strong> · Ср. вес: <strong>${avgW} кг</strong>`
+      : (last ? `Прошлый вес: <strong>${escapeHtml(last.weight)} кг</strong> · ${escapeHtml(last.sets + '×' + last.reps)}` : 'Запланировано на эту тренировку');
+    return `<div class="card exercise-plan-card${isDone?'':' pending'}"><div class="card-inner">
       <div class="exercise-plan-head">
         <div>
           <div class="ex-name">${escapeHtml(ex)}</div>
-          <div class="ex-stats">1RM: <strong>${maxRM} кг</strong> · Ср. вес: <strong>${avgW} кг</strong></div>
+          <div class="ex-stats">${statLine}</div>
         </div>
-        <div class="exercise-plan-status done">✓</div>
+        <div class="exercise-plan-status ${isDone?'done':'pending'}">${isDone?'✓':'+'}</div>
       </div>
       <div class="ex-sets">${chips}</div>
       <div class="exercise-plan-foot">
         <span>${escapeHtml(lastMeta)}</span>
         <div class="exercise-plan-actions">
-          <button class="exercise-plan-add danger" onclick="deleteWorkoutExercise(decodeURIComponent('${encodeToken(ex)}'))">Удалить</button>
-          <button class="exercise-plan-add" onclick="repeatWorkoutSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">Повторить</button>
+          ${isDone ? `<button class="exercise-plan-add danger" onclick="deleteWorkoutExercise(decodeURIComponent('${encodeToken(ex)}'))">Удалить</button>` : ''}
+          ${last ? `<button class="exercise-plan-add" onclick="repeatWorkoutSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">Повторить</button>` : ''}
+          <button class="exercise-plan-add" onclick="openExerciseAdviceForExercise(decodeURIComponent('${encodeToken(ex)}'))">Совет</button>
           <button class="exercise-plan-add" onclick="openAddSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">+ подход</button>
         </div>
       </div>
@@ -5743,8 +5764,8 @@ function renderExercises() {
 
   container.innerHTML = html || `<div class="card">
     <div class="card-inner" style="text-align:center;padding:28px 18px">
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">В этот день упражнений пока нет</div>
-      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Нажми “Добавить подход”, выбери упражнение и сохрани — только после этого оно появится в дневнике.</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">В группе пока нет упражнений</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5">Открой базу упражнений или настрой группу, чтобы собрать план тренировки.</div>
     </div>
   </div>`;
 }
@@ -5911,6 +5932,11 @@ async function runExerciseAiAdvice() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Обновить'; }
   }
+}
+
+function openExerciseAdviceForExercise(exerciseName) {
+  openAddSetForExercise(exerciseName);
+  setTimeout(runExerciseAiAdvice, 120);
 }
 
 function readSelectedExerciseName() {
