@@ -1301,6 +1301,62 @@ html[data-theme="dark"] .focus-card {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+.app-boot {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  backdrop-filter: blur(12px);
+  transform: translateY(0);
+  opacity: 1;
+  transition: opacity .22s ease, transform .22s ease;
+  pointer-events: none;
+}
+.app-boot.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.app-boot-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 var(--green-soft);
+  animation: bootPulse 1.2s ease-in-out infinite;
+}
+.app-boot-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-sub);
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@keyframes bootPulse {
+  0%, 100% { transform: scale(.86); box-shadow: 0 0 0 0 var(--green-soft); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 8px transparent; }
+}
 
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 12px 0; }
 .kpi-card {
@@ -2761,6 +2817,10 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
 </head>
 <body>
 <div id="app">
+  <div class="app-boot" id="app-boot">
+    <span class="app-boot-dot"></span>
+    <span class="app-boot-text" id="app-boot-text">Открываю локальные данные...</span>
+  </div>
 
   <!-- ═══════════════════════════════════ HOME ═══════════════════════════════ -->
   <div class="screen active" id="s-home">
@@ -6036,10 +6096,12 @@ async function repeatWorkoutSetForExercise(exerciseName) {
   });
   document.getElementById(id)?.addEventListener('change', function() {
     setWorkoutSetError('');
-    toggleCustomExerciseInput();
-    if (id === 'm-exercise') clearExerciseAiAdvice();
-    suggestLastSetForExercise(true);
-    updateWorkoutSetDateLabel();
+    if (id === 'm-exercise') {
+      toggleCustomExerciseInput();
+      clearExerciseAiAdvice();
+      suggestLastSetForExercise(true);
+    }
+    if (id === 'm-workout-date') updateWorkoutSetDateLabel();
     updateRMPreview();
   });
 });
@@ -7722,16 +7784,39 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
 });
 
+function setAppBootStatus(message) {
+  var boot = document.getElementById('app-boot');
+  var text = document.getElementById('app-boot-text');
+  if (!boot) return;
+  boot.classList.remove('hidden');
+  if (text) text.textContent = message || 'Загружаю данные...';
+}
+
+function hideAppBootStatus(delay) {
+  setTimeout(function() {
+    var boot = document.getElementById('app-boot');
+    if (boot) boot.classList.add('hidden');
+  }, delay || 0);
+}
+
 // ════════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════════
 applyTheme(localStorage.getItem('planner_theme') || document.documentElement.getAttribute('data-theme'));
 updateNotificationModeLabel();
+setAppBootStatus('Открываю локальные данные...');
 renderHome();
+setAppBootStatus('Синхронизирую изменения...');
 loadState(() => {
   renderSyncedScreens();
   setSyncStatus(getOutbox().length ? 'pending' : (apiAvailable ? 'online' : 'offline'));
-}).then(function() { setTimeout(maybeShowProfileOnboarding, 180); });
+}).then(function() {
+  hideAppBootStatus(180);
+  setTimeout(maybeShowProfileOnboarding, 220);
+}).catch(function() {
+  setAppBootStatus('Работаю офлайн. Данные сохранятся на устройстве.');
+  hideAppBootStatus(1400);
+});
 </script>
 </body>
 </html>
