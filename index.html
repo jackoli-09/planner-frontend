@@ -13,10 +13,25 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       console.warn('Офлайн-кеш пока недоступен:', err);
     });
   });
+  // Первая установка SW не требует перезагрузки: страница уже свежая.
+  // При обновлении не перезагружаем посреди ввода — ждём, пока приложение свернут.
+  var hadSwController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (!hadSwController) { hadSwController = true; return; }
     if (sessionStorage.getItem('planner_sw_reloaded') === '1') return;
-    sessionStorage.setItem('planner_sw_reloaded', '1');
-    location.reload();
+    function reloadForUpdate() {
+      sessionStorage.setItem('planner_sw_reloaded', '1');
+      location.reload();
+    }
+    var active = document.activeElement;
+    var isEditing = document.querySelector('.modal-overlay.open') ||
+      (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName));
+    if (!isEditing) return reloadForUpdate();
+    document.addEventListener('visibilitychange', function onHidden() {
+      if (document.visibilityState !== 'hidden') return;
+      document.removeEventListener('visibilitychange', onHidden);
+      reloadForUpdate();
+    });
   });
 }
 
@@ -2178,6 +2193,8 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
   font: 700 12px/1.2 'Manrope', sans-serif; text-align: left;
 }
 .sync-action.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.sync-action.danger { color: var(--red); }
+a.sync-action { text-decoration: none; box-sizing: border-box; }
 .sync-action:active { transform: scale(.985); }
 .sync-action:disabled { opacity: .55; transform: none; cursor: default; }
 .sync-action-icon { font-size: 17px; line-height: 1; }
@@ -3299,6 +3316,8 @@ select.modal-input { appearance: none; -webkit-appearance: none; }
       <button class="sync-action" onclick="document.getElementById('backup-file-input').click()"><span>Восстановить из файла</span><span class="sync-action-icon">↑</span></button>
       <input id="backup-file-input" type="file" accept="application/json,.json" style="display:none" onchange="importBackupFile(this)">
       <button class="sync-action" id="restore-auto-backup-btn" onclick="restoreAutomaticBackup()"><span>Восстановить автокопию</span><span class="sync-action-icon">↶</span></button>
+      <a class="sync-action" href="./privacy.html" target="_blank" rel="noopener"><span>Политика конфиденциальности</span><span class="sync-action-icon">§</span></a>
+      <button class="sync-action danger" id="delete-account-btn" onclick="deleteAccount()"><span>Удалить аккаунт и все данные</span><span class="sync-action-icon">✕</span></button>
     </div>
     <div class="sync-notice" id="sync-notice"></div>
     <div class="sync-debug" id="sync-debug">Диагностика появится после проверки синхронизации.</div>
@@ -3903,7 +3922,14 @@ var lastServerUserId = null;
 
 function getUserId() {
   const u = tg?.initDataUnsafe?.user;
-  if (u?.id) return u.id;
+  if (u?.id) {
+    localStorage.setItem('planner_last_tg_user_id', String(u.id));
+    return u.id;
+  }
+  // Telegram SDK не загрузился (офлайн, сбой CDN): остаёмся в данных последнего
+  // Telegram-пользователя этого устройства, а не открываем пустой демо-профиль.
+  const lastTgId = parseInt(localStorage.getItem('planner_last_tg_user_id') || '', 10);
+  if (lastTgId > 0) return lastTgId;
   let demoId = localStorage.getItem('demo_user_id');
   if (!demoId) { demoId = String(Date.now()); localStorage.setItem('demo_user_id', demoId); }
   return parseInt(demoId);
@@ -5317,6 +5343,36 @@ async function restoreAutomaticBackup() {
   } catch(e) {
     showSyncNotice('Не удалось восстановить: ' + (e.message || 'копия повреждена'), true);
   }
+}
+
+function askConfirm(message) {
+  return new Promise(function(resolve) {
+    if (tg?.showConfirm) {
+      try { tg.showConfirm(message, function(ok) { resolve(!!ok); }); return; } catch (_) {}
+    }
+    resolve(window.confirm(message));
+  });
+}
+
+async function deleteAccount() {
+  var ok = await askConfirm('Удалить аккаунт? Все задачи, тренировки, питание и замеры будут безвозвратно удалены с сервера и с этого устройства.');
+  if (!ok) return;
+  await ensureAuthSession(false);
+  try {
+    var headers = getApiHeaders();
+    headers['X-Confirm-Delete'] = 'DELETE';
+    var res = await fetch(API_BASE + '/api/account', {method:'DELETE', headers:headers});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+  } catch (error) {
+    showSyncNotice('Не удалось удалить аккаунт: нужен интернет и вход через Telegram. Данные не тронуты.', true);
+    return;
+  }
+  var suffix = '_' + USER_ID;
+  Object.keys(localStorage).forEach(function(key) {
+    if (key.endsWith(suffix)) localStorage.removeItem(key);
+  });
+  localStorage.removeItem('planner_last_tg_user_id');
+  location.reload();
 }
 
 function exportData() {
