@@ -55,6 +55,7 @@ function applyTheme(theme) {
   }
   var label = document.getElementById('theme-mode-label');
   if (label) label.textContent = selected === 'dark' ? 'Темная' : 'Светлая';
+  if (typeof syncChartTheme === 'function') syncChartTheme();
 }
 
 function toggleTheme() {
@@ -1043,6 +1044,15 @@ body { background: var(--bg); color: var(--text); }
 .nav-icon { line-height: 1; }
 .nav-label { color: var(--text-muted); font-size: 9.5px; font-weight: 600; letter-spacing: 0.2px; }
 
+.ic { width: 22px; height: 22px; display: block; flex-shrink: 0; }
+.nav-icon .ic { width: 23px; height: 23px; }
+.more-icon .ic, .home-nudge-icon .ic { width: 18px; height: 18px; }
+.workout-date-nav { display: flex; align-items: center; justify-content: center; }
+.workout-date-nav .ic { width: 18px; height: 18px; }
+.chart-canvas-wrap { position: relative; }
+.chart-empty { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 0 20px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+.workout-program-day.rest .program-day-name { color: var(--text-muted); font-weight: 700; }
+
 /* ── Headers ── */
 .page-header {
   padding: 16px 16px 10px;
@@ -1647,7 +1657,7 @@ html[data-theme="dark"] .focus-card {
 .workout-program-day {
   min-width: 0;
   min-height: 58px;
-  padding: 7px 5px;
+  padding: 7px 2px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--card);
@@ -1939,13 +1949,14 @@ html[data-theme="dark"] .focus-card {
   font-size: 10px;
   line-height: 1.35;
 }
-.exercise-plan-foot span { flex: 1; }
+.exercise-plan-foot { flex-wrap: wrap; }
+.exercise-plan-foot span { flex: 1 1 100%; }
 .exercise-plan-actions {
   display: flex;
+  flex: 1 1 100%;
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
-  flex-shrink: 0;
 }
 .ex-sets { display: flex; gap: 6px; flex-wrap: wrap; }
 .set-chip {
@@ -2939,9 +2950,9 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 
     <div class="workout-calendar">
       <div class="workout-calendar-head">
-        <button class="workout-date-nav" onclick="shiftWorkoutDate(-1)" aria-label="Предыдущий день">‹</button>
+        <button class="workout-date-nav" onclick="shiftWorkoutDate(-1)" aria-label="Предыдущий день"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></svg></button>
         <div class="workout-date-title" id="workout-date-title">Сегодня<span>Выбери день тренировки</span></div>
-        <button class="workout-date-nav" onclick="shiftWorkoutDate(1)" aria-label="Следующий день">›</button>
+        <button class="workout-date-nav" onclick="shiftWorkoutDate(1)" aria-label="Следующий день"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
       </div>
       <div class="workout-day-strip" id="workout-day-strip"></div>
       <button class="workout-today-btn" id="workout-today-btn" onclick="jumpWorkoutToday()">Вернуться к сегодня</button>
@@ -2949,8 +2960,8 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 
     <div class="muscle-tabs" id="muscle-tabs"></div>
     <div class="workout-toolbar">
-      <button class="workout-tool-btn" onclick="openWorkoutGroups()">Настроить группы</button>
-      <button class="workout-tool-btn" onclick="openExerciseLibrary()">База упражнений</button>
+      <button class="workout-tool-btn" onclick="openWorkoutGroups()">Группы</button>
+      <button class="workout-tool-btn" onclick="openExerciseLibrary()">Упражнения</button>
       <button class="workout-tool-btn" onclick="openWorkoutGroupEditor()">+ Группа</button>
     </div>
     <section class="workout-program-panel">
@@ -3055,8 +3066,9 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
     </div>
 
     <div id="body-weight-section">
-      <div class="section-label">Тело</div>
-      <div class="body-visual-card">
+      <!-- 3D-модель тела отложена до параметрической модели (см. контекст проекта) -->
+      <div class="section-label" style="display:none">Тело</div>
+      <div class="body-visual-card" style="display:none">
         <div class="body-visual-head">
           <div>
             <div class="body-visual-kicker">3D трекинг</div>
@@ -3332,10 +3344,10 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
       <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="food-date-label">Сегодня</div>
     </div>
     <!-- Дата -->
-    <div style="display:flex;gap:8px;align-items:center;padding:0 12px 10px">
-      <button onclick="foodDateShift(-1)" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer;font-family:inherit">◀</button>
-      <div style="flex:1;text-align:center;font-size:13px;font-weight:600;color:var(--text)" id="food-date-display">Сегодня</div>
-      <button onclick="foodDateShift(1)" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer;font-family:inherit">▶</button>
+    <div class="workout-calendar-head">
+      <button class="workout-date-nav" onclick="foodDateShift(-1)" aria-label="Предыдущий день"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></svg></button>
+      <div class="workout-date-title" id="food-date-display">Сегодня</div>
+      <button class="workout-date-nav" onclick="foodDateShift(1)" aria-label="Следующий день"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
     </div>
     <!-- Итоги -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin:0 12px 10px;padding:14px">
@@ -3434,23 +3446,23 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
   </div>
   <div class="nav-buttons">
     <button class="nav-item active" id="nav-home" onclick="go('home')" title="Главная">
-      <div class="nav-icon">⌂</div>
+      <div class="nav-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z"/></svg></div>
       <div class="nav-label">Главная</div>
     </button>
     <button class="nav-item" id="nav-tasks" onclick="go('tasks')" title="Задачи">
-      <div class="nav-icon">✓</div>
+      <div class="nav-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="m8.5 12.3 2.4 2.4 4.6-5"/></svg></div>
       <div class="nav-label">Задачи</div>
     </button>
     <button class="nav-item" id="nav-food" onclick="go('food')" title="Питание">
-      <div class="nav-icon">◐</div>
+      <div class="nav-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5v17M4.5 3.5v4.5a2.5 2.5 0 0 0 5 0V3.5M17 20.5v-17c-2 1-3.5 3.5-3.5 7 0 2.5 1.2 3.8 3.5 3.8"/></svg></div>
       <div class="nav-label">Питание</div>
     </button>
     <button class="nav-item" id="nav-workout" onclick="go('workout')" title="Тренировки">
-      <div class="nav-icon">▥</div>
+      <div class="nav-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="6.5" width="3.5" height="11" rx="1.2"/><rect x="15.5" y="6.5" width="3.5" height="11" rx="1.2"/><path d="M2.5 9.5v5M21.5 9.5v5M8.5 12h7"/></svg></div>
       <div class="nav-label">Трен.</div>
     </button>
     <button class="nav-item" id="nav-more" onclick="openMore()" title="Еще">
-      <div class="nav-icon">⋯</div>
+      <div class="nav-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></div>
       <div class="nav-label">Ещё</div>
     </button>
   </div>
@@ -3461,39 +3473,39 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
     <div class="modal-title">Еще</div>
     <div class="more-grid">
       <button class="more-action" onclick="goFromMore('charts')">
-        <span class="more-icon">↗</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16M6 15.5l4-4.5 3 3 5-6.5"/></svg></span>
         <span><span class="more-title">Прогресс</span><span class="more-sub">Графики и рекорды</span></span>
       </button>
       <button class="more-action" onclick="goFromMore('body')">
-        <span class="more-icon">kg</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.5 10.5a3.5 3.5 0 0 1 7 0M12 10.5l1.6-1.8"/></svg></span>
         <span><span class="more-title">Вес</span><span class="more-sub">Замеры и калории</span></span>
       </button>
       <button class="more-action" onclick="goFromMore('supps')">
-        <span class="more-icon">+</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="8.6" width="18.4" height="6.8" rx="3.4" transform="rotate(-40 12 12)"/><path d="m9.4 9.1 5.2 5.8"/></svg></span>
         <span><span class="more-title">Добавки</span><span class="more-sub">Приемы и отметки</span></span>
       </button>
       <button class="more-action" onclick="goFromMore('report')">
-        <span class="more-icon">□</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h7.5l4 4v13h-11.5z"/><path d="M13.5 3.5v4.5h4.5M9.5 12.5h5M9.5 16h5"/></svg></span>
         <span><span class="more-title">Отчет</span><span class="more-sub">Сводка месяца</span></span>
       </button>
       <button class="more-action" onclick="goFromMore('ai')" style="grid-column:1 / -1">
-        <span class="more-icon">AI</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.5l1.7 4.6 4.6 1.7-4.6 1.7L11 17.1l-1.7-4.6-4.6-1.7 4.6-1.7z"/><path d="M18.5 15v4.5M16.3 17.3h4.4"/></svg></span>
         <span><span class="more-title">ИИ-анализ</span><span class="more-sub">Плато, достижения и фокус недели</span></span>
       </button>
       <button class="more-action" onclick="openProfileEditor()" style="grid-column:1 / -1">
-        <span class="more-icon">◎</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1.3-3.4 4-5 7-5s5.7 1.6 7 5"/></svg></span>
         <span><span class="more-title">Профиль</span><span class="more-sub">Цель, параметры и калории</span></span>
       </button>
       <button class="more-action" onclick="openNotificationSettings()" style="grid-column:1 / -1">
-        <span class="more-icon">◷</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg></span>
         <span><span class="more-title">Напоминания</span><span class="more-sub" id="notifications-mode-label">Настроить время</span></span>
       </button>
       <button class="more-action" onclick="goFromMore('sync')" style="grid-column:1 / -1">
-        <span class="more-icon">↻</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 10.5A7.5 7.5 0 0 0 6 7.2L4.5 8.7M4.5 4.5v4.2h4.2M4.5 13.5A7.5 7.5 0 0 0 18 16.8l1.5-1.5M19.5 19.5v-4.2h-4.2"/></svg></span>
         <span><span class="more-title">Данные</span><span class="more-sub">Синхронизация и резервные копии</span></span>
       </button>
       <button class="more-action" onclick="toggleTheme()" style="grid-column:1 / -1">
-        <span class="more-icon">◐</span>
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A7.8 7.8 0 1 1 9.8 4.5a6.2 6.2 0 0 0 9.7 9.7z"/></svg></span>
         <span><span class="more-title">Тема</span><span class="more-sub" id="theme-mode-label">Светлая</span></span>
       </button>
     </div>
@@ -3901,6 +3913,11 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 
 <script>
 // ════════════════════════════════════════════════════════════════
+var ICONS = {"home": "<path d=\"M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z\"/>", "tasks": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"4.5\"/><path d=\"m8.5 12.3 2.4 2.4 4.6-5\"/>", "food": "<path d=\"M7 3.5v17M4.5 3.5v4.5a2.5 2.5 0 0 0 5 0V3.5M17 20.5v-17c-2 1-3.5 3.5-3.5 7 0 2.5 1.2 3.8 3.5 3.8\"/>", "workout": "<rect x=\"5\" y=\"6.5\" width=\"3.5\" height=\"11\" rx=\"1.2\"/><rect x=\"15.5\" y=\"6.5\" width=\"3.5\" height=\"11\" rx=\"1.2\"/><path d=\"M2.5 9.5v5M21.5 9.5v5M8.5 12h7\"/>", "more": "<circle cx=\"5.5\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/>", "plus": "<path d=\"M12 5.5v13M5.5 12h13\"/>", "check": "<path d=\"m5.5 12.5 4 4 9-9\"/>", "scale": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"4.5\"/><path d=\"M8.5 10.5a3.5 3.5 0 0 1 7 0M12 10.5l1.6-1.8\"/>", "chart": "<path d=\"M4 19.5h16M6 15.5l4-4.5 3 3 5-6.5\"/>", "pill": "<rect x=\"2.8\" y=\"8.6\" width=\"18.4\" height=\"6.8\" rx=\"3.4\" transform=\"rotate(-40 12 12)\"/><path d=\"m9.4 9.1 5.2 5.8\"/>", "report": "<path d=\"M6.5 3.5h7.5l4 4v13h-11.5z\"/><path d=\"M13.5 3.5v4.5h4.5M9.5 12.5h5M9.5 16h5\"/>", "spark": "<path d=\"M11 4.5l1.7 4.6 4.6 1.7-4.6 1.7L11 17.1l-1.7-4.6-4.6-1.7 4.6-1.7z\"/><path d=\"M18.5 15v4.5M16.3 17.3h4.4\"/>", "user": "<circle cx=\"12\" cy=\"8.5\" r=\"3.5\"/><path d=\"M5 20c1.3-3.4 4-5 7-5s5.7 1.6 7 5\"/>", "bell": "<path d=\"M6 16.5v-5a6 6 0 0 1 12 0v5l1.5 2h-15z\"/><path d=\"M10 20.5a2 2 0 0 0 4 0\"/>", "sync": "<path d=\"M19.5 10.5A7.5 7.5 0 0 0 6 7.2L4.5 8.7M4.5 4.5v4.2h4.2M4.5 13.5A7.5 7.5 0 0 0 18 16.8l1.5-1.5M19.5 19.5v-4.2h-4.2\"/>", "moon": "<path d=\"M19.5 14.2A7.8 7.8 0 1 1 9.8 4.5a6.2 6.2 0 0 0 9.7 9.7z\"/>", "chev-left": "<path d=\"m14.5 6-6 6 6 6\"/>", "chev-right": "<path d=\"m9.5 6 6 6-6 6\"/>"};
+function iconSvg(name) {
+  return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[name] || ICONS.plus) + '</svg>';
+}
+
 // TELEGRAM WEBAPP INIT
 // ════════════════════════════════════════════════════════════════
 var tg = window.Telegram?.WebApp;
@@ -4411,11 +4428,12 @@ function setSyncStatus(mode) {
     online: 'Синхронизировано',
     pending: 'Сохранено на устройстве · ожидает сеть',
     offline: 'Офлайн · данные на устройстве',
+    server: 'Сервер не отвечает · данные на устройстве',
     auth: 'Откройте планировщик через кнопку бота в Telegram'
   };
   currentSyncMode = mode;
   if (pill) {
-    pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : (mode === 'auth' ? 'Нужен Telegram' : 'Офлайн'));
+    pill.textContent = mode === 'online' ? 'Синхр.' : (mode === 'pending' ? 'В очереди' : (mode === 'auth' ? 'Нужен Telegram' : (mode === 'server' ? 'Нет сервера' : 'Офлайн')));
     pill.dataset.sync = mode;
   }
   if (status) status.textContent = labels[mode] || labels.offline;
@@ -4465,7 +4483,7 @@ async function apiCall(method, path, body, options) {
     if (isWrite && [400, 404, 409, 422].includes(e.status)) {
       removeQueuedWrite(outboxId);
     }
-    setSyncStatus(e.status === 401 ? 'auth' : (getOutbox().length ? 'pending' : 'offline'));
+    setSyncStatus(e.status === 401 ? 'auth' : (getOutbox().length ? 'pending' : (navigator.onLine === false ? 'offline' : 'server')));
     console.warn('API недоступен, работаем в офлайн-режиме (localStorage):', e);
     return null;
   } finally {
@@ -4693,10 +4711,33 @@ var NEON_PALETTE = ['#b026ff','#00e5a0','#ff9d3d','#4dabff','#ff4d6a','#d946ef']
 // ════════════════════════════════════════════════════════════════
 // CHART.JS GLOBAL DARK THEME
 // ════════════════════════════════════════════════════════════════
-if (window.Chart) {
-  Chart.defaults.color = '#8888a0';
-  Chart.defaults.borderColor = '#2a2a3d';
+function cssVar(name, fallback) {
+  var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+function chartGridColor() { return cssVar('--border', '#2a2a3d'); }
+function syncChartTheme() {
+  if (!window.Chart) return;
+  Chart.defaults.color = cssVar('--text-muted', '#8888a0');
+  Chart.defaults.borderColor = chartGridColor();
   Chart.defaults.font.family = "'Manrope', sans-serif";
+}
+syncChartTheme();
+
+// Пустой график выглядит как сломанный: вместо осей 0…1 показываем подсказку.
+function toggleChartEmpty(canvasId, isEmpty, text) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  var wrap = canvas.parentElement;
+  var note = wrap.querySelector('.chart-empty');
+  if (!note) {
+    note = document.createElement('div');
+    note.className = 'chart-empty';
+    wrap.appendChild(note);
+  }
+  note.textContent = text || 'Пока нет данных';
+  note.style.display = isEmpty ? 'flex' : 'none';
+  canvas.style.visibility = isEmpty ? 'hidden' : 'visible';
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -5413,7 +5454,7 @@ function go(name) {
   ['home','tasks','food','workout'].forEach(function(s) {
     var btn = document.getElementById('nav-' + s);
     var ind = document.getElementById('nind-' + s);
-    var isActive = s === name || (s === 'workout' && name === 'charts');
+    var isActive = s === name; // «Прогресс» живёт в «Ещё»: подсвечиваем только один пункт
     if (btn) { if (isActive) btn.classList.add('active'); else btn.classList.remove('active'); }
     if (ind) { if (isActive) ind.classList.add('on'); else ind.classList.remove('on'); }
   });
@@ -5620,26 +5661,26 @@ function renderHomeNudges(todayStr_, todayTasks, done, total) {
   }, 0);
 
   if (!total) {
-    nudges.push({icon:'+', title:'Добавить первое дело', meta:'1-3 главных задачи делают день понятным.', action:"go('tasks');setTimeout(openAddTask,120)"});
+    nudges.push({icon:'plus', title:'Добавить первое дело', meta:'1-3 главных задачи делают день понятным.', action:"go('tasks');setTimeout(openAddTask,120)"});
   } else if (pendingTasks.length) {
-    nudges.push({icon:'✓', title:'Закрыть следующую задачу', meta:pendingTasks[0].text, action:"go('tasks')"});
+    nudges.push({icon:'tasks', title:'Закрыть следующую задачу', meta:pendingTasks[0].text, action:"go('tasks')"});
   }
   if (!todayCal) {
-    nudges.push({icon:'◐', title:'Записать питание', meta:'Калории и БЖУ сразу попадут в прогресс дня.', action:"go('food')"});
+    nudges.push({icon:'food', title:'Записать питание', meta:'Калории и БЖУ сразу попадут в прогресс дня.', action:"go('food')"});
   }
   if (!todayWeight) {
-    nudges.push({icon:'kg', title:'Добавить вес', meta:'Один замер в день лучше редких больших правок.', action:"go('body');setTimeout(function(){openAddBody('weight')},120)"});
+    nudges.push({icon:'scale', title:'Добавить вес', meta:'Один замер в день лучше редких больших правок.', action:"go('body');setTimeout(function(){openAddBody('weight')},120)"});
   }
   if (suppTotal && suppDone < suppTotal) {
-    nudges.push({icon:'+', title:'Отметить добавки', meta:suppDone + ' из ' + suppTotal + ' приемов отмечено.', action:"go('supps')"});
+    nudges.push({icon:'pill', title:'Отметить добавки', meta:suppDone + ' из ' + suppTotal + ' приемов отмечено.', action:"go('supps')"});
   }
   if (!nudges.length) {
-    nudges.push({icon:'✓', title:'День выглядит собранным', meta:'Можно перейти к отчету или просто продолжать по плану.', action:"go('report')"});
+    nudges.push({icon:'check', title:'День выглядит собранным', meta:'Можно перейти к отчету или просто продолжать по плану.', action:"go('report')"});
   }
 
   container.innerHTML = nudges.slice(0, 3).map(function(nudge) {
     return '<div class="home-nudge" role="button" tabindex="0" onclick="' + nudge.action + '" onkeydown="if(event.key===\'Enter\'){' + nudge.action + '}">' +
-      '<div class="home-nudge-icon">' + escapeHtml(nudge.icon) + '</div>' +
+      '<div class="home-nudge-icon">' + iconSvg(nudge.icon) + '</div>' +
       '<div><div class="home-nudge-title">' + escapeHtml(nudge.title) + '</div><div class="home-nudge-meta">' + escapeHtml(nudge.meta) + '</div></div>' +
       '<div class="home-nudge-go">›</div>' +
     '</div>';
@@ -5708,8 +5749,10 @@ function renderWorkoutProgramPanel() {
     var date = dateForWeekdayNearSelected(day.index);
     var active = day.index === selected.getDay() ? ' active' : '';
     var done = workoutDates.has(date) ? ' done' : '';
-    var label = plan.rest ? 'Отдых' : (plan.group || 'План');
-    return '<div class="workout-program-day' + active + done + '">' +
+    var fullLabel = plan.rest ? 'Отдых' : (plan.group || 'План');
+    var label = plan.rest ? 'Отдых' : String(fullLabel).split(/\s*[+(]\s*|\s+/)[0];
+    var rest = plan.rest ? ' rest' : '';
+    return '<div class="workout-program-day' + active + done + rest + '" title="' + escapeHtml(fullLabel) + '">' +
       '<span class="program-day-week">' + day.label + '</span>' +
       '<span class="program-day-name">' + escapeHtml(label) + '</span>' +
       '<span class="program-day-dot"></span>' +
@@ -6650,15 +6693,16 @@ function renderCharts() {
     })
   };
 
-  if (progChart) progChart.destroy();
-  progChart = new Chart(document.getElementById('progressChart').getContext('2d'), {
+  if (progChart) { progChart.destroy(); progChart = null; }
+  toggleChartEmpty('progressChart', !allDates.length, 'График появится после первой тренировки или замера веса');
+  if (allDates.length) progChart = new Chart(document.getElementById('progressChart').getContext('2d'), {
     type: 'line', data: lineData,
     options: {
       responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{labels:{font:{size:10},boxWidth:12,color:'#8888a0'}}},
+      plugins:{legend:{labels:{font:{size:10},boxWidth:12,color:cssVar('--text-muted','#8888a0')}}},
       scales:{
-        x:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}},
-        y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}
+        x:{ticks:{font:{size:9}},grid:{color:chartGridColor()}},
+        y:{ticks:{font:{size:9}},grid:{color:chartGridColor()}}
       }
     }
   });
@@ -6670,15 +6714,17 @@ function renderCharts() {
     return s.length ? round1(s.reduce((a,w)=>a+w.weight,0)/s.length) : 0;
   });
 
-  if (avgChart) avgChart.destroy();
-  avgChart = new Chart(document.getElementById('avgChart').getContext('2d'), {
+  if (avgChart) { avgChart.destroy(); avgChart = null; }
+  var hasAvg = avgVals.some(function(v) { return v > 0; });
+  toggleChartEmpty('avgChart', !hasAvg, 'Средний рабочий вес появится после первых подходов');
+  if (hasAvg) avgChart = new Chart(document.getElementById('avgChart').getContext('2d'), {
     type:'bar',
     data:{ labels:avgExList.map(function(name) { return name.replace(/^Жим штанги /, 'Жим ').slice(0, 12); }),
       datasets:[{label:'Ср. вес кг',data:avgVals,backgroundColor:avgColors,borderRadius:6}] },
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}}
+      scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{color:chartGridColor()}}}
     }
   });
 }
@@ -7078,7 +7124,9 @@ function animateBody3d(now) {
 
 function renderWeightChart() {
   const sorted = [...state.bodyWeight].sort((a,b)=>a.date.localeCompare(b.date));
-  if (weightChart) weightChart.destroy();
+  if (weightChart) { weightChart.destroy(); weightChart = null; }
+  toggleChartEmpty('weightChart', !sorted.length, 'Добавь первый вес — здесь появится динамика');
+  if (!sorted.length) return;
   weightChart = new Chart(document.getElementById('weightChart').getContext('2d'), {
     type:'line',
     data:{
@@ -7092,14 +7140,16 @@ function renderWeightChart() {
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{x:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}},y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}}
+      scales:{x:{ticks:{font:{size:9}},grid:{color:chartGridColor()}},y:{ticks:{font:{size:9}},grid:{color:chartGridColor()}}}
     }
   });
 }
 
 function renderCalChart() {
   const sorted = [...state.bodyCal].sort((a,b)=>a.date.localeCompare(b.date));
-  if (calChart) calChart.destroy();
+  if (calChart) { calChart.destroy(); calChart = null; }
+  toggleChartEmpty('calChart', !sorted.length, 'Калории появятся после первой записи питания');
+  if (!sorted.length) return;
   calChart = new Chart(document.getElementById('calChart').getContext('2d'), {
     type:'bar',
     data:{
@@ -7112,7 +7162,7 @@ function renderCalChart() {
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{color:'#1f1f2e'}}}
+      scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{color:chartGridColor()}}}
     }
   });
 }
