@@ -663,6 +663,137 @@ function openFoodItem(food, amount, meal) {
   document.getElementById('modal-food-add').classList.add('open');
 }
 
+
+// ── Свои блюда: хранятся как избранное (food_id = dish:…), синхронизируются тем же API ──
+function dishFoodOptions() {
+  var map = {};
+  function add(food) {
+    if (!food || !food.food_name || String(food.food_id || '').indexOf('dish:') === 0) return;
+    map[food.food_name.toLowerCase()] = food;
+  }
+  LOCAL_FOOD_LIBRARY.forEach(add);
+  (window._foodResults || []).forEach(add);
+  (state.foodFavorites || []).forEach(add);
+  recentFoodPicks(30).forEach(function(p) { add(p.food); });
+  return map;
+}
+
+function addDishIngredientRow(name, grams) {
+  var box = document.getElementById('dish-ingredients');
+  var row = document.createElement('div');
+  row.className = 'dish-row';
+  row.innerHTML = '<input class="modal-input dish-food" list="dish-food-options" placeholder="Продукт" oninput="updateDishSummary()">' +
+    '<input class="modal-input dish-grams" type="number" min="1" inputmode="decimal" placeholder="г" oninput="updateDishSummary()">' +
+    '<button class="dish-row-remove" type="button" aria-label="Убрать ингредиент" onclick="this.parentElement.remove();updateDishSummary()">×</button>';
+  box.appendChild(row);
+  if (name) row.querySelector('.dish-food').value = name;
+  if (grams) row.querySelector('.dish-grams').value = grams;
+}
+
+function openDishEditor() {
+  var options = dishFoodOptions();
+  document.getElementById('dish-food-options').innerHTML = Object.keys(options).map(function(key) {
+    return '<option value="' + escapeHtml(options[key].food_name) + '"></option>';
+  }).join('');
+  document.getElementById('dish-name').value = '';
+  document.getElementById('dish-cooked').value = '';
+  document.getElementById('dish-portion').value = '';
+  document.getElementById('dish-ingredients').innerHTML = '';
+  document.getElementById('dish-error').textContent = '';
+  addDishIngredientRow(); addDishIngredientRow();
+  updateDishSummary();
+  document.getElementById('modal-dish').classList.add('open');
+}
+
+function computeDish() {
+  var options = dishFoodOptions();
+  var total = {weight:0, calories:0, protein:0, fat:0, carbs:0};
+  var unknown = [];
+  var count = 0;
+  document.querySelectorAll('#dish-ingredients .dish-row').forEach(function(row) {
+    var name = row.querySelector('.dish-food').value.trim();
+    var grams = parseFloat(row.querySelector('.dish-grams').value);
+    if (!name && !grams) return;
+    var food = options[name.toLowerCase()];
+    if (!food) { unknown.push(name || '?'); return; }
+    if (!(grams > 0)) { unknown.push(name + ' (вес)'); return; }
+    var r = grams / 100;
+    total.weight += grams;
+    total.calories += asNumber(food.calories) * r;
+    total.protein += asNumber(food.protein) * r;
+    total.fat += asNumber(food.fat) * r;
+    total.carbs += asNumber(food.carbs) * r;
+    count++;
+  });
+  var cooked = parseFloat(document.getElementById('dish-cooked').value);
+  var finalWeight = cooked > 0 ? cooked : total.weight;
+  var k = finalWeight > 0 ? 100 / finalWeight : 0;
+  return {
+    count:count, unknown:unknown, weight:finalWeight, total:total,
+    per100:{calories:round1(total.calories*k), protein:round1(total.protein*k), fat:round1(total.fat*k), carbs:round1(total.carbs*k)}
+  };
+}
+
+function updateDishSummary() {
+  var dish = computeDish();
+  var el = document.getElementById('dish-summary');
+  if (!el) return;
+  if (!dish.count) { el.textContent = 'Добавь ингредиенты из списка продуктов'; return; }
+  el.textContent = 'Всего ' + Math.round(dish.weight) + ' г · ' + Math.round(dish.total.calories) + ' ккал. На 100 г: ' +
+    Math.round(dish.per100.calories) + ' ккал · Б ' + dish.per100.protein + ' · Ж ' + dish.per100.fat + ' · У ' + dish.per100.carbs;
+}
+
+async function saveDish() {
+  var err = document.getElementById('dish-error');
+  var name = document.getElementById('dish-name').value.trim();
+  var dish = computeDish();
+  if (!name) { err.textContent = 'Назови блюдо.'; return; }
+  if (dish.unknown.length) { err.textContent = 'Выбери из списка или укажи вес: ' + dish.unknown.join(', '); return; }
+  if (!dish.count) { err.textContent = 'Добавь хотя бы один ингредиент.'; return; }
+  var portion = parseFloat(document.getElementById('dish-portion').value) || Math.min(Math.round(dish.weight), 300);
+  var id = 'fav_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  var favorite = normalizeFoodFavorite({
+    id:id, client_id:id, food_id:'dish:' + id, food_name:name, serving_desc:'блюдо',
+    calories:dish.per100.calories, protein:dish.per100.protein, fat:dish.per100.fat, carbs:dish.per100.carbs,
+    amount:Math.max(1, Math.round(portion)), meal_type:getDefaultMealType()
+  });
+  state.foodFavorites.push(favorite);
+  saveStateLocal();
+  renderFoodFavorites();
+  closeModal('modal-dish');
+  var saved = await apiCall('POST', '/api/food/favorites', favorite);
+  if (saved?.id) { favorite.id = saved.id; saveStateLocal(); }
+}
+
+// ── Копирование питания из любого из последних дней ──
+function openCopyDay() {
+  var byDate = {};
+  (state.foodLog || []).forEach(function(e) {
+    if (!e.date || e.date === currentFoodDate) return;
+    (byDate[e.date] = byDate[e.date] || []).push(e);
+  });
+  var dates = Object.keys(byDate).sort().reverse().slice(0, 14);
+  var list = document.getElementById('copy-day-list');
+  list.innerHTML = dates.length ? dates.map(function(date) {
+    var entries = byDate[date];
+    var kcal = Math.round(entries.reduce(function(a, e) { return a + asNumber(e.calories); }, 0));
+    var label = new Date(date + 'T00:00:00').toLocaleDateString('ru-RU', {weekday:'short', day:'numeric', month:'long'});
+    return '<button class="copy-day-item" type="button" onclick="copyFoodDay(\'' + date + '\')">' +
+      '<span class="copy-day-date">' + escapeHtml(label) + '</span>' +
+      '<span class="copy-day-meta">' + entries.length + ' ' + pluralRu(entries.length, 'запись', 'записи', 'записей') + ' · ' + kcal + ' ккал</span></button>';
+  }).join('') : '<div class="empty-state">Нет других дней с записями</div>';
+  document.getElementById('modal-copy-day').classList.add('open');
+}
+
+async function copyFoodDay(date) {
+  var source = (state.foodLog || []).filter(function(e) { return e.date === date; });
+  closeModal('modal-copy-day');
+  if (!source.length) return;
+  var count = await copyFoodEntriesToCurrent(source);
+  var status = document.getElementById('repeat-food-status');
+  if (status) { status.style.display = 'block'; status.textContent = 'Добавлено: ' + count; }
+}
+
 function openFoodFavorite(id) {
   var favorite = (state.foodFavorites || []).find(function(item) { return String(item.id || item.client_id) === String(id); });
   if (favorite) openFoodItem(favorite, favorite.amount, favorite.meal_type);
@@ -1098,6 +1229,20 @@ body { background: var(--bg); color: var(--text); }
 .workout-date-nav { display: flex; align-items: center; justify-content: center; }
 .workout-date-nav .ic { width: 18px; height: 18px; }
 .chart-canvas-wrap { position: relative; }
+.food-favorites-head { justify-content: flex-start; gap: 6px; }
+.food-dish-add { margin-left: auto; padding: 4px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: 800 10.5px/1.2 'Manrope', sans-serif; cursor: pointer; }
+.food-copy-day-btn { padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font: 700 12px/1.2 'Manrope', sans-serif; cursor: pointer; white-space: nowrap; }
+.dish-weights { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dish-ingredients { display: grid; gap: 6px; margin-top: 6px; }
+.dish-row { display: grid; grid-template-columns: minmax(0,1fr) 72px 34px; gap: 6px; align-items: center; }
+.dish-row .modal-input { margin: 0; }
+.dish-row-remove { height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text-muted); font-size: 16px; cursor: pointer; }
+.dish-add-row { margin-top: 8px; padding: 0; border: 0; background: none; color: var(--neon2); font: 800 12px/1.2 'Manrope', sans-serif; cursor: pointer; }
+.dish-summary { margin: 10px 0 6px; padding: 10px 12px; border-radius: 10px; background: var(--card2); color: var(--text-sub); font-size: 11.5px; line-height: 1.45; }
+.dish-error { min-height: 14px; margin-bottom: 6px; color: var(--red); font-size: 11px; }
+.copy-day-list { display: grid; gap: 6px; margin: 10px 0; max-height: 50vh; overflow-y: auto; }
+.copy-day-item { display: flex; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--text); font: 700 12.5px/1.3 'Manrope', sans-serif; cursor: pointer; text-align: left; }
+.copy-day-meta { color: var(--text-muted); font-weight: 600; font-size: 11px; white-space: nowrap; }
 .food-quick-pick.recent { border-color: var(--neon2, var(--border)); }
 .workout-program-panel .workout-program-week { display: none; }
 .workout-program-panel.week-open .workout-program-week { display: grid; }
@@ -3448,7 +3593,7 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
       </div>
     </div>
     <div class="food-favorites-section">
-      <div class="food-favorites-head"><div class="food-favorites-title">Избранное</div><div class="food-favorites-count" id="food-favorites-count">0</div></div>
+      <div class="food-favorites-head"><div class="food-favorites-title">Избранное и блюда</div><div class="food-favorites-count" id="food-favorites-count">0</div><button class="food-dish-add" type="button" onclick="openDishEditor()">+ Блюдо</button></div>
       <div class="food-favorites-list" id="food-favorites-list"><div class="food-favorites-empty">Пока пусто</div></div>
     </div>
     <!-- Поиск -->
@@ -3461,7 +3606,8 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
       <div id="food-search-results"></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin:0 12px 10px">
-      <button id="repeat-food-btn" onclick="repeatYesterdayFood()" style="flex:1;padding:11px 12px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700">Повторить вчерашнее питание</button>
+      <button id="repeat-food-btn" onclick="repeatYesterdayFood()" style="flex:1;padding:11px 12px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700">Повторить вчера</button>
+      <button class="food-copy-day-btn" type="button" onclick="openCopyDay()">Другой день…</button>
       <div id="repeat-food-status" style="display:none;font-size:10px;color:var(--text-muted);max-width:42%"></div>
     </div>
     <!-- Приёмы пищи -->
@@ -3882,6 +4028,43 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 </div>
 
 <!-- Add Task Modal -->
+<div class="modal-overlay" id="modal-dish">
+  <div class="modal-sheet">
+    <div class="modal-title">Своё блюдо</div>
+    <div class="modal-row">
+      <div class="modal-label">Название</div>
+      <input class="modal-input" id="dish-name" maxlength="80" placeholder="Например, омлет с сыром">
+    </div>
+    <div class="modal-label" style="margin-top:4px">Ингредиенты</div>
+    <datalist id="dish-food-options"></datalist>
+    <div id="dish-ingredients" class="dish-ingredients"></div>
+    <button class="dish-add-row" type="button" onclick="addDishIngredientRow()">+ Ингредиент</button>
+    <div class="modal-grid dish-weights" style="margin-top:10px">
+      <div class="modal-row">
+        <div class="modal-label">Готовый вес, г</div>
+        <input class="modal-input" id="dish-cooked" type="number" min="1" inputmode="decimal" placeholder="авто" oninput="updateDishSummary()">
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">Порция, г</div>
+        <input class="modal-input" id="dish-portion" type="number" min="1" inputmode="decimal" placeholder="250">
+      </div>
+    </div>
+    <div class="dish-summary" id="dish-summary">Добавь ингредиенты из списка продуктов</div>
+    <div class="dish-error" id="dish-error"></div>
+    <button class="btn-primary" type="button" onclick="saveDish()">Сохранить блюдо</button>
+    <button class="modal-close-btn" type="button" onclick="closeModal('modal-dish')">Отмена</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-copy-day">
+  <div class="modal-sheet">
+    <div class="modal-title">Скопировать питание</div>
+    <div class="modal-label" id="copy-day-hint">Выбери день — его записи добавятся в текущий</div>
+    <div id="copy-day-list" class="copy-day-list"></div>
+    <button class="modal-close-btn" type="button" onclick="closeModal('modal-copy-day')">Закрыть</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-task">
   <div class="modal-sheet">
     <div class="modal-title" id="m-task-title">Новая задача</div>

@@ -275,3 +275,33 @@ def test_recent_food_appears_in_quick_picks(browser):
     assert "Сырники" in d.page.text_content(".food-quick-pick.recent")
     d.page.click(".food-quick-pick.recent")
     assert abs(d.page.evaluate("selectedFood.calories") - 220) < 0.6
+
+
+def test_custom_dish_saved_as_favorite_with_per100_macros(browser):
+    d = Device(browser, 3_100_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("go('food')")
+    d.page.click(".food-dish-add")
+    d.page.fill("#dish-name", "Курица с рисом")
+    rows = d.page.locator("#dish-ingredients .dish-row")
+    rows.nth(0).locator(".dish-food").fill("Куриная грудка")
+    rows.nth(0).locator(".dish-grams").fill("200")
+    rows.nth(1).locator(".dish-food").fill("Рис варёный")
+    rows.nth(1).locator(".dish-grams").fill("200")
+    d.page.click("#modal-dish .btn-primary")
+    fav = d.page.evaluate("state.foodFavorites.find(f => f.food_name === 'Курица с рисом')")
+    # (165*2 + 130*2) / 400 * 100 = 147.5
+    assert abs(fav["calories"] - 147.5) < 0.2 and fav["food_id"].startswith("dish:")
+    d.page.wait_for_function("getOutbox().length === 0", timeout=15000)
+    assert "Курица с рисом" in d.page.text_content("#food-favorites-list")
+
+
+def test_copy_food_from_other_day(browser):
+    d = Device(browser, 3_200_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("go('food')")
+    d.page.evaluate("""state.foodLog.push({id:'old1', client_id:'old1', date:'2026-01-05', meal_type:'обед',
+        food_name:'Борщ', calories:180, protein:8, fat:6, carbs:20, amount:300}); saveStateLocal();""")
+    d.page.click(".food-copy-day-btn")
+    d.page.click(".copy-day-item")
+    d.page.wait_for_function("state.foodLog.some(e => e.date === currentFoodDate && e.food_name === 'Борщ')")
