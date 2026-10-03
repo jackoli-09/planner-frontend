@@ -346,6 +346,8 @@ async function loadFoodLog() {
 }
 
 function renderFoodLog(entries) {
+  // недавние продукты зависят от всего журнала — обновляем их при любой перерисовке
+  try { renderFoodQuickPicks(); } catch (_) {}
   var totCal = entries.reduce(function(a,e){return a+(parseFloat(e.calories)||0);},0);
   var totProt = entries.reduce(function(a,e){return a+(parseFloat(e.protein)||0);},0);
   var totFat = entries.reduce(function(a,e){return a+(parseFloat(e.fat)||0);},0);
@@ -572,18 +574,63 @@ function getDefaultMealType() {
   return 'перекус';
 }
 
+// Недавние продукты: восстанавливаем значения на 100 г из записей журнала.
+function recentFoodPicks(limit) {
+  var seen = {};
+  var result = [];
+  var log = (state.foodLog || []).slice().sort(function(a, b) {
+    return String(b.date || '').localeCompare(String(a.date || ''));
+  });
+  for (var i = 0; i < log.length && result.length < limit; i++) {
+    var e = log[i];
+    var amount = asNumber(e.amount, 0);
+    var name = String(e.food_name || '').trim();
+    var key = name.toLowerCase();
+    if (!name || amount <= 0 || seen[key]) continue;
+    seen[key] = true;
+    var k = 100 / amount;
+    result.push({
+      food: {
+        food_id: e.food_id || 'manual', food_name: name, serving_desc: 'на 100г',
+        calories: round1(asNumber(e.calories) * k), protein: round1(asNumber(e.protein) * k),
+        fat: round1(asNumber(e.fat) * k), carbs: round1(asNumber(e.carbs) * k)
+      },
+      amount: amount,
+      title: name.length > 18 ? name.slice(0, 17) + '…' : name,
+      meta: e.serving_desc || foodAmountLabel({amount: amount}),
+      calories: Math.round(asNumber(e.calories)),
+      recent: true
+    });
+  }
+  return result;
+}
+
 function renderFoodQuickPicks() {
   var box = document.getElementById('food-quick-picks');
   if (!box) return;
-  box.innerHTML = QUICK_FOOD_PICKS.map(function(pick, index) {
+  window._recentFoodPicks = recentFoodPicks(6);
+  var recentHtml = window._recentFoodPicks.map(function(pick, index) {
+    return '<button class="food-quick-pick recent" type="button" onclick="openRecentFoodPick('+index+')">' +
+      '<span class="food-quick-pick-title">'+escapeHtml(pick.title)+'</span>' +
+      '<span class="food-quick-pick-meta">'+escapeHtml(pick.meta)+' · '+pick.calories+' ккал</span>' +
+    '</button>';
+  }).join('');
+  var recentNames = window._recentFoodPicks.map(function(p) { return p.food.food_name.toLowerCase(); });
+  box.innerHTML = recentHtml + QUICK_FOOD_PICKS.map(function(pick, index) {
     var food = LOCAL_FOOD_LIBRARY.find(function(item) { return item.food_id === pick.food_id; });
-    if (!food) return '';
+    if (!food || recentNames.indexOf(food.food_name.toLowerCase()) !== -1) return '';
     var calories = Math.round(asNumber(food.calories) * asNumber(pick.amount, 100) / 100);
     return '<button class="food-quick-pick" type="button" onclick="openQuickFoodPick('+index+')">' +
       '<span class="food-quick-pick-title">'+escapeHtml(pick.title || food.food_name)+'</span>' +
       '<span class="food-quick-pick-meta">'+escapeHtml(pick.meta || foodAmountLabel({amount:pick.amount}))+' · '+calories+' ккал</span>' +
     '</button>';
   }).join('');
+}
+
+function openRecentFoodPick(index) {
+  var pick = (window._recentFoodPicks || [])[index];
+  if (!pick) return;
+  openFoodItem(pick.food, pick.amount, getDefaultMealType());
 }
 
 function openQuickFoodPick(index) {
@@ -797,6 +844,7 @@ async function confirmAddFood() {
     saveStateLocal();
   }
   closeModal('modal-food-add');
+  renderFoodQuickPicks();
   document.getElementById('food-search-results').innerHTML = '';
   document.getElementById('food-search-input').value = '';
   loadFoodLog();
@@ -1050,6 +1098,34 @@ body { background: var(--bg); color: var(--text); }
 .workout-date-nav { display: flex; align-items: center; justify-content: center; }
 .workout-date-nav .ic { width: 18px; height: 18px; }
 .chart-canvas-wrap { position: relative; }
+.food-quick-pick.recent { border-color: var(--neon2, var(--border)); }
+.workout-program-panel .workout-program-week { display: none; }
+.workout-program-panel.week-open .workout-program-week { display: grid; }
+.workout-program-toggle {
+  margin-top: 10px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--text-muted); font: 800 11px/1.2 'Manrope', sans-serif;
+}
+.rest-timer {
+  position: fixed; left: 12px; right: 12px; z-index: 120;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: var(--card); box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  transform: translateY(16px); opacity: 0; pointer-events: none;
+  transition: transform .2s ease, opacity .2s ease;
+}
+.rest-timer.open { transform: none; opacity: 1; pointer-events: auto; }
+.rest-timer.done { border-color: var(--green); }
+.rest-timer-label { color: var(--text-muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+.rest-timer-value { flex: 1; color: var(--text); font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rest-timer.done .rest-timer-value { color: var(--green); }
+.rest-timer-btn {
+  min-width: 44px; min-height: 36px; padding: 0 10px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--card2); color: var(--text);
+  font: 800 12px/1 'Manrope', sans-serif; cursor: pointer;
+}
+.rest-timer-btn.close { background: var(--text); color: var(--bg); border-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .rest-timer { transition: none; } }
 .chart-empty { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 0 20px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
 .workout-program-day.rest .program-day-name { color: var(--text-muted); font-weight: 700; }
 
@@ -2985,6 +3061,7 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
           <button class="workout-program-btn" onclick="openWorkoutProgramEditor()">План</button>
         </div>
       </div>
+      <button class="workout-program-toggle" id="workout-program-toggle" type="button" onclick="toggleWorkoutWeek()" aria-expanded="false">Неделя</button>
       <div class="workout-program-week" id="workout-program-week"></div>
     </section>
     <section class="workout-session-panel">
@@ -3445,6 +3522,13 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 </div><!-- #app -->
 
 <!-- ═══════════════════════ BOTTOM NAV ════════════════════════ -->
+<div class="rest-timer" id="rest-timer" role="status" aria-live="polite">
+  <span class="rest-timer-label">Отдых</span>
+  <span class="rest-timer-value" id="rest-timer-value">1:30</span>
+  <button class="rest-timer-btn" type="button" onclick="adjustRestTimer(-15)" aria-label="Меньше на 15 секунд">−15</button>
+  <button class="rest-timer-btn" type="button" onclick="adjustRestTimer(15)" aria-label="Больше на 15 секунд">+15</button>
+  <button class="rest-timer-btn close" type="button" onclick="stopRestTimer()" aria-label="Закрыть таймер">Готово</button>
+</div>
 <div class="bottom-nav">
   <div class="nav-indicator">
     <div class="nav-ind-seg on" id="nind-home"></div>
@@ -5828,7 +5912,27 @@ function dateForWeekdayNearSelected(weekday) {
   return localDateISO(start);
 }
 
+function toggleWorkoutWeek(force) {
+  var panel = document.querySelector('.workout-program-panel');
+  if (!panel) return;
+  var open = typeof force === 'boolean' ? force : !panel.classList.contains('week-open');
+  panel.classList.toggle('week-open', open);
+  var btn = document.getElementById('workout-program-toggle');
+  if (btn) {
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = open ? 'Скрыть неделю' : 'Неделя';
+  }
+  try { localStorage.setItem('planner_week_open', open ? '1' : '0'); } catch (_) {}
+}
+
 function renderWorkoutProgramPanel() {
+  var weekPref = null;
+  try { weekPref = localStorage.getItem('planner_week_open'); } catch (_) {}
+  var panelEl = document.querySelector('.workout-program-panel');
+  if (panelEl && !panelEl.dataset.weekInit) {
+    panelEl.dataset.weekInit = '1';
+    toggleWorkoutWeek(weekPref === '1');
+  }
   var title = document.getElementById('workout-program-title');
   var meta = document.getElementById('workout-program-meta');
   var week = document.getElementById('workout-program-week');
@@ -6277,6 +6381,55 @@ function ensureExerciseInCurrentGroup(exerciseName) {
   }
 }
 
+// ── Таймер отдыха между подходами ──
+var restTimer = {endsAt: 0, interval: null};
+function restDefaultSeconds() {
+  var v = parseInt(localStorage.getItem('planner_rest_seconds') || '90', 10);
+  return Number.isFinite(v) && v >= 15 ? Math.min(v, 600) : 90;
+}
+function startRestTimer(seconds) {
+  restTimer.endsAt = Date.now() + (seconds || restDefaultSeconds()) * 1000;
+  if (restTimer.interval) clearInterval(restTimer.interval);
+  restTimer.interval = setInterval(tickRestTimer, 250);
+  tickRestTimer();
+}
+function adjustRestTimer(delta) {
+  if (!restTimer.endsAt) return;
+  var left = Math.max(0, restTimer.endsAt - Date.now()) / 1000;
+  var next = Math.max(15, Math.round(left + delta));
+  restTimer.endsAt = Date.now() + next * 1000;
+  // запоминаем привычную длину отдыха
+  var base = restDefaultSeconds() + delta;
+  localStorage.setItem('planner_rest_seconds', String(Math.max(15, Math.min(600, base))));
+  tickRestTimer();
+}
+function stopRestTimer() {
+  restTimer.endsAt = 0;
+  if (restTimer.interval) clearInterval(restTimer.interval);
+  restTimer.interval = null;
+  var bar = document.getElementById('rest-timer');
+  if (bar) bar.classList.remove('open', 'done');
+}
+function tickRestTimer() {
+  var bar = document.getElementById('rest-timer');
+  if (!bar || !restTimer.endsAt) return;
+  var left = Math.ceil((restTimer.endsAt - Date.now()) / 1000);
+  bar.classList.add('open');
+  var label = document.getElementById('rest-timer-value');
+  if (left <= 0) {
+    if (!bar.classList.contains('done')) {
+      bar.classList.add('done');
+      try { tg?.HapticFeedback?.notificationOccurred('success'); } catch (_) {}
+      try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch (_) {}
+      setTimeout(function() { if (bar.classList.contains('done')) stopRestTimer(); }, 8000);
+    }
+    if (label) label.textContent = 'Пора!';
+    return;
+  }
+  bar.classList.remove('done');
+  if (label) label.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+}
+
 async function persistWorkoutEntry(entry) {
   entry = normalizeWorkout(entry);
   state.workouts.push(entry);
@@ -6288,6 +6441,7 @@ async function persistWorkoutEntry(entry) {
   }
   currentWorkoutDate = entry.date;
   currentWorkoutStripDate = entry.date;
+  if (entry.date === todayStr()) startRestTimer();
   renderWorkoutCalendar();
   renderWorkoutProgramPanel();
   renderExercises();

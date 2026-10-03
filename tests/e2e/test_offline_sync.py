@@ -249,3 +249,29 @@ def test_new_task_ids_are_unique(browser):
         d.add_task(f"Задача {i}")
     ids = d.page.evaluate("state.tasks.map(t => t.id)")
     assert len(set(ids)) == 3 and all(i.startswith("t_") for i in ids)
+
+
+def test_rest_timer_starts_after_set_today(browser):
+    d = Device(browser, 2_500_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("go('workout')")
+    d.page.evaluate("""persistWorkoutEntry({client_id:'w_test', date: todayStr(), muscle: currentMuscle,
+        exercise:'Жим штанги лёжа', sets:1, reps:8, weight:60})""")
+    d.page.wait_for_function("document.getElementById('rest-timer').classList.contains('open')")
+    value = d.page.text_content("#rest-timer-value")
+    assert value.startswith("1:") or value.startswith("0:")
+    d.page.click("#rest-timer .rest-timer-btn.close")
+    d.page.wait_for_function("!document.getElementById('rest-timer').classList.contains('open')")
+
+
+def test_recent_food_appears_in_quick_picks(browser):
+    d = Device(browser, 2_600_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("go('food')")
+    d.page.evaluate("""openFoodItem({food_id:'x1', food_name:'Сырники домашние', calories:220, protein:12, fat:10, carbs:20,
+        serving_desc:'на 100г'}, 150, 'завтрак')""")
+    d.page.evaluate("confirmAddFood()")
+    d.page.wait_for_function("document.querySelector('.food-quick-pick.recent')")
+    assert "Сырники" in d.page.text_content(".food-quick-pick.recent")
+    d.page.click(".food-quick-pick.recent")
+    assert abs(d.page.evaluate("selectedFood.calories") - 220) < 0.6
