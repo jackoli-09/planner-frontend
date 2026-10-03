@@ -30,6 +30,7 @@ BACKEND_DIR = Path(os.environ.get("BACKEND_DIR", ROOT.parent / "planner-backend"
 BOT_TOKEN = "123456:TEST_TOKEN_FOR_TESTS_ONLY"
 FRONT_PORT, API_PORT = 8134, 8765
 RAILWAY = "https://planner-backend-production-ad6d.up.railway.app"
+OWNER_ID = 1_999_999_999
 CHART_JS = Path(os.environ.get("CHART_JS", ROOT.parent / "e2edeps/node_modules/chart.js/dist/chart.umd.js"))
 
 
@@ -76,6 +77,7 @@ def servers():
         "DATABASE_URL": os.environ.get("TEST_DATABASE_URL", "postgresql://postgres@127.0.0.1:5433/planner"),
         "ALLOWED_ORIGINS": f"http://localhost:{FRONT_PORT}",
         "FRONTEND_URL": f"http://localhost:{FRONT_PORT}",
+        "OWNER_USER_ID": str(OWNER_ID),
     }
     api = subprocess.Popen([sys.executable, "-m", "uvicorn", "main:app", "--port", str(API_PORT)],
                            cwd=BACKEND_DIR, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
@@ -209,3 +211,20 @@ def test_other_user_sees_nothing(browser):
     b.open()
     b.page.wait_for_timeout(1500)
     assert text not in b.task_texts()
+
+
+def test_feedback_and_owner_stats(browser):
+    user = Device(browser, 2_300_000_000 + uuid.uuid4().int % 10**8)
+    user.open()
+    user.page.wait_for_function("getOutbox().length === 0")
+    assert user.page.is_hidden("#owner-stats-btn")
+    user.page.evaluate("openFeedback()")
+    user.page.fill("#feedback-text", "Хочу таймер отдыха")
+    user.page.click("#feedback-submit")
+    expect(user.page.locator("#feedback-status")).to_contain_text("Спасибо")
+
+    owner = Device(browser, OWNER_ID)
+    owner.open()
+    owner.page.wait_for_function("document.getElementById('owner-stats-btn').style.display !== 'none'", timeout=15000)
+    owner.page.evaluate("openOwnerStats()")
+    expect(owner.page.locator("#owner-stats-body")).to_contain_text("Удержание D7")

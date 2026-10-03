@@ -1053,6 +1053,15 @@ body { background: var(--bg); color: var(--text); }
 .chart-empty { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 0 20px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
 .workout-program-day.rest .program-day-name { color: var(--text-muted); font-weight: 700; }
 
+textarea.modal-input { resize: vertical; min-height: 110px; line-height: 1.4; }
+.feedback-status { min-height: 18px; margin: 4px 2px 10px; font-size: 12px; color: var(--text-muted); }
+.owner-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.owner-stat { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.owner-stat-value { font-size: 22px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.owner-stat-label { margin-top: 2px; font-size: 11.5px; font-weight: 700; color: var(--text); }
+.owner-stat-sub { margin-top: 2px; font-size: 10.5px; color: var(--text-muted); }
+.owner-stats-usage { margin: 12px 2px 14px; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
+
 /* ── Headers ── */
 .page-header {
   padding: 16px 16px 10px;
@@ -3504,6 +3513,14 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
         <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 10.5A7.5 7.5 0 0 0 6 7.2L4.5 8.7M4.5 4.5v4.2h4.2M4.5 13.5A7.5 7.5 0 0 0 18 16.8l1.5-1.5M19.5 19.5v-4.2h-4.2"/></svg></span>
         <span><span class="more-title">Данные</span><span class="more-sub">Синхронизация и резервные копии</span></span>
       </button>
+      <button class="more-action" onclick="openFeedback()" style="grid-column:1 / -1">
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 19 17h-7.5L7 20.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z"/></svg></span>
+        <span><span class="more-title">Написать автору</span><span class="more-sub">Идея, ошибка или чего не хватает</span></span>
+      </button>
+      <button class="more-action" id="owner-stats-btn" onclick="openOwnerStats()" style="grid-column:1 / -1;display:none">
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V11M10 20V5M15 20v-7M20 20V9"/></svg></span>
+        <span><span class="more-title">Статистика продукта</span><span class="more-sub">Пользователи, удержание, отзывы</span></span>
+      </button>
       <button class="more-action" onclick="toggleTheme()" style="grid-column:1 / -1">
         <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A7.8 7.8 0 1 1 9.8 4.5a6.2 6.2 0 0 0 9.7 9.7z"/></svg></span>
         <span><span class="more-title">Тема</span><span class="more-sub" id="theme-mode-label">Светлая</span></span>
@@ -3514,6 +3531,27 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 </div>
 
 <!-- ═══════════════════════ MODALS ═══════════════════════════ -->
+<div class="modal-overlay" id="modal-feedback">
+  <div class="modal-sheet">
+    <div class="modal-title">Написать автору</div>
+    <div class="modal-row">
+      <div class="modal-label">Что улучшить или что сломалось?</div>
+      <textarea class="modal-input" id="feedback-text" rows="5" maxlength="2000" placeholder="Например: хочу таймер отдыха между подходами"></textarea>
+    </div>
+    <div class="feedback-status" id="feedback-status"></div>
+    <button class="btn-primary" id="feedback-submit" onclick="submitFeedback()">Отправить</button>
+    <button class="modal-close-btn" onclick="closeModal('modal-feedback')">Отмена</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-owner-stats">
+  <div class="modal-sheet">
+    <div class="modal-title">Статистика продукта</div>
+    <div class="owner-stats" id="owner-stats-body">Загрузка…</div>
+    <button class="modal-close-btn" onclick="closeModal('modal-owner-stats')">Закрыть</button>
+  </div>
+</div>
+
 <!-- Profile Onboarding -->
 <div class="modal-overlay" id="modal-profile">
   <div class="modal-sheet profile-sheet">
@@ -5091,6 +5129,8 @@ async function recoverEmptyServerSections(bootstrap) {
 
 function applyBootstrap(bootstrap) {
   lastServerUserId = bootstrap?.user_id || null;
+  var ownerBtn = document.getElementById('owner-stats-btn');
+  if (ownerBtn) ownerBtn.style.display = bootstrap?.is_owner ? '' : 'none';
   lastServerSnapshotCount = bootstrapRecordCount(bootstrap);
   localStorage.setItem('planner_last_server_user_' + USER_ID, String(lastServerUserId || ''));
   localStorage.setItem('planner_last_server_count_' + USER_ID, String(lastServerSnapshotCount || 0));
@@ -5486,6 +5526,60 @@ function openMore() {
 function closeMoreMenu() {
   var modal = document.getElementById('modal-more');
   if (modal) modal.classList.remove('open');
+}
+
+function openFeedback() {
+  closeMoreMenu();
+  document.getElementById('feedback-status').textContent = '';
+  document.getElementById('modal-feedback').classList.add('open');
+  setTimeout(function() { document.getElementById('feedback-text').focus(); }, 150);
+}
+
+async function submitFeedback() {
+  var field = document.getElementById('feedback-text');
+  var status = document.getElementById('feedback-status');
+  var text = field.value.trim();
+  if (text.length < 2) { status.textContent = 'Напиши хотя бы пару слов.'; return; }
+  var btn = document.getElementById('feedback-submit');
+  btn.disabled = true;
+  try {
+    await ensureAuthSession(false);
+    var res = await fetch(API_BASE + '/api/feedback', {method:'POST', headers:getApiHeaders(), body:JSON.stringify({text:text})});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    field.value = '';
+    status.textContent = 'Спасибо! Сообщение отправлено.';
+    setTimeout(function() { closeModal('modal-feedback'); }, 1200);
+  } catch (e) {
+    status.textContent = 'Не отправилось — нужен интернет. Текст сохранён в поле, попробуй позже.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function openOwnerStats() {
+  closeMoreMenu();
+  var body = document.getElementById('owner-stats-body');
+  body.textContent = 'Загрузка…';
+  document.getElementById('modal-owner-stats').classList.add('open');
+  var st = await apiCall('GET', '/api/admin/stats');
+  if (!st) { body.textContent = 'Не удалось загрузить статистику.'; return; }
+  function pct(r) { return r.rate === null ? '—' : Math.round(r.rate * 100) + '%'; }
+  function sub(r) { return r.returned + ' из ' + r.eligible; }
+  var fu = st.feature_users || {};
+  var tiles = [
+    ['Пользователей', st.users_total, '+' + st.new_7d + ' за неделю'],
+    ['Активны за 7 дней', st.active_7d, 'сегодня ' + st.active_1d],
+    ['Удержание D1', pct(st.retention_d1), sub(st.retention_d1)],
+    ['Удержание D7', pct(st.retention_d7), sub(st.retention_d7)],
+    ['Удержание D30', pct(st.retention_d30), sub(st.retention_d30)],
+    ['Отзывов', st.feedback_total, 'приходят в Telegram'],
+  ];
+  body.innerHTML = '<div class="owner-stats-grid">' + tiles.map(function(t) {
+    return '<div class="owner-stat"><div class="owner-stat-value">' + escapeHtml(String(t[1])) + '</div>' +
+      '<div class="owner-stat-label">' + escapeHtml(t[0]) + '</div><div class="owner-stat-sub">' + escapeHtml(t[2]) + '</div></div>';
+  }).join('') + '</div>' +
+  '<div class="owner-stats-usage">Пользуются: тренировки ' + (fu.workouts||0) + ' · питание ' + (fu.food_log||0) +
+  ' · задачи ' + (fu.tasks||0) + ' · вес ' + (fu.body_weight||0) + ' · добавки ' + (fu.supplement_checks||0) + '</div>';
 }
 
 function goFromMore(name) {
