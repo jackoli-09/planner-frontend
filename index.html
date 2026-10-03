@@ -1230,6 +1230,13 @@ body { background: var(--bg); color: var(--text); }
 .workout-date-nav .ic { width: 18px; height: 18px; }
 .chart-canvas-wrap { position: relative; }
 .food-favorites-head { justify-content: flex-start; gap: 6px; }
+.home-nudge-state { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border-light); display: flex; align-items: center; justify-content: center; color: var(--bg); }
+.home-nudge-state .ic { width: 14px; height: 14px; stroke-width: 2.6; }
+.home-nudge.partial .home-nudge-state { border-color: var(--orange); background: conic-gradient(var(--orange) 0 50%, transparent 50% 100%); }
+.home-nudge.done .home-nudge-state { border-color: var(--green); background: var(--green); }
+.home-nudge.done .home-nudge-title { color: var(--text-muted); }
+.home-nudge.done { opacity: .82; }
+.home-nudge-meta { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .food-dish-add { margin-left: auto; padding: 4px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: 800 10.5px/1.2 'Manrope', sans-serif; cursor: pointer; }
 .food-copy-day-btn { padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font: 700 12px/1.2 'Manrope', sans-serif; cursor: pointer; white-space: nowrap; }
 .dish-weights { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -3130,8 +3137,8 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
       </section>
 
       <div class="home-section-head animate-in delay-2">
-        <div class="home-section-title">Что сделать сейчас</div>
-        <div class="home-section-link" onclick="go('sync')">Статус</div>
+        <div class="home-section-title">План дня</div>
+        <div class="home-section-link" id="home-day-score">0 из 0</div>
       </div>
       <div class="home-nudge-list animate-in delay-2" id="home-nudge-list"></div>
 
@@ -6039,29 +6046,43 @@ function renderHomeNudges(todayStr_, todayTasks, done, total) {
     }).length;
   }, 0);
 
-  if (!total) {
-    nudges.push({icon:'plus', title:'Добавить первое дело', meta:'1-3 главных задачи делают день понятным.', action:"go('tasks');setTimeout(openAddTask,120)"});
-  } else if (pendingTasks.length) {
-    nudges.push({icon:'tasks', title:'Закрыть следующую задачу', meta:pendingTasks[0].text, action:"go('tasks')"});
-  }
-  if (!todayCal) {
-    nudges.push({icon:'food', title:'Записать питание', meta:'Калории и БЖУ сразу попадут в прогресс дня.', action:"go('food')"});
-  }
-  if (!todayWeight) {
-    nudges.push({icon:'scale', title:'Добавить вес', meta:'Один замер в день лучше редких больших правок.', action:"go('body');setTimeout(function(){openAddBody('weight')},120)"});
-  }
-  if (suppTotal && suppDone < suppTotal) {
-    nudges.push({icon:'pill', title:'Отметить добавки', meta:suppDone + ' из ' + suppTotal + ' приемов отмечено.', action:"go('supps')"});
-  }
-  if (!nudges.length) {
-    nudges.push({icon:'check', title:'День выглядит собранным', meta:'Можно перейти к отчету или просто продолжать по плану.', action:"go('report')"});
-  }
+  // Единый «режим дня»: каждое направление — одна строка со статусом.
+  var todayFood = (state.foodLog || []).filter(function(e) { return e.date === todayStr_; });
+  var foodKcal = Math.round(todayFood.reduce(function(a, e) { return a + asNumber(e.calories); }, 0));
+  var mealsLogged = new Set(todayFood.map(function(e) { return e.meal_type; })).size;
+  var plan = workoutProgramDay(new Date().getDay());
+  var setsToday = (state.workouts || []).filter(function(w) { return w.date === todayStr_; }).length;
 
-  container.innerHTML = nudges.slice(0, 3).map(function(nudge) {
-    return '<div class="home-nudge" role="button" tabindex="0" onclick="' + nudge.action + '" onkeydown="if(event.key===\'Enter\'){' + nudge.action + '}">' +
+  nudges.push(!total
+    ? {icon:'tasks', title:'Задачи', meta:'Добавь 1–3 главных дела', status:'todo', action:"go('tasks');setTimeout(openAddTask,120)"}
+    : {icon:'tasks', title:'Задачи', meta:done + ' из ' + total + (pendingTasks.length ? ' · далее: ' + pendingTasks[0].text : ' · всё закрыто'),
+       status: done === total ? 'done' : (done ? 'partial' : 'todo'), action:"go('tasks')"});
+  nudges.push({icon:'food', title:'Питание',
+    meta: todayFood.length ? foodKcal + ' из ' + CALORIE_GOAL + ' ккал · приёмов: ' + mealsLogged : 'Запиши первый приём пищи',
+    status: (mealsLogged >= 3 || foodKcal >= CALORIE_GOAL * 0.8) ? 'done' : (todayFood.length ? 'partial' : 'todo'), action:"go('food')"});
+  nudges.push(plan.rest && !setsToday
+    ? {icon:'workout', title:'Тренировка', meta:'По плану отдых', status:'done', action:"go('workout')"}
+    : {icon:'workout', title:'Тренировка', meta: setsToday ? (plan.group || 'Тренировка') + ' · подходов: ' + setsToday : (plan.group || 'Тренировка') + ' — ещё не начата',
+       status: setsToday ? 'done' : 'todo', action:"go('workout')"});
+  if (suppTotal) {
+    nudges.push({icon:'pill', title:'Добавки', meta:suppDone + ' из ' + suppTotal + ' приёмов',
+      status: suppDone >= suppTotal ? 'done' : (suppDone ? 'partial' : 'todo'), action:"go('supps')"});
+  }
+  nudges.push({icon:'scale', title:'Вес', meta: todayWeight ? todayWeight.weight + ' кг' : 'Один замер утром',
+    status: todayWeight ? 'done' : 'todo', action: todayWeight ? "go('body')" : "go('body');setTimeout(function(){openAddBody('weight')},120)"});
+
+  var doneCount = nudges.filter(function(n) { return n.status === 'done'; }).length;
+  var score = document.getElementById('home-day-score');
+  if (score) score.textContent = doneCount + ' из ' + nudges.length;
+  // незавершённое — наверх
+  var order = {todo:0, partial:1, done:2};
+  nudges.sort(function(x, y) { return order[x.status] - order[y.status]; });
+
+  container.innerHTML = nudges.map(function(nudge) {
+    return '<div class="home-nudge ' + nudge.status + '" role="button" tabindex="0" onclick="' + nudge.action + '" onkeydown="if(event.key===\'Enter\'){' + nudge.action + '}">' +
       '<div class="home-nudge-icon">' + iconSvg(nudge.icon) + '</div>' +
       '<div><div class="home-nudge-title">' + escapeHtml(nudge.title) + '</div><div class="home-nudge-meta">' + escapeHtml(nudge.meta) + '</div></div>' +
-      '<div class="home-nudge-go">›</div>' +
+      '<div class="home-nudge-state" aria-label="' + ({done:'Готово', partial:'В процессе', todo:'Не начато'})[nudge.status] + '">' + (nudge.status === 'done' ? iconSvg('check') : '') + '</div>' +
     '</div>';
   }).join('');
 }

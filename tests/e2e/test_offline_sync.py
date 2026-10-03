@@ -305,3 +305,16 @@ def test_copy_food_from_other_day(browser):
     d.page.click(".food-copy-day-btn")
     d.page.click(".copy-day-item")
     d.page.wait_for_function("state.foodLog.some(e => e.date === currentFoodDate && e.food_name === 'Борщ')")
+
+
+def test_home_day_plan_reflects_food_and_workout(browser):
+    d = Device(browser, 3_400_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("go('home')")
+    assert d.page.locator("#home-nudge-list .home-nudge.done").count() <= 1
+    d.page.evaluate("""state.foodLog.push({id:'f1',client_id:'f1',date:todayStr(),meal_type:'завтрак',food_name:'Каша',calories:2100,protein:5,fat:5,carbs:50,amount:300});
+        state.workouts.push({client_id:'w1',date:todayStr(),muscle:'Грудь + Трицепс',exercise:'Жим',sets:1,reps:5,weight:50});
+        saveStateLocal(); go('home');""")
+    titles = d.page.evaluate("[...document.querySelectorAll('#home-nudge-list .home-nudge.done .home-nudge-title')].map(e=>e.textContent)")
+    assert "Питание" in titles and "Тренировка" in titles
+    assert d.page.text_content("#home-day-score").startswith(str(len(titles)))
