@@ -237,7 +237,8 @@ def test_rejected_write_is_kept_not_dropped(browser):
     d.page.wait_for_function("getOutbox().length === 0")
     d.page.evaluate("apiCall('POST', '/api/tasks', {id: 'bad', text: 'x', prio: 'm', repeat_rule: 'hourly'})")
     d.page.wait_for_function("getFailedWrites().length === 1", timeout=15000)
-    assert d.outbox_len() == 0
+    # отклонённая операция ушла из очереди (другие фоновые записи могут ещё отправляться)
+    assert not d.page.evaluate("getOutbox().some(i => i.body && i.body.id === 'bad')")
     assert d.page.evaluate("getFailedWrites()[0].status") == 422
 
 
@@ -318,3 +319,19 @@ def test_home_day_plan_reflects_food_and_workout(browser):
     titles = d.page.evaluate("[...document.querySelectorAll('#home-nudge-list .home-nudge.done .home-nudge-title')].map(e=>e.textContent)")
     assert "Питание" in titles and "Тренировка" in titles
     assert d.page.text_content("#home-day-score").startswith(str(len(titles)))
+
+
+def test_set_with_rpe_and_note_syncs(browser):
+    uid = 3_500_000_000 + uuid.uuid4().int % 10**8
+    d = Device(browser, uid)
+    d.open()
+    d.page.evaluate("go('workout')")
+    d.page.evaluate("openAddSetForExercise('Жим штанги лёжа')")
+    d.page.fill("#m-sets", "1"); d.page.fill("#m-reps", "5"); d.page.fill("#m-weight", "100")
+    d.page.click("#m-rpe button[data-rpe='8']")
+    d.page.fill("#m-set-note", "пауза внизу")
+    d.page.click("#modal-set .btn-primary")
+    d.page.wait_for_function("getOutbox().length === 0", timeout=15000)
+    laptop = Device(browser, uid)
+    laptop.open()
+    laptop.page.wait_for_function("state.workouts.some(w => w.rpe === 8 && w.note === 'пауза внизу')", timeout=15000)

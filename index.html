@@ -1237,6 +1237,10 @@ body { background: var(--bg); color: var(--text); }
 .home-nudge.done .home-nudge-title { color: var(--text-muted); }
 .home-nudge.done { opacity: .82; }
 .home-nudge-meta { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.modal-label-hint { color: var(--text-muted); font-weight: 600; font-size: 10px; margin-left: 4px; }
+.rpe-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 6px; }
+.rpe-picker button { min-height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font: 800 13px/1 'Manrope', sans-serif; cursor: pointer; }
+.rpe-picker button.active { background: var(--text); color: var(--bg); border-color: transparent; }
 .food-dish-add { margin-left: auto; padding: 4px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: 800 10.5px/1.2 'Manrope', sans-serif; cursor: pointer; }
 .food-copy-day-btn { padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font: 700 12px/1.2 'Manrope', sans-serif; cursor: pointer; white-space: nowrap; }
 .dish-weights { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -4025,6 +4029,21 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
         <input class="modal-input" type="number" id="m-weight" value="80" step="2.5">
       </div>
     </div>
+    <div class="modal-row">
+      <div class="modal-label">Усилие (RPE) <span class="modal-label-hint">10 = отказ, 8 = ещё 2 повтора в запасе</span></div>
+      <div class="rpe-picker" id="m-rpe" role="radiogroup" aria-label="Усилие RPE">
+        <button type="button" data-rpe="" class="active" onclick="pickRpe(this)">—</button>
+        <button type="button" data-rpe="6" onclick="pickRpe(this)">6</button>
+        <button type="button" data-rpe="7" onclick="pickRpe(this)">7</button>
+        <button type="button" data-rpe="8" onclick="pickRpe(this)">8</button>
+        <button type="button" data-rpe="9" onclick="pickRpe(this)">9</button>
+        <button type="button" data-rpe="10" onclick="pickRpe(this)">10</button>
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Заметка</div>
+      <input class="modal-input" id="m-set-note" maxlength="200" placeholder="Например: пауза внизу, узкий хват">
+    </div>
     <div class="modal-hint">
       1RM: <strong id="m-1rm-preview">—</strong> · Ср. вес: <strong id="m-avg-preview">—</strong>
     </div>
@@ -4992,7 +5011,9 @@ function normalizeWorkout(w) {
     date: asDateStr(w.date),
     sets: parseInt(w.sets) || 1,
     reps: parseInt(w.reps) || 1,
-    weight: asNumber(w.weight)
+    weight: asNumber(w.weight),
+    rpe: w.rpe === null || w.rpe === undefined || w.rpe === '' ? null : asNumber(w.rpe),
+    note: w.note ? String(w.note) : null
   };
 }
 function normalizeTask(t) {
@@ -6325,7 +6346,7 @@ function renderExercises() {
     const chips = sets.length ? sets.map(s => {
       const orm = calc1rm(s.weight, s.reps);
       const isPR = isPRFor(ex, orm);
-      return `<div class="set-chip${isPR?' pr':''}">${s.sets}×${s.reps} — ${s.weight} кг${isPR?' ★':''} <button onclick="deleteWorkout(${s._idx},${s.id||0})" style="margin-left:6px;border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></div>`;
+      return `<div class="set-chip${isPR?' pr':''}"${s.note?` title="${escapeHtml(s.note)}"`:''}>${s.sets}×${s.reps} — ${s.weight} кг${s.rpe?` · RPE ${s.rpe}`:''}${isPR?' ★':''}${s.note?' ✎':''} <button onclick="deleteWorkout(${s._idx},${s.id||0})" style="margin-left:6px;border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></div>`;
     }).join('') : '<div class="ex-sets-empty">Подходы еще не записаны</div>';
     const maxRM = sets.length ? Math.max(...sets.map(s=>calc1rm(s.weight,s.reps))) : 0;
     const avgW = sets.length ? round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length) : 0;
@@ -6422,6 +6443,7 @@ function openAddSet() {
   clearExerciseAiAdvice();
   suggestLastSetForExercise(true);
   updateRMPreview();
+  resetSetExtras();
   document.getElementById('modal-set').classList.add('open');
 }
 
@@ -6694,6 +6716,21 @@ document.getElementById('m-custom-exercise')?.addEventListener('input', function
   updateRMPreview();
 });
 
+function pickRpe(btn) {
+  document.querySelectorAll('#m-rpe button').forEach(function(b) { b.classList.toggle('active', b === btn); b.setAttribute('aria-checked', b === btn ? 'true' : 'false'); });
+}
+function selectedRpe() {
+  var active = document.querySelector('#m-rpe button.active');
+  var v = active ? parseFloat(active.dataset.rpe) : NaN;
+  return Number.isFinite(v) ? v : null;
+}
+function resetSetExtras() {
+  var none = document.querySelector('#m-rpe button[data-rpe=""]');
+  if (none) pickRpe(none);
+  var note = document.getElementById('m-set-note');
+  if (note) note.value = '';
+}
+
 async function saveSet() {
   setWorkoutSetError('');
   var exerciseName = readSelectedExerciseName();
@@ -6721,6 +6758,8 @@ async function saveSet() {
     sets: sets,
     reps: reps,
     weight: weight,
+    rpe: selectedRpe(),
+    note: (document.getElementById('m-set-note')?.value || '').trim() || null,
   };
   await persistWorkoutEntry(entry);
   closeModal('modal-set');
