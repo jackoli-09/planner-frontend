@@ -228,3 +228,24 @@ def test_feedback_and_owner_stats(browser):
     owner.page.wait_for_function("document.getElementById('owner-stats-btn').style.display !== 'none'", timeout=15000)
     owner.page.evaluate("openOwnerStats()")
     expect(owner.page.locator("#owner-stats-body")).to_contain_text("Удержание D7")
+
+
+def test_rejected_write_is_kept_not_dropped(browser):
+    uid = 2_300_000_000 + uuid.uuid4().int % 10**8
+    d = Device(browser, uid)
+    d.open()
+    d.page.wait_for_function("getOutbox().length === 0")
+    d.page.evaluate("apiCall('POST', '/api/tasks', {id: 'bad', text: 'x', prio: 'm', repeat_rule: 'hourly'})")
+    d.page.wait_for_function("getFailedWrites().length === 1", timeout=15000)
+    assert d.outbox_len() == 0
+    assert d.page.evaluate("getFailedWrites()[0].status") == 422
+
+
+def test_new_task_ids_are_unique(browser):
+    uid = 2_400_000_000 + uuid.uuid4().int % 10**8
+    d = Device(browser, uid)
+    d.open()
+    for i in range(3):
+        d.add_task(f"Задача {i}")
+    ids = d.page.evaluate("state.tasks.map(t => t.id)")
+    assert len(set(ids)) == 3 and all(i.startswith("t_") for i in ids)

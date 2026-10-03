@@ -4453,6 +4453,20 @@ function queueWrite(method, path, body) {
   return item.id;
 }
 
+function getFailedWrites() {
+  try { return JSON.parse(localStorage.getItem('planner_failed_ops_' + USER_ID) || '[]'); }
+  catch (_) { return []; }
+}
+
+function rememberFailedWrite(method, path, body, status) {
+  var items = getFailedWrites();
+  items.push({method:method, path:path, body:body || null, status:status, at:new Date().toISOString()});
+  localStorage.setItem('planner_failed_ops_' + USER_ID, JSON.stringify(items.slice(-50)));
+  if (typeof showSyncNotice === 'function') {
+    showSyncNotice('Сервер не принял ' + items.length + ' ' + pluralRu(items.length, 'изменение', 'изменения', 'изменений') + '. Данные остались на устройстве; копия сохранена в резервной выгрузке.', true);
+  }
+}
+
 function removeQueuedWrite(id) {
   if (!id) return;
   saveOutbox(getOutbox().filter(item => item.id !== id));
@@ -4519,6 +4533,9 @@ async function apiCall(method, path, body, options) {
     apiAvailable = false;
     rememberSyncError({path:path, status:e.status || 0, message:String(e.message || e.name || 'Network error')});
     if (isWrite && [400, 404, 409, 422].includes(e.status)) {
+      // Повтор не поможет: убираем из очереди, но не теряем молча.
+      // DELETE → 404 значит «уже удалено» — это успех, а не ошибка.
+      if (!(method === 'DELETE' && e.status === 404)) rememberFailedWrite(method, path, body, e.status);
       removeQueuedWrite(outboxId);
     }
     setSyncStatus(e.status === 401 ? 'auth' : (getOutbox().length ? 'pending' : (navigator.onLine === false ? 'offline' : 'server')));
@@ -5463,7 +5480,8 @@ function exportData() {
     user_id: USER_ID,
     profile: userProfile,
     notifications: notificationSettings,
-    state: stateSnapshot()
+    state: stateSnapshot(),
+    failed_sync_operations: getFailedWrites()
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
@@ -7748,7 +7766,7 @@ function saveTask() {
   if (!text) return;
   const modal = document.getElementById('modal-task');
   const mode = modal.dataset.mode || 'add';
-  const id = mode === 'edit' ? modal.dataset.taskId : Date.now().toString();
+  const id = mode === 'edit' ? modal.dataset.taskId : ('t_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
   let task = state.tasks.find(t=>t.id===id);
   if (!task) {
     task = { id, done: false };
