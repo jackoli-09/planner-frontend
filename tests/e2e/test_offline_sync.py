@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = Path(os.environ.get("BACKEND_DIR", ROOT.parent / "planner-backend"))
 BOT_TOKEN = "123456:TEST_TOKEN_FOR_TESTS_ONLY"
 FRONT_PORT, API_PORT = 8134, 8765
-RAILWAY = "https://planner-backend-production-ad6d.up.railway.app"
+RAILWAY = "https://planner-backend-three.vercel.app"
 OWNER_ID = 1_999_999_999
 CHART_JS = Path(os.environ.get("CHART_JS", ROOT.parent / "e2edeps/node_modules/chart.js/dist/chart.umd.js"))
 
