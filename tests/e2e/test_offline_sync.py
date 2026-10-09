@@ -108,7 +108,15 @@ class Device:
         # внешние CDN в CI/песочнице могут быть недоступны — отдаём локальные копии
         self.ctx.route("https://cdnjs.cloudflare.com/**",
                        lambda r: r.fulfill(content_type="application/javascript", path=str(CHART_JS)))
-        self.ctx.route("https://fonts.googleapis.com/**", lambda r: r.fulfill(content_type="text/css", body=""))
+        fonts_dir = os.environ.get("LOCAL_FONTS_DIR")  # для скриншотов: реальные шрифты без сети
+        if fonts_dir:
+            css = Path(fonts_dir, "local-fonts.css").read_text()
+            self.ctx.route("https://fonts.googleapis.com/**", lambda r: r.fulfill(content_type="text/css", body=css))
+            self.ctx.route("https://fontfiles.local/**", lambda r: r.fulfill(
+                content_type="font/woff2",
+                path=str(Path(fonts_dir, "fonts/node_modules/@fontsource", r.request.url.split("fontfiles.local/", 1)[1]))))
+        else:
+            self.ctx.route("https://fonts.googleapis.com/**", lambda r: r.fulfill(content_type="text/css", body=""))
         self.ctx.route("https://world.openfoodfacts.org/**", lambda r: r.abort())
         self.ctx.add_init_script(f"localStorage.setItem('planner_profile_skipped_{user_id}','1')")
         self.page = self.ctx.new_page()

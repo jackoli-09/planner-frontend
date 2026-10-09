@@ -1,10 +1,10 @@
-const CACHE_VERSION = 'planner-shell-v41';
+const CACHE_VERSION = 'planner-shell-v42';
 const CORE_ASSETS = [
   './',
   './index.html',
   'https://telegram.org/js/telegram-web-app.js',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
-  'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap'
+  'https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&family=Unbounded:wght@500;600;700&display=swap'
 ];
 
 self.addEventListener('install', event => {
