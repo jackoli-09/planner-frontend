@@ -3201,6 +3201,51 @@ body {
 .rest-timer-value { font-weight: 800; font-size: 26px; color: var(--signal); }
 .rest-timer.done .rest-timer-value { color: var(--green); }
 
+
+
+.workout-today-btn.is-current { display: none; }
+.workout-session-panel { display: none; }
+.workout-settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 16px 12px; }
+.workout-settings-row span { font: 500 10.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-right: 4px; }
+.workout-settings-row button { min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: transparent; color: var(--text); font: 600 13px var(--font-text); cursor: pointer; }
+.add-ex-card { margin: 0 12px 10px !important; padding: 14px !important; text-align: center; border-style: dashed !important; color: var(--text-muted); font: 600 14px var(--font-text); cursor: pointer; }
+body.rest-on .screen { padding-bottom: 76px; }
+/* ─ Логгер подходов ─ */
+.lg-card { margin: 0 12px 8px; border: 1px solid var(--border); border-radius: var(--r); background: var(--card); }
+.lg-card.collapsed { cursor: pointer; }
+.lg-card.collapsed:active { background: var(--card2); }
+.lg-card.active { border-color: var(--text); }
+.lg-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 14px 12px; }
+.lg-name { font: 600 16px/1.25 var(--font-text); color: var(--text); }
+.lg-card.active .lg-name { font: 600 19px/1.2 var(--font-display); }
+.lg-meta { margin-top: 4px; font: 500 11px/1.35 var(--font-mono); color: var(--text-muted); }
+.lg-count { font: 800 20px var(--font-mono); color: var(--text); white-space: nowrap; }
+.lg-count small { font: 500 10px var(--font-mono); color: var(--text-muted); margin-left: 3px; }
+.lg-card.collapsed:not(.has-sets) .lg-count { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--signal); }
+.lg-sets { border-top: 1px solid var(--border); }
+.lg-set { border-bottom: 1px solid var(--border); }
+.lg-set-main { width: 100%; display: grid; grid-template-columns: 38px 1fr 1fr auto; align-items: baseline; gap: 6px; min-height: 48px; padding: 10px 14px; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.lg-set.pr .lg-set-main { background: var(--signal-soft); }
+.lg-n { font: 500 12px var(--font-mono); color: var(--text-muted); }
+.lg-v { font: 800 22px var(--font-mono); font-variant-numeric: tabular-nums; }
+.lg-v small { font: 500 11px var(--font-mono); color: var(--text-muted); margin-left: 3px; }
+.lg-tag { font: 500 11px var(--font-mono); color: var(--signal); text-align: right; white-space: nowrap; }
+.lg-set-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px 52px; }
+.lg-set-actions button, .lg-more button { min-height: 40px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--card2); color: var(--text); font: 600 13px var(--font-text); cursor: pointer; }
+.lg-set-actions .danger, .lg-more .danger { color: var(--red); background: transparent; }
+.lg-note { flex-basis: 100%; font: 400 13px/1.4 var(--font-text); color: var(--text-sub); }
+.lg-hint { padding: 12px 14px 0; font: 500 12px/1.4 var(--font-mono); color: var(--signal); }
+.lg-entry { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 0; }
+.lg-step { display: grid; grid-template-columns: 44px 1fr 44px; align-items: stretch; border: 1px solid var(--border-light); border-radius: var(--r-sm); overflow: hidden; background: var(--bg); }
+.lg-step > button { border: 0; background: var(--card2); color: var(--text); font: 600 22px/1 var(--font-mono); min-height: 56px; cursor: pointer; }
+.lg-step > button:active { background: var(--signal); color: var(--signal-ink); }
+.lg-step label { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.lg-input { width: 100%; border: 0; background: transparent; color: var(--text); text-align: center; font: 800 24px/1 var(--font-mono); font-variant-numeric: tabular-nums; padding: 4px 0 0; outline: none; }
+.lg-step label span { font: 500 10px var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: .1em; padding-bottom: 4px; }
+.lg-step:focus-within { border-color: var(--signal); }
+.lg-log { display: block; width: calc(100% - 28px); margin: 10px 14px 0; min-height: 54px; border: 0; border-radius: var(--r-sm); background: var(--signal); color: var(--signal-ink); font: 600 16px var(--font-display); cursor: pointer; }
+.lg-log:active { transform: scale(.99); }
+.lg-more { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 14px; }
 @media (prefers-reduced-motion: reduce) { .animate-in { animation: none !important; } }
 </style>
 </head>
@@ -3328,11 +3373,6 @@ body {
     </div>
 
     <div class="muscle-tabs" id="muscle-tabs"></div>
-    <div class="workout-toolbar">
-      <button class="workout-tool-btn" onclick="openWorkoutGroups()">Группы</button>
-      <button class="workout-tool-btn" onclick="openExerciseLibrary()">Упражнения</button>
-      <button class="workout-tool-btn" onclick="openWorkoutGroupEditor()">+ Группа</button>
-    </div>
     <section class="workout-program-panel">
       <div class="workout-program-top">
         <div>
@@ -3363,7 +3403,13 @@ body {
 
     <div id="exercise-list"></div>
 
-    <div class="card add-ex-card" onclick="openAddSet()">+ Добавить подход</div>
+    <div class="card add-ex-card" onclick="openAddSet()">+ Другое упражнение</div>
+    <div class="workout-settings-row">
+      <span>Настроить</span>
+      <button type="button" onclick="openWorkoutGroups()">Группы</button>
+      <button type="button" onclick="openExerciseLibrary()">Упражнения</button>
+      <button type="button" onclick="openWorkoutGroupEditor()">+ Группа</button>
+    </div>
     <div style="height:8px"></div>
   </div>
 
@@ -6508,48 +6554,254 @@ function renderExercises() {
   const exToShow = plannedExercises.concat(customLogged);
   renderWorkoutSessionSummary(exToShow, byEx);
 
-  var html = exToShow.map(ex => {
-    const sets = byEx[ex] || [];
-    const isDone = sets.length > 0;
-    const chips = sets.length ? sets.map(s => {
-      const orm = calc1rm(s.weight, s.reps);
-      const isPR = isPRFor(ex, orm);
-      return `<div class="set-chip${isPR?' pr':''}"${s.note?` title="${escapeHtml(s.note)}"`:''}>${s.sets}×${s.reps} — ${s.weight} кг${s.rpe?` · RPE ${s.rpe}`:''}${isPR?' ★':''}${s.note?' ✎':''} <button onclick="deleteWorkout(${s._idx},${s.id||0})" style="margin-left:6px;border:0;background:transparent;color:inherit;font-weight:800;cursor:pointer">×</button></div>`;
-    }).join('') : '<div class="ex-sets-empty">Подходы еще не записаны</div>';
-    const maxRM = sets.length ? Math.max(...sets.map(s=>calc1rm(s.weight,s.reps))) : 0;
-    const avgW = sets.length ? round1(sets.reduce((a,s)=>a+s.weight,0)/sets.length) : 0;
-    const last = lastSetForExercise(ex);
-    const lastMeta = last ? ('Последний: ' + asDateStr(last.date) + ' · ' + last.sets + '×' + last.reps + ' · ' + last.weight + ' кг') : 'Новое упражнение в плане. Начни с комфортного веса.';
-    const statLine = isDone
-      ? `1RM: <strong>${maxRM} кг</strong> · Ср. вес: <strong>${avgW} кг</strong>`
-      : (last ? `Прошлый вес: <strong>${escapeHtml(last.weight)} кг</strong> · ${escapeHtml(last.sets + '×' + last.reps)}` : 'Запланировано на эту тренировку');
-    return `<div class="card exercise-plan-card${isDone?'':' pending'}"><div class="card-inner">
-      <div class="exercise-plan-head">
-        <div>
-          <div class="ex-name">${escapeHtml(ex)}</div>
-          <div class="ex-stats">${statLine}</div>
-        </div>
-        <div class="exercise-plan-status ${isDone?'done':'pending'}">${isDone?'✓':'+'}</div>
-      </div>
-      <div class="ex-sets">${chips}</div>
-      <div class="exercise-plan-foot">
-        <span>${escapeHtml(lastMeta)}</span>
-        <div class="exercise-plan-actions">
-          ${isDone ? `<button class="exercise-plan-add danger" onclick="deleteWorkoutExercise(decodeURIComponent('${encodeToken(ex)}'))">Удалить</button>` : ''}
-          ${last ? `<button class="exercise-plan-add" onclick="repeatWorkoutSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">Повторить</button>` : ''}
-          <button class="exercise-plan-add" onclick="openExerciseAdviceForExercise(decodeURIComponent('${encodeToken(ex)}'))">Совет</button>
-          <button class="exercise-plan-add" onclick="openAddSetForExercise(decodeURIComponent('${encodeToken(ex)}'))">+ подход</button>
-        </div>
-      </div>
-    </div></div>`;
-  }).join('');
-
+  if (!activeExercise || exToShow.indexOf(activeExercise) === -1) {
+    activeExercise = exToShow.find(function(ex) { return !(byEx[ex] || []).length; }) || exToShow[exToShow.length - 1] || '';
+  }
+  var html = exToShow.map(function(ex) { return renderExerciseLogger(ex, byEx[ex] || [], selectedDate); }).join('');
   container.innerHTML = html || `<div class="card">
     <div class="card-inner" style="text-align:center;padding:28px 18px">
       <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">${selectedDate === todayStr() ? 'В группе пока нет упражнений' : 'В этот день записей нет'}</div>
       <div style="font-size:12px;color:var(--text-muted);line-height:1.5">${selectedDate === todayStr() ? 'Открой базу упражнений или настрой группу, чтобы собрать план тренировки.' : 'Показываются только реально сохраненные подходы выбранной даты.'}</div>
     </div>
   </div>`;
+}
+
+
+// ══════════ Запись тренировки: быстрый логгер подходов ══════════
+var activeExercise = '';
+var workoutDrafts = {};        // exercise → {weight, reps}
+var openSetMenuKey = '';       // подход, у которого открыты действия
+
+// Рекорд — подход, который превзошёл все более ранние подходы этого упражнения (не просто равный).
+function isRecordSet(w) {
+  var orm = calc1rm(w.weight, w.reps);
+  if (!(orm > 0)) return false;
+  var all = state.workouts || [];
+  var myIndex = typeof w._idx === 'number' ? w._idx : all.indexOf(w);
+  var before = all.filter(function(o, i) {
+    return i !== myIndex && o.exercise === w.exercise && (o.date < w.date || (o.date === w.date && i < myIndex));
+  });
+  if (!before.length) return false;   // первый раз — не рекорд, а точка отсчёта
+  return orm > Math.max.apply(null, before.map(function(o) { return calc1rm(o.weight, o.reps); }));
+}
+
+function setKey(w) { return String(w.client_id || ('id:' + w.id)); }
+
+// Предложение на сегодня: прогрессия от прошлой тренировки этого упражнения.
+function exerciseSuggestion(ex, beforeDate) {
+  var history = (state.workouts || []).filter(function(w) { return w.exercise === ex && w.date < beforeDate; });
+  if (!history.length) return null;
+  var lastDate = history.reduce(function(m, w) { return w.date > m ? w.date : m; }, '');
+  var session = history.filter(function(w) { return w.date === lastDate; });
+  var top = Math.max.apply(null, session.map(function(w) { return asNumber(w.weight); }));
+  var topSets = session.filter(function(w) { return asNumber(w.weight) === top; });
+  var reps = Math.max.apply(null, topSets.map(function(w) { return parseInt(w.reps, 10) || 0; }));
+  var setsDone = topSets.reduce(function(a, w) { return a + (parseInt(w.sets, 10) || 1); }, 0);
+  var hardest = Math.max.apply(null, topSets.map(function(w) { return asNumber(w.rpe, 0); }));
+  var progress = top > 0 && reps >= 8 && setsDone >= 3 && (!hardest || hardest <= 8.5);
+  var step = /присед|станов|жим ногами|тяга/i.test(ex) ? 5 : 2.5;
+  return {
+    date: lastDate, lastWeight: top, lastReps: reps, lastSets: setsDone,
+    weight: progress ? round1(top + step) : top,
+    reps: reps || 8,
+    progress: progress
+  };
+}
+
+function exerciseDraft(ex, todaySets, selectedDate) {
+  if (workoutDrafts[ex]) return workoutDrafts[ex];
+  var lastToday = todaySets[todaySets.length - 1];
+  var sug = exerciseSuggestion(ex, selectedDate);
+  var draft = lastToday
+    ? {weight: asNumber(lastToday.weight), reps: parseInt(lastToday.reps, 10) || 8}
+    : (sug ? {weight: sug.weight, reps: sug.reps} : {weight: 20, reps: 8});
+  workoutDrafts[ex] = draft;
+  return draft;
+}
+
+function fmtKg(v) { return String(round1(asNumber(v))).replace('.', ','); }
+
+function renderExerciseLogger(ex, sets, selectedDate) {
+  var token = encodeToken(ex);
+  var isActive = ex === activeExercise;
+  var sug = exerciseSuggestion(ex, selectedDate);
+  var count = sets.reduce(function(a, w) { return a + (parseInt(w.sets, 10) || 1); }, 0);
+  var bestOrm = sets.length ? Math.max.apply(null, sets.map(function(w) { return calc1rm(w.weight, w.reps); })) : 0;
+  var meta = sug
+    ? 'прошлый раз ' + sug.lastSets + '×' + sug.lastReps + ' · ' + fmtKg(sug.lastWeight) + ' кг'
+    : 'новое упражнение — начни с комфортного веса';
+
+  var n = 0;
+  var rows = sets.map(function(w) {
+    var k = setKey(w);
+    var times = parseInt(w.sets, 10) || 1;
+    var from = n + 1; n += times;
+    var label = times > 1 ? (from + '–' + n) : String(from);
+    var pr = isRecordSet(w);
+    var open = openSetMenuKey === k;
+    var kt = encodeToken(k);
+    return '<div class="lg-set' + (pr ? ' pr' : '') + (open ? ' open' : '') + '">' +
+      '<button class="lg-set-main" type="button" onclick="toggleSetMenu(decodeURIComponent(\'' + kt + '\'))" aria-expanded="' + open + '">' +
+        '<span class="lg-n">' + label + '</span>' +
+        '<span class="lg-v">' + w.reps + '<small>повт</small></span>' +
+        '<span class="lg-v">' + fmtKg(w.weight) + '<small>кг</small></span>' +
+        '<span class="lg-tag">' + (pr ? 'рекорд' : (w.rpe ? 'RPE ' + w.rpe : '')) + (w.note ? ' ✎' : '') + '</span>' +
+      '</button>' +
+      (open ? '<div class="lg-set-actions">' +
+        (w.note ? '<div class="lg-note">' + escapeHtml(w.note) + '</div>' : '') +
+        '<button type="button" onclick="openEditSet(decodeURIComponent(\'' + kt + '\'))">Изменить</button>' +
+        '<button type="button" onclick="duplicateSet(decodeURIComponent(\'' + kt + '\'))">Повторить</button>' +
+        '<button type="button" class="danger" onclick="deleteSetByKey(decodeURIComponent(\'' + kt + '\'))">Удалить</button>' +
+      '</div>' : '') +
+    '</div>';
+  }).join('');
+
+  if (!isActive) {
+    return '<div class="lg-card collapsed' + (count ? ' has-sets' : '') + '" role="button" tabindex="0" onclick="activateExercise(decodeURIComponent(\'' + token + '\'))">' +
+      '<div class="lg-head"><div><div class="lg-name">' + escapeHtml(ex) + '</div><div class="lg-meta">' + escapeHtml(meta) + '</div></div>' +
+      '<div class="lg-count">' + (count ? count + '<small>подх.</small>' : 'начать') + '</div></div></div>';
+  }
+
+  var d = exerciseDraft(ex, sets, selectedDate);
+  var hint = sug && !sets.length
+    ? (sug.progress ? 'Цель: ' + fmtKg(sug.weight) + ' кг × ' + sug.reps + ' — в прошлый раз было легко' : 'Цель: повторить ' + fmtKg(sug.weight) + ' кг × ' + sug.reps)
+    : (bestOrm ? 'Лучший подход сегодня: 1RM ≈ ' + fmtKg(bestOrm) + ' кг' : '');
+  return '<div class="lg-card active" id="lg-active">' +
+    '<div class="lg-head"><div><div class="lg-name">' + escapeHtml(ex) + '</div><div class="lg-meta">' + escapeHtml(meta) + '</div></div>' +
+    '<div class="lg-count">' + count + '<small>подх.</small></div></div>' +
+    (rows ? '<div class="lg-sets">' + rows + '</div>' : '') +
+    (hint ? '<div class="lg-hint">' + escapeHtml(hint) + '</div>' : '') +
+    '<div class="lg-entry">' +
+      stepperHtml(token, 'weight', fmtKg(d.weight), 'кг') +
+      stepperHtml(token, 'reps', String(d.reps), 'повт') +
+    '</div>' +
+    '<button class="lg-log" type="button" onclick="quickLogSet(decodeURIComponent(\'' + token + '\'))">Записать подход ' + (count + 1) + '</button>' +
+    '<div class="lg-more">' +
+      '<button type="button" onclick="openAddSetForExercise(decodeURIComponent(\'' + token + '\'))">RPE и заметка</button>' +
+      '<button type="button" onclick="openExerciseAdviceForExercise(decodeURIComponent(\'' + token + '\'))">Совет</button>' +
+      (count ? '<button type="button" class="danger" onclick="deleteWorkoutExercise(decodeURIComponent(\'' + token + '\'))">Удалить все</button>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function stepperHtml(token, field, value, unit) {
+  var label = field === 'weight' ? 'Вес' : 'Повторы';
+  return '<div class="lg-step">' +
+    '<button type="button" aria-label="' + label + ' меньше" onclick="stepDraft(decodeURIComponent(\'' + token + '\'),\'' + field + '\',-1)">−</button>' +
+    '<label><input class="lg-input" inputmode="decimal" aria-label="' + label + '" value="' + value + '" ' +
+      'onfocus="this.select()" oninput="setDraft(decodeURIComponent(\'' + token + '\'),\'' + field + '\',this.value,true)"><span>' + unit + '</span></label>' +
+    '<button type="button" aria-label="' + label + ' больше" onclick="stepDraft(decodeURIComponent(\'' + token + '\'),\'' + field + '\',1)">+</button>' +
+  '</div>';
+}
+
+function weightStep(ex) { return /гантел/i.test(ex) ? 1 : 2.5; }
+
+function stepDraft(ex, field, dir) {
+  var d = workoutDrafts[ex] || {weight: 20, reps: 8};
+  if (field === 'weight') d.weight = Math.max(0, round1(asNumber(d.weight) + dir * weightStep(ex)));
+  else d.reps = Math.max(1, Math.min(100, (parseInt(d.reps, 10) || 0) + dir));
+  workoutDrafts[ex] = d;
+  try { tg?.HapticFeedback?.selectionChanged(); } catch (_) {}
+  renderExercises();
+}
+
+function setDraft(ex, field, raw, silent) {
+  var d = workoutDrafts[ex] || {weight: 20, reps: 8};
+  var v = parseFloat(String(raw).replace(',', '.'));
+  if (field === 'weight' && Number.isFinite(v) && v >= 0 && v <= 1000) d.weight = round1(v);
+  if (field === 'reps' && Number.isFinite(v) && v >= 1 && v <= 100) d.reps = Math.round(v);
+  workoutDrafts[ex] = d;
+  if (!silent) renderExercises();   // при вводе с клавиатуры не перерисовываем — иначе теряется фокус и нажатие «Записать»
+}
+
+function activateExercise(ex) {
+  activeExercise = ex;
+  openSetMenuKey = '';
+  renderExercises();
+  var el = document.getElementById('lg-active');
+  if (el && el.scrollIntoView) el.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+}
+
+function toggleSetMenu(key) {
+  openSetMenuKey = openSetMenuKey === key ? '' : key;
+  renderExercises();
+}
+
+async function quickLogSet(ex) {
+  var d = workoutDrafts[ex];
+  var weight = asNumber(d?.weight, -1), reps = parseInt(d?.reps, 10);
+  if (!(weight >= 0) || !(reps >= 1)) return;
+  ensureExerciseInCurrentGroup(ex);
+  openSetMenuKey = '';
+  try { tg?.HapticFeedback?.impactOccurred('medium'); } catch (_) {}
+  await persistWorkoutEntry({
+    client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
+    date: currentWorkoutDate || todayStr(), muscle: currentMuscle,
+    exercise: ex, sets: 1, reps: reps, weight: weight
+  });
+}
+
+function findSetByKey(key) {
+  var idx = (state.workouts || []).findIndex(function(w) { return setKey(w) === key; });
+  return idx >= 0 ? {idx: idx, set: state.workouts[idx]} : null;
+}
+
+async function deleteSetByKey(key) {
+  var found = findSetByKey(key);
+  if (!found) return;
+  openSetMenuKey = '';
+  await deleteWorkout(found.idx, found.set.id || 0);
+}
+
+async function duplicateSet(key) {
+  var found = findSetByKey(key);
+  if (!found) return;
+  var w = found.set;
+  openSetMenuKey = '';
+  await persistWorkoutEntry({
+    client_id: 'workout_' + Date.now().toString(36) + Math.random().toString(36).slice(2),
+    date: w.date, muscle: w.muscle, exercise: w.exercise, sets: 1, reps: w.reps, weight: w.weight, rpe: w.rpe || null
+  });
+}
+
+var editingSetKey = '';
+function openEditSet(key) {
+  var found = findSetByKey(key);
+  if (!found) return;
+  var w = found.set;
+  openAddSetForExercise(w.exercise);
+  editingSetKey = key;
+  document.getElementById('m-sets').value = w.sets || 1;
+  document.getElementById('m-reps').value = w.reps;
+  document.getElementById('m-weight').value = w.weight;
+  var dateInput = document.getElementById('m-workout-date');
+  if (dateInput) { dateInput.value = w.date; updateWorkoutSetDateLabel(); }
+  var rpeBtn = document.querySelector('#m-rpe button[data-rpe="' + (w.rpe ? String(w.rpe) : '') + '"]');
+  if (rpeBtn) pickRpe(rpeBtn);
+  var note = document.getElementById('m-set-note');
+  if (note) note.value = w.note || '';
+  var title = document.querySelector('#modal-set .modal-title');
+  if (title) title.textContent = 'Изменить подход';
+  updateRMPreview();
+}
+
+// Записать изменения существующего подхода: тот же client_id → сервер обновит запись (upsert).
+async function saveEditedSet(entry) {
+  var found = findSetByKey(editingSetKey);
+  editingSetKey = '';
+  if (!found) return persistWorkoutEntry(entry);
+  var w = found.set;
+  if (!w.client_id) {               // старая запись без client_id: удаляем и пишем заново
+    await deleteWorkout(found.idx, w.id || 0);
+    return persistWorkoutEntry(entry);
+  }
+  Object.assign(w, normalizeWorkout(Object.assign({}, entry, {client_id: w.client_id, id: w.id})));
+  saveState();
+  renderWorkoutCalendar(); renderWorkoutProgramPanel(); renderExercises(); renderHome();
+  await apiCall('POST', '/api/workouts', {
+    client_id: w.client_id, date: w.date, muscle: w.muscle, exercise: w.exercise,
+    sets: w.sets, reps: w.reps, weight: w.weight, rpe: w.rpe, note: w.note
+  });
 }
 
 function renderWorkoutSessionSummary(exercises, byEx) {
@@ -6616,6 +6868,9 @@ function openAddSet() {
 }
 
 function openAddSetForExercise(exerciseName) {
+  editingSetKey = '';
+  var setTitle = document.querySelector('#modal-set .modal-title');
+  if (setTitle) setTitle.textContent = 'Подход: детали';
   updateExerciseSelect();
   syncWorkoutSetDateInput();
   setWorkoutSetError('');
@@ -6630,7 +6885,14 @@ function openAddSetForExercise(exerciseName) {
   toggleCustomExerciseInput();
   clearExerciseAiAdvice();
   suggestLastSetForExercise(true);
+  var draft = workoutDrafts[exerciseName];
+  document.getElementById('m-sets').value = 1;
+  if (draft) {
+    document.getElementById('m-reps').value = draft.reps;
+    document.getElementById('m-weight').value = draft.weight;
+  }
   updateRMPreview();
+  resetSetExtras();
   document.getElementById('modal-set').classList.add('open');
 }
 
@@ -6785,6 +7047,7 @@ function startRestTimer(seconds) {
   restTimer.endsAt = Date.now() + (seconds || restDefaultSeconds()) * 1000;
   if (restTimer.interval) clearInterval(restTimer.interval);
   restTimer.interval = setInterval(tickRestTimer, 250);
+  document.body.classList.add('rest-on');
   tickRestTimer();
 }
 function adjustRestTimer(delta) {
@@ -6803,6 +7066,7 @@ function stopRestTimer() {
   restTimer.interval = null;
   var bar = document.getElementById('rest-timer');
   if (bar) bar.classList.remove('open', 'done');
+  document.body.classList.remove('rest-on');
 }
 function tickRestTimer() {
   var bar = document.getElementById('rest-timer');
@@ -6828,11 +7092,7 @@ async function persistWorkoutEntry(entry) {
   entry = normalizeWorkout(entry);
   state.workouts.push(entry);
   saveState();
-  var saved = await apiCall('POST', '/api/workouts', entry);
-  if (saved && saved.id) {
-    entry.id = saved.id;
-    saveState();
-  }
+  // Сначала обновляем экран, сеть — потом: без интернета запрос может висеть до 15 секунд.
   currentWorkoutDate = entry.date;
   currentWorkoutStripDate = entry.date;
   if (entry.date === todayStr()) startRestTimer();
@@ -6841,6 +7101,11 @@ async function persistWorkoutEntry(entry) {
   renderExercises();
   renderHome();
   updateExerciseSelect();
+  var saved = await apiCall('POST', '/api/workouts', entry);
+  if (saved && saved.id) {
+    entry.id = saved.id;
+    saveState();
+  }
 }
 
 async function repeatWorkoutSetForExercise(exerciseName) {
@@ -6929,7 +7194,9 @@ async function saveSet() {
     rpe: selectedRpe(),
     note: (document.getElementById('m-set-note')?.value || '').trim() || null,
   };
-  await persistWorkoutEntry(entry);
+  if (editingSetKey) await saveEditedSet(entry);
+  else await persistWorkoutEntry(entry);
+  workoutDrafts[exerciseName] = {weight: weight, reps: reps};
   closeModal('modal-set');
 }
 
@@ -7178,6 +7445,10 @@ async function deleteWorkout(index, id) {
   state.workouts.splice(index, 1);
   if (id) addTombstone('workout', id);
   saveState();
+  renderWorkoutCalendar();
+  renderWorkoutProgramPanel();
+  renderExercises();
+  renderHome();
   if (id) {
     await apiCall('DELETE', '/api/workouts/' + id);
   } else if (workout?.client_id) {
@@ -7185,10 +7456,6 @@ async function deleteWorkout(index, id) {
       item.method === 'POST' && item.path === '/api/workouts' && item.body?.client_id === workout.client_id
     )));
   }
-  renderWorkoutCalendar();
-  renderWorkoutProgramPanel();
-  renderExercises();
-  renderHome();
 }
 
 async function deleteWorkoutExercise(exerciseName) {
@@ -7211,12 +7478,12 @@ async function deleteWorkoutExercise(exerciseName) {
     });
   }));
   saveState();
-  await Promise.all(matches.filter(function(item) { return item.id; }).map(function(item) {
-    return apiCall('DELETE', '/api/workouts/' + item.id);
-  }));
   renderWorkoutCalendar();
   renderExercises();
   renderHome();
+  await Promise.all(matches.filter(function(item) { return item.id; }).map(function(item) {
+    return apiCall('DELETE', '/api/workouts/' + item.id);
+  }));
 }
 
 // ════════════════════════════════════════════════════════════════

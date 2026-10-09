@@ -343,3 +343,95 @@ def test_set_with_rpe_and_note_syncs(browser):
     laptop = Device(browser, uid)
     laptop.open()
     laptop.page.wait_for_function("state.workouts.some(w => w.rpe === 8 && w.note === 'пауза внизу')", timeout=15000)
+
+
+def _open_workout(d):
+    d.page.evaluate("go('workout')")
+    d.page.wait_for_selector(".lg-card.active")
+
+
+def test_quick_log_with_steppers(browser):
+    d = Device(browser, 3_600_000_000 + uuid.uuid4().int % 10**8)
+    d.open(); _open_workout(d)
+    ex = d.page.text_content(".lg-card.active .lg-name")
+    start = d.page.evaluate(f"workoutDrafts[{json.dumps(ex)}].weight")
+    d.page.click(".lg-card.active .lg-step:nth-child(1) button[aria-label='Вес больше']")
+    d.page.click(".lg-card.active .lg-step:nth-child(1) button[aria-label='Вес больше']")
+    d.page.click(".lg-card.active .lg-log")
+    d.page.wait_for_function(f"state.workouts.some(w => w.exercise === {json.dumps(ex)})")
+    w = d.page.evaluate(f"state.workouts.find(w => w.exercise === {json.dumps(ex)})")
+    assert w["sets"] == 1 and abs(w["weight"] - (start + 5)) < 0.01
+    assert "подход 2" in d.page.text_content(".lg-card.active .lg-log")
+
+
+def test_typed_value_is_used_when_tapping_log_immediately(browser):
+    d = Device(browser, 3_700_000_000 + uuid.uuid4().int % 10**8)
+    d.open(); _open_workout(d)
+    ex = d.page.text_content(".lg-card.active .lg-name")
+    d.page.fill(".lg-card.active .lg-step:nth-child(1) .lg-input", "62,5")
+    d.page.fill(".lg-card.active .lg-step:nth-child(2) .lg-input", "11")
+    d.page.click(".lg-card.active .lg-log")
+    d.page.wait_for_function(f"state.workouts.some(w => w.exercise === {json.dumps(ex)})")
+    w = d.page.evaluate(f"state.workouts.find(w => w.exercise === {json.dumps(ex)})")
+    assert w["weight"] == 62.5 and w["reps"] == 11
+
+
+def test_edit_set_keeps_identity_and_syncs(browser):
+    uid = 3_800_000_000 + uuid.uuid4().int % 10**8
+    d = Device(browser, uid)
+    d.open(); _open_workout(d)
+    d.page.click(".lg-card.active .lg-log")
+    d.page.wait_for_function("getOutbox().length === 0 && state.workouts.length === 1", timeout=15000)
+    cid = d.page.evaluate("state.workouts[0].client_id")
+    d.page.click(".lg-set-main")
+    d.page.click(".lg-set-actions button:has-text('Изменить')")
+    d.page.fill("#m-reps", "3")
+    d.page.click("#modal-set .btn-primary")
+    d.page.wait_for_function("state.workouts.length === 1 && state.workouts[0].reps === 3")
+    assert d.page.evaluate("state.workouts[0].client_id") == cid
+    d.page.wait_for_function("getOutbox().length === 0", timeout=15000)
+    laptop = Device(browser, uid); laptop.open()
+    laptop.page.wait_for_function("state.workouts.length === 1 && state.workouts[0].reps === 3", timeout=15000)
+
+
+def test_delete_set_from_row_menu(browser):
+    d = Device(browser, 3_900_000_000 + uuid.uuid4().int % 10**8)
+    d.open(); _open_workout(d)
+    d.page.click(".lg-card.active .lg-log")
+    d.page.wait_for_function("state.workouts.length === 1")
+    d.page.click(".lg-set-main")
+    d.page.click(".lg-set-actions .danger")
+    d.page.wait_for_function("state.workouts.length === 0")
+
+
+def test_progression_suggestion_after_easy_session(browser):
+    d = Device(browser, 4_000_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("""(() => {
+      const ex = getExerciseList(currentMuscle)[0];
+      const y = new Date(Date.now() - 86400000); const ds = localDateISO(y);
+      for (let i = 0; i < 3; i++) state.workouts.push({client_id:'h'+i, date: ds, muscle: currentMuscle, exercise: ex, sets:1, reps:8, weight:80, rpe:8});
+      saveStateLocal(); window._ex = ex;
+    })()""")
+    _open_workout(d)
+    ex = d.page.evaluate("window._ex")
+    d.page.evaluate(f"activateExercise({json.dumps(ex)})")
+    assert d.page.evaluate(f"workoutDrafts[{json.dumps(ex)}].weight") == 82.5
+    assert "82,5" in d.page.text_content(".lg-card.active .lg-hint")
+
+
+def test_only_first_beating_set_is_record(browser):
+    d = Device(browser, 4_300_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("""(() => {
+      const ex = getExerciseList(currentMuscle)[0];
+      const y = localDateISO(new Date(Date.now() - 2*86400000));
+      state.workouts.push({client_id:'old', date: y, muscle: currentMuscle, exercise: ex, sets:1, reps:8, weight:80});
+      saveStateLocal();
+    })()""")
+    _open_workout(d)
+    d.page.click(".lg-card.active button[aria-label='Вес больше']")  # 82,5 > 80
+    d.page.click(".lg-card.active .lg-log")
+    d.page.click(".lg-card.active .lg-log")
+    d.page.wait_for_function("document.querySelectorAll('.lg-card.active .lg-set').length === 2")
+    assert d.page.locator(".lg-card.active .lg-set.pr").count() == 1
