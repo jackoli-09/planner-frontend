@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'planner-shell-v46';
+const CACHE_VERSION = 'planner-shell-v47';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -35,14 +35,23 @@ self.addEventListener('fetch', event => {
   if (url.hostname.includes('planner-backend') || url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {
+    // Сеть первой, но не дольше 3 секунд: при плохой связи открываем
+    // приложение из кеша, а свежую версию докачиваем в фоне.
     event.respondWith((async () => {
-      try {
-        const response = await fetch(request);
-        const cache = await caches.open(CACHE_VERSION);
-        cache.put('./index.html', response.clone());
+      const cache = await caches.open(CACHE_VERSION);
+      const network = fetch(request).then(response => {
+        if (response && response.ok) cache.put('./index.html', response.clone());
         return response;
+      });
+      const cached = await caches.match('./index.html');
+      if (!cached) return network.catch(() => Response.error());
+      event.waitUntil(network.catch(() => null));
+      const timeout = new Promise(resolve => setTimeout(() => resolve(null), 3000));
+      try {
+        const winner = await Promise.race([network, timeout]);
+        return winner || cached;
       } catch (_) {
-        return (await caches.match('./index.html')) || Response.error();
+        return cached;
       }
     })());
     return;

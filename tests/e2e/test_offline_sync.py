@@ -489,3 +489,108 @@ def test_modules_editor_from_more_menu(browser):
     assert not d.page.is_visible("#onboarding.open")
     titles = d.page.eval_on_selector_all("#home-nudge-list .home-nudge-title", "els => els.map(e => e.textContent)")
     assert "Тренировка" not in titles and "Задачи" in titles
+
+
+# ── Полностью офлайн: нет ни сервера, ни сети (самолётный режим) ──
+def go_offline(d: Device):
+    d.api_down = True
+    d.ctx.set_offline(True)
+
+
+def go_online(d: Device):
+    d.ctx.set_offline(False)
+    d.api_down = False
+
+
+def wait_sw(d: Device):
+    d.page.wait_for_function("navigator.serviceWorker && navigator.serviceWorker.controller !== null", timeout=15000)
+    # оболочка должна быть в кеше до отключения сети
+    d.page.wait_for_function("""(async () => {
+      const keys = await caches.keys();
+      for (const k of keys) { if (await (await caches.open(k)).match('./index.html')) return true; }
+      return false; })()""", timeout=15000)
+
+
+def counts(d: Device):
+    return d.page.evaluate("""({
+      tasks: state.tasks.map(t => t.text + (t.done ? ':done' : '')).sort(),
+      food: state.foodLog.filter(e => e.date === todayStr()).length,
+      sets: state.workouts.filter(w => w.date === todayStr()).length,
+      weight: (state.bodyWeight.find(e => e.date === todayStr()) || {}).weight || null,
+      supps: Object.keys(state.supps.checked).filter(k => k.startsWith(todayStr())).length
+    })""")
+
+
+def test_cold_start_and_full_day_offline(browser):
+    uid = 4_800_000_000 + uuid.uuid4().int % 10**8
+    tag = uuid.uuid4().hex[:4]
+    phone = Device(browser, uid)
+    errors = []
+    phone.page.on("pageerror", lambda e: errors.append(str(e)))
+    phone.open()
+    phone.page.wait_for_function("getOutbox().length === 0")
+    wait_sw(phone)
+
+    # ── Самолётный режим, холодный запуск ──
+    go_offline(phone)
+    phone.page.reload()
+    phone.page.wait_for_function("typeof state !== 'undefined' && typeof getOutbox === 'function'", timeout=15000)
+    assert phone.page.is_visible("#s-home.active")
+
+    # Задачи: три новых, одну закрыть, одну удалить
+    for n in (1, 2, 3):
+        phone.add_task(f"Офлайн-{tag}-{n}")
+    phone.page.evaluate(f"toggleTask(state.tasks.find(t => t.text === 'Офлайн-{tag}-1').id)")
+    phone.page.evaluate(f"deleteTask(state.tasks.find(t => t.text === 'Офлайн-{tag}-3').id)")
+
+    # Питание: быстрый продукт из локальной базы
+    phone.page.evaluate("go('food')")
+    phone.page.click(".food-quick-pick >> nth=0")
+    phone.page.wait_for_selector("#modal-food-add.open")
+    phone.page.evaluate("confirmAddFood()")
+    phone.page.wait_for_function("state.foodLog.filter(e => e.date === todayStr()).length === 1")
+
+    # Тренировка: два подхода в одно касание
+    phone.page.evaluate("go('workout')")
+    phone.page.wait_for_selector(".lg-card.active")
+    phone.page.click(".lg-card.active .lg-log")
+    phone.page.click(".lg-card.active .lg-log")
+    phone.page.wait_for_function("state.workouts.filter(w => w.date === todayStr()).length === 2")
+
+    # Вес и добавки
+    phone.page.evaluate("go('body'); openAddBody('weight')")
+    phone.page.fill("#m-body-weight", "79.4")
+    phone.page.click("#modal-body .btn-primary")
+    phone.page.evaluate("go('supps')")
+    phone.page.click("#supp-list .time-chip >> nth=0")
+
+    # Графики и отчёт не падают без сети
+    phone.page.evaluate("go('charts'); go('report'); go('home')")
+
+    before = counts(phone)
+    assert before == {
+        "tasks": sorted([f"Офлайн-{tag}-1:done", f"Офлайн-{tag}-2"]),
+        "food": 1, "sets": 2, "weight": 79.4, "supps": 1,
+    }, before
+    assert phone.outbox_len() > 0
+
+    # ── Перезапуск всё ещё без сети: ничего не потерялось ──
+    phone.page.reload()
+    phone.page.wait_for_function("typeof state !== 'undefined' && typeof getOutbox === 'function'", timeout=15000)
+    assert counts(phone) == before
+    assert phone.outbox_len() > 0
+
+    # ── Сеть вернулась: очередь уходит на сервер ──
+    go_online(phone)
+    phone.page.evaluate("syncNow()")
+    phone.page.wait_for_function("getOutbox().length === 0", timeout=20000)
+    assert phone.page.evaluate("getFailedWrites().length") == 0
+
+    # ── Второе устройство видит тот же день ──
+    laptop = Device(browser, uid)
+    laptop.open()
+    laptop.page.wait_for_function(f"state.tasks.some(t => t.text === 'Офлайн-{tag}-2')", timeout=15000)
+    laptop.page.wait_for_function("state.workouts.filter(w => w.date === todayStr()).length === 2", timeout=15000)
+    assert counts(laptop) == before
+    assert not errors, errors
+

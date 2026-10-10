@@ -512,12 +512,18 @@ async function searchFood() {
   if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Поиск...</div>';
   try {
     var items = [];
+    var usedLocal = false;
     try {
+      if (navigator.onLine === false) throw new Error('offline');
       var data = await apiCall('GET', '/api/food/search?q=' + encodeURIComponent(q));
       items = data.results || [];
     } catch(e) {
       try {
-        var resp = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=10&fields=id,product_name,product_name_ru,brands,nutriments,serving_size');
+        if (navigator.onLine === false) throw new Error('offline');
+        var ctrl = window.AbortController ? new AbortController() : null;
+        var abortTimer = ctrl ? setTimeout(function() { ctrl.abort(); }, 6000) : null;
+        var resp = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=10&fields=id,product_name,product_name_ru,brands,nutriments,serving_size', ctrl ? {signal: ctrl.signal} : undefined);
+        if (abortTimer) clearTimeout(abortTimer);
         var d2 = await resp.json();
         items = (d2.products||[]).map(function(p){
           var n=p.nutriments||{};
@@ -533,16 +539,17 @@ async function searchFood() {
           };
         }).filter(function(p){return p.food_name;});
       } catch(e2) {
-        items = findLocalFoodItems(q);
+        items = findLocalFoodItems(q); usedLocal = true;
       }
     }
-    if (!items.length) items = findLocalFoodItems(q);
+    if (!items.length) { items = findLocalFoodItems(q); usedLocal = true; }
     window._foodResults = items;
+    var localNote = usedLocal ? '<div class="food-search-note">Нет связи — ищу по встроенной базе продуктов. Остальное найдётся, когда появится интернет.</div>' : '';
     if(!items.length) {
-      if(resultsEl) resultsEl.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Ничего не найдено</div>';
+      if(resultsEl) resultsEl.innerHTML = localNote + '<div style="font-size:12px;color:var(--text-muted);padding:8px 0">Ничего не найдено' + (usedLocal ? ' — попробуй проще: «курица», «рис», «яйца»' : '') + '</div>';
       return;
     }
-    if(resultsEl) resultsEl.innerHTML = items.map(function(f,i){
+    if(resultsEl) resultsEl.innerHTML = localNote + items.map(function(f,i){
       return '<div onclick="openFoodModal('+i+')" style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">' +
         '<div><div style="font-size:12px;font-weight:500;color:var(--text)">'+escapeHtml(f.food_name)+'</div>' +
         '<div style="font-size:10px;color:var(--text-muted)">'+(f.calories||0)+' ккал · Б:'+(f.protein||0)+' Ж:'+(f.fat||0)+' У:'+(f.carbs||0)+'</div></div>' +
@@ -1345,7 +1352,7 @@ textarea.modal-input { resize: vertical; min-height: 110px; line-height: 1.4; }
 .btn-primary {
   display: block; width: calc(100% - 24px); margin: 0 12px;
   background: var(--signal);
-  color: #fff; border: none;
+  color: var(--signal-ink); border: none;
   border-radius: var(--r); padding: 14px; font-size: 14px;
   font-weight: 700; cursor: pointer; text-align: center;
   font-family: inherit;
@@ -1675,7 +1682,7 @@ html[data-theme="dark"] .focus-card {
 }
 .mtab.active {
   background: var(--signal);
-  color: #fff; border-color: transparent;
+  color: var(--signal-ink); border-color: transparent;
   box-shadow: 0 0 16px var(--neon-glow);
 }
 .mtab.add {
@@ -2658,7 +2665,7 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
   position: fixed; bottom: 76px; right: 16px;
   width: 54px; height: 54px; border-radius: 50%;
   background: var(--signal);
-  color: #fff; border: none;
+  color: var(--signal-ink); border: none;
   font-size: 26px; cursor: pointer; z-index: 99;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 24px var(--neon-glow);
@@ -2681,7 +2688,7 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 }
 .dc-name { font-size: 10px; color: var(--text-muted); }
 .dc-num { font-size: 15px; font-weight: 700; color: var(--text); }
-.day-chip.today .dc-name, .day-chip.today .dc-num { color: #fff; }
+.day-chip.today .dc-name, .day-chip.today .dc-num { color: var(--signal-ink); }
 
 .supp-item { padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .supp-item:last-child { border-bottom: none; }
@@ -2705,7 +2712,7 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 }
 .time-chip.on {
   background: var(--signal);
-  color: #fff; border-color: transparent;
+  color: var(--signal-ink); border-color: transparent;
 }
 
 .prog-bar-wrap { height: 7px; background: var(--card2); border-radius: 4px; margin: 8px 0 4px; overflow: hidden; }
@@ -2725,7 +2732,7 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
 }
 .btab.active {
   background: var(--signal);
-  color: #fff; border-color: transparent; box-shadow: 0 0 16px var(--neon-glow);
+  color: var(--signal-ink); border-color: transparent; box-shadow: 0 0 16px var(--neon-glow);
 }
 .body-entry-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .body-entry-row:last-child { border-bottom: none; }
@@ -2783,7 +2790,7 @@ a.sync-action { text-decoration: none; box-sizing: border-box; }
   border: 0;
   border-radius: var(--r);
   background: var(--signal);
-  color: #fff;
+  color: var(--signal-ink);
   font: inherit;
   font-size: 11.5px;
   font-weight: 800;
@@ -3335,6 +3342,8 @@ input[type="number"], input[type="time"], input[type="date"] { font-family: var(
 .task-cb .ic, .home-task-dot .ic { width: 14px; height: 14px; stroke-width: 2.4; }
 .exercise-library-add .ic { width: 16px; height: 16px; }
 html { font-synthesis: none; }
+.food-search-note { margin: 10px 0 4px; padding: 8px 10px; border-left: 2px solid var(--signal); background: var(--signal-soft); font: 500 12px/1.4 var(--font-text); color: var(--text-sub); }
+#mf-cal, #mf-prot, #mf-fat, #mf-carb { font-family: var(--font-mono); }
 .rr-val, .pr-max, .pr-avg, .be-val, .be-date, .task-dl, .owner-stat-value, .tc-num, .rs-val, .food-favorite-meta, .food-quick-pick-meta { font-family: var(--font-mono) !important; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .rr-val.neon { color: var(--text) !important; font-weight: 700; }
 /* ─ Первый запуск: онбординг «Табло» ─ */
@@ -3967,9 +3976,9 @@ html { font-synthesis: none; }
           <div style="font-size:13px;font-weight:700;color:var(--text)" id="mf-food-name">—</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;text-align:center">
             <div><div style="font-size:16px;font-weight:700;color:var(--text)" id="mf-cal">0</div><div style="font-size:9px;color:var(--text-muted)">ккал</div></div>
-            <div><div style="font-size:16px;font-weight:700;color:var(--green)" id="mf-prot">0</div><div style="font-size:9px;color:var(--text-muted)">белки</div></div>
-            <div><div style="font-size:16px;font-weight:700;color:var(--orange)" id="mf-fat">0</div><div style="font-size:9px;color:var(--text-muted)">жиры</div></div>
-            <div><div style="font-size:16px;font-weight:700;color:var(--blue)" id="mf-carb">0</div><div style="font-size:9px;color:var(--text-muted)">углев</div></div>
+            <div><div style="font-size:16px;font-weight:700;color:var(--text)" id="mf-prot">0</div><div style="font-size:9px;color:var(--text-muted)">белки</div></div>
+            <div><div style="font-size:16px;font-weight:700;color:var(--text)" id="mf-fat">0</div><div style="font-size:9px;color:var(--text-muted)">жиры</div></div>
+            <div><div style="font-size:16px;font-weight:700;color:var(--text)" id="mf-carb">0</div><div style="font-size:9px;color:var(--text-muted)">углев</div></div>
           </div>
           <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-top:6px" id="mf-per100">на 100г</div>
         </div>
@@ -4003,7 +4012,7 @@ html { font-synthesis: none; }
             <option value="перекус">Перекус</option>
           </select>
         </div>
-        <button onclick="confirmAddFood()" style="width:100%;padding:14px;background:var(--text);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Добавить</button>
+        <button class="btn-primary" onclick="confirmAddFood()">Добавить</button>
       </div>
     </div>
   </div>
@@ -5607,6 +5616,28 @@ function syncChartTheme() {
   Chart.defaults.font.family = "'JetBrains Mono', ui-monospace, monospace";
 }
 syncChartTheme();
+
+// Chart.js грузится с CDN. Без сети его может не быть — тогда графики
+// показывают подсказку, а библиотека догружается, как только появится связь.
+var chartLibLoading = false;
+function chartLibReady(canvasId) {
+  if (window.Chart) return true;
+  if (canvasId) toggleChartEmpty(canvasId, true, 'График появится, когда будет интернет');
+  if (!chartLibLoading && navigator.onLine !== false) {
+    chartLibLoading = true;
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    script.onload = function() {
+      syncChartTheme();
+      try { renderWeightChart(); renderCalChart(); } catch (_) {}
+      try { if (document.getElementById('s-charts')?.classList.contains('active')) renderCharts(); } catch (_) {}
+    };
+    script.onerror = function() { chartLibLoading = false; };
+    document.head.appendChild(script);
+  }
+  return false;
+}
+window.addEventListener('online', function() { if (!window.Chart) chartLibReady(); });
 
 // Пустой график выглядит как сломанный: вместо осей 0…1 показываем подсказку.
 function toggleChartEmpty(canvasId, isEmpty, text) {
@@ -7977,7 +8008,7 @@ function renderCharts() {
 
   if (progChart) { progChart.destroy(); progChart = null; }
   toggleChartEmpty('progressChart', !allDates.length, 'График появится после первой тренировки или замера веса');
-  if (allDates.length) progChart = new Chart(document.getElementById('progressChart').getContext('2d'), {
+  if (allDates.length && chartLibReady('progressChart')) progChart = new Chart(document.getElementById('progressChart').getContext('2d'), {
     type: 'line', data: lineData,
     options: {
       responsive:true, maintainAspectRatio:false,
@@ -8003,7 +8034,7 @@ function renderCharts() {
   if (avgChart) { avgChart.destroy(); avgChart = null; }
   var hasAvg = avgVals.some(function(v) { return v > 0; });
   toggleChartEmpty('avgChart', !hasAvg, 'Средний рабочий вес появится после первых подходов');
-  if (hasAvg) avgChart = new Chart(document.getElementById('avgChart').getContext('2d'), {
+  if (hasAvg && chartLibReady('avgChart')) avgChart = new Chart(document.getElementById('avgChart').getContext('2d'), {
     type:'bar',
     data:{ labels:avgExList.map(function(name) { return name.replace(/^Жим штанги /, 'Жим ').slice(0, 12); }),
       datasets:[{label:'Ср. вес кг',data:avgVals,backgroundColor:avgColors,borderRadius:6}] },
@@ -8413,6 +8444,7 @@ function renderWeightChart() {
   if (weightChart) { weightChart.destroy(); weightChart = null; }
   toggleChartEmpty('weightChart', !sorted.length, 'Добавь первый вес — здесь появится динамика');
   if (!sorted.length) return;
+  if (!chartLibReady('weightChart')) return;
   weightChart = new Chart(document.getElementById('weightChart').getContext('2d'), {
     type:'line',
     data:{
@@ -8436,6 +8468,7 @@ function renderCalChart() {
   if (calChart) { calChart.destroy(); calChart = null; }
   toggleChartEmpty('calChart', !sorted.length, 'Калории появятся после первой записи питания');
   if (!sorted.length) return;
+  if (!chartLibReady('calChart')) return;
   calChart = new Chart(document.getElementById('calChart').getContext('2d'), {
     type:'bar',
     data:{
