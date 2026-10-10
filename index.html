@@ -86,7 +86,7 @@ async function runAiAnalysis() {
     if(w) w.textContent = data.weekly_recommendation || '—';
     var ach = document.getElementById('ai-achievements');
     if(ach) ach.innerHTML = (data.top_achievements||[]).map(function(a){
-      return '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:13px;color:var(--text)"><span style="color:var(--text-muted)">✦</span>'+escapeHtml(a)+'</div>';
+      return '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:13px;color:var(--text)"><span class="ai-bullet" aria-hidden="true"></span>'+escapeHtml(a)+'</div>';
     }).join('');
     var pl = document.getElementById('ai-plateau');
     if(pl) pl.innerHTML = (data.plateau||[]).length ?
@@ -402,7 +402,7 @@ function renderFoodLog(entries) {
           '<div class="meal-item-main"><div class="meal-item-name">' + escapeHtml(e.food_name) + '</div>' +
           '<div class="meal-item-sub">' + escapeHtml(foodAmountLabel(e)) + ' · Б ' + Math.round(asNumber(e.protein)) + ' · Ж ' + Math.round(asNumber(e.fat)) + ' · У ' + Math.round(asNumber(e.carbs)) + '</div></div>' +
           '<div class="meal-item-kcal">' + Math.round(parseFloat(e.calories)||0) + '</div>' +
-          '<button class="food-item-action ' + (favorite ? 'active' : '') + '" aria-label="' + (favorite ? 'Убрать из избранного' : 'Добавить в избранное') + '" onclick="toggleFoodFavoriteFromLog(decodeURIComponent(\'' + encodeToken(e.id) + '\'),event)">' + (favorite ? '★' : '☆') + '</button>' +
+          '<button class="food-item-action ' + (favorite ? 'active' : '') + '" aria-label="' + (favorite ? 'Убрать из избранного' : 'Добавить в избранное') + '" onclick="toggleFoodFavoriteFromLog(decodeURIComponent(\'' + encodeToken(e.id) + '\'),event)">' + iconSvg(favorite ? 'star-fill' : 'star') + '</button>' +
           '<button class="meal-item-del" aria-label="Удалить" onclick="deleteFoodLog(decodeURIComponent(\'' + encodeToken(e.id) + '\'))">×</button>' +
         '</div>';
       }).join('') +
@@ -452,7 +452,7 @@ function renderFoodFavorites() {
   var favorites = state.foodFavorites || [];
   if (count) count.textContent = favorites.length;
   if (!favorites.length) {
-    list.innerHTML = '<div class="food-favorites-empty">Нажми ☆ у продукта в дневнике — он появится здесь</div>';
+    list.innerHTML = '<div class="food-favorites-empty">Нажми звёздочку у продукта в дневнике — он появится здесь</div>';
     return;
   }
   list.innerHTML = favorites.map(function(favorite) {
@@ -3307,6 +3307,8 @@ body.rest-on .screen { padding-bottom: 76px; }
 .rs-val { margin-top: 6px; font: 800 30px/1 var(--font-mono) !important; letter-spacing: -.04em; color: var(--text) !important; }
 #rep-weight.down { color: var(--green) !important; }
 .month-arrow { border-radius: var(--r-sm) !important; }
+.month-arrow { display: grid; place-items: center; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+.month-arrow .ic { width: 18px; height: 18px; }
 .month-label { font: 600 16px var(--font-display) !important; }
 /* ИИ: без «аватарки», выровнено по левому краю */
 #s-ai .ai-hero { text-align: left !important; align-items: flex-start !important; padding: 16px 16px 12px !important; }
@@ -3319,6 +3321,22 @@ body.rest-on .screen { padding-bottom: 76px; }
 /* Статистика прогресса — без радуги */
 .stat-num.kpi-neon, .stat-num.kpi-green, .stat-num.kpi-orange, .tc-num { color: var(--text) !important; text-shadow: none !important; }
 .food-favorites-empty { border: 0 !important; padding: 6px 2px !important; text-align: left !important; font: 500 12px var(--font-text) !important; color: var(--text-muted) !important; }
+
+/* Шрифты: одна система везде */
+button, input, select, textarea, optgroup { font-family: inherit; }
+input, select, textarea { font-family: var(--font-text); }
+input[type="number"], input[type="time"], input[type="date"] { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.ai-bullet { flex: 0 0 6px; width: 6px; height: 6px; margin-top: 7px; background: var(--signal); }
+.food-item-action .ic { width: 16px; height: 16px; }
+.food-item-action.active { color: var(--signal); }
+.sync-action-icon .ic, .sync-state-icon .ic { width: 18px; height: 18px; }
+.profile-option .ic { width: 20px; height: 20px; color: var(--text-muted); }
+.task-cb .ic, .home-task-dot .ic { width: 14px; height: 14px; stroke-width: 2.4; }
+.exercise-library-add .ic { width: 16px; height: 16px; }
+html { font-synthesis: none; }
+.rr-val, .pr-max, .pr-avg, .be-val, .be-date, .task-dl, .owner-stat-value, .tc-num, .rs-val, .food-favorite-meta, .food-quick-pick-meta { font-family: var(--font-mono) !important; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.rr-val.neon { color: var(--text) !important; font-weight: 700; }
 /* ─ Первый запуск: онбординг «Табло» ─ */
 .onb { position: fixed; inset: 0; z-index: 400; display: none; flex-direction: column; background: var(--bg);
   background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
@@ -3747,9 +3765,9 @@ body.rest-on .screen { padding-bottom: 76px; }
     </div>
 
     <div class="report-month-switch">
-      <div class="month-arrow" onclick="shiftReportMonth(-1)">‹</div>
+      <button class="month-arrow" onclick="shiftReportMonth(-1)" aria-label="Предыдущий месяц"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></svg></button>
       <div class="month-label" id="report-month-label">Июнь 2026</div>
-      <div class="month-arrow" onclick="shiftReportMonth(1)">›</div>
+      <button class="month-arrow" onclick="shiftReportMonth(1)" aria-label="Следующий месяц"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
     </div>
 
     <div class="report-summary-grid">
@@ -3766,7 +3784,7 @@ body.rest-on .screen { padding-bottom: 76px; }
         <div class="rs-val kpi-orange" id="rep-supps">0%</div>
       </div>
       <div class="rs-card">
-        <div class="rs-label">Δ Вес тела</div>
+        <div class="rs-label">Вес тела ±</div>
         <div class="rs-val kpi-blue" id="rep-weight">—</div>
       </div>
     </div>
@@ -3861,7 +3879,7 @@ body.rest-on .screen { padding-bottom: 76px; }
     </div>
     <div class="sync-overview">
       <div class="sync-heading">
-        <div class="sync-state-icon offline" id="sync-state-icon">✓</div>
+        <div class="sync-state-icon offline" id="sync-state-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4 4 9-9"/></svg></div>
         <div>
           <div class="sync-main-status" id="sync-status">Проверка подключения…</div>
           <div class="sync-last-status" id="sync-last-status">Последнее сохранение: —</div>
@@ -3874,14 +3892,14 @@ body.rest-on .screen { padding-bottom: 76px; }
       </div>
     </div>
     <div class="sync-actions">
-      <button class="sync-action primary" id="sync-now-btn" onclick="syncNow()"><span>Синхронизировать сейчас</span><span class="sync-action-icon">↻</span></button>
-      <button class="sync-action" id="sync-pull-btn" onclick="pullFromServerNow()"><span>Загрузить с сервера</span><span class="sync-action-icon">⇣</span></button>
-      <button class="sync-action" onclick="exportData()"><span>Скачать резервную копию</span><span class="sync-action-icon">↓</span></button>
-      <button class="sync-action" onclick="document.getElementById('backup-file-input').click()"><span>Восстановить из файла</span><span class="sync-action-icon">↑</span></button>
+      <button class="sync-action primary" id="sync-now-btn" onclick="syncNow()"><span>Синхронизировать сейчас</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 10.5A7.5 7.5 0 0 0 6 7.2L4.5 8.7M4.5 4.5v4.2h4.2M4.5 13.5A7.5 7.5 0 0 0 18 16.8l1.5-1.5M19.5 19.5v-4.2h-4.2"/></svg></span></button>
+      <button class="sync-action" id="sync-pull-btn" onclick="pullFromServerNow()"><span>Загрузить с сервера</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17.5a4.5 4.5 0 1 1 1-8.9 5.5 5.5 0 0 1 10.6 1.9A3.5 3.5 0 0 1 17.5 17.5"/><path d="M12 11v9M9 17l3 3 3-3"/></svg></span></button>
+      <button class="sync-action" onclick="exportData()"><span>Скачать резервную копию</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg></span></button>
+      <button class="sync-action" onclick="document.getElementById('backup-file-input').click()"><span>Восстановить из файла</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5v-11M7 9l5-5 5 5M5 19.5h14"/></svg></span></button>
       <input id="backup-file-input" type="file" accept="application/json,.json" style="display:none" onchange="importBackupFile(this)">
-      <button class="sync-action" id="restore-auto-backup-btn" onclick="restoreAutomaticBackup()"><span>Восстановить автокопию</span><span class="sync-action-icon">↶</span></button>
-      <a class="sync-action" href="./privacy.html" target="_blank" rel="noopener"><span>Политика конфиденциальности</span><span class="sync-action-icon">§</span></a>
-      <button class="sync-action danger" id="delete-account-btn" onclick="deleteAccount()"><span>Удалить аккаунт и все данные</span><span class="sync-action-icon">✕</span></button>
+      <button class="sync-action" id="restore-auto-backup-btn" onclick="restoreAutomaticBackup()"><span>Восстановить автокопию</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7 5 11l4 4"/><path d="M5 11h9a5 5 0 0 1 0 10h-2"/></svg></span></button>
+      <a class="sync-action" href="./privacy.html" target="_blank" rel="noopener"><span>Политика конфиденциальности</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h7.5l4 4v13h-11.5z"/><path d="M13.5 3.5v4.5h4.5M9.5 12.5h5M9.5 16h5"/></svg></span></a>
+      <button class="sync-action danger" id="delete-account-btn" onclick="deleteAccount()"><span>Удалить аккаунт и все данные</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></button>
     </div>
     <div class="sync-notice" id="sync-notice"></div>
     <div class="sync-debug" id="sync-debug">Диагностика появится после проверки синхронизации.</div>
@@ -3892,8 +3910,8 @@ body.rest-on .screen { padding-bottom: 76px; }
   <!-- Food Screen -->
   <div class="screen" id="s-food">
     <div class="page-header">
-      <div style="font-size:20px;font-weight:700;color:var(--text)">Питание</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="food-date-label">Сегодня</div>
+      <div class="ph-title">Питание</div>
+      <div class="ph-sub" id="food-date-label">Сегодня</div>
     </div>
     <!-- Дата -->
     <div class="workout-calendar-head">
@@ -4162,9 +4180,9 @@ body.rest-on .screen { padding-bottom: 76px; }
       <div class="modal-title" id="profile-modal-title">Настроим цель</div>
       <div class="profile-question">Какой результат для тебя сейчас главный?</div>
       <div class="profile-options">
-        <button class="profile-option" data-goal="lose" onclick="selectProfileGoal('lose')"><span>Снизить вес</span><span>↓</span></button>
-        <button class="profile-option" data-goal="maintain" onclick="selectProfileGoal('maintain')"><span>Поддерживать форму</span><span>＝</span></button>
-        <button class="profile-option" data-goal="gain" onclick="selectProfileGoal('gain')"><span>Набрать массу</span><span>↑</span></button>
+        <button class="profile-option" data-goal="lose" onclick="selectProfileGoal('lose')"><span>Снизить вес</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>
+        <button class="profile-option" data-goal="maintain" onclick="selectProfileGoal('maintain')"><span>Поддерживать форму</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5h12M6 14.5h12"/></svg></button>
+        <button class="profile-option" data-goal="gain" onclick="selectProfileGoal('gain')"><span>Набрать массу</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
       </div>
       <button class="btn-primary" onclick="profileNextStep()">Продолжить</button>
       <button class="modal-close-btn" id="profile-later-btn" onclick="skipProfileOnboarding()">Позже</button>
@@ -4283,7 +4301,7 @@ body.rest-on .screen { padding-bottom: 76px; }
     <div class="modal-title">План тренировок на неделю</div>
     <div class="profile-question">Выбери группу для каждого дня. Отдых можно оставить прямо в плане.</div>
     <div class="workout-program-editor-list" id="workout-program-editor-list"></div>
-    <button class="sync-action" type="button" onclick="quickGenerateWorkoutProgram()"><span>Собрать 3 тренировки в неделю</span><span class="sync-action-icon">↻</span></button>
+    <button class="sync-action" type="button" onclick="quickGenerateWorkoutProgram()"><span>Собрать 3 тренировки в неделю</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 10.5A7.5 7.5 0 0 0 6 7.2L4.5 8.7M4.5 4.5v4.2h4.2M4.5 13.5A7.5 7.5 0 0 0 18 16.8l1.5-1.5M19.5 19.5v-4.2h-4.2"/></svg></span></button>
     <div class="profile-error" id="workout-program-error"></div>
     <button class="btn-primary" onclick="saveWorkoutProgramEditor()">Сохранить план</button>
     <button class="modal-close-btn" onclick="closeModal('modal-workout-program')">Отмена</button>
@@ -4316,7 +4334,7 @@ body.rest-on .screen { padding-bottom: 76px; }
     <div class="modal-row">
       <div class="modal-label">Упражнения</div>
       <div class="exercise-editor-list" id="exercise-editor-list"></div>
-      <button class="sync-action" type="button" onclick="openExerciseLibrary({editor:true})"><span>Выбрать из базы</span><span class="sync-action-icon">⌕</span></button>
+      <button class="sync-action" type="button" onclick="openExerciseLibrary({editor:true})"><span>Выбрать из базы</span><span class="sync-action-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg></span></button>
       <button class="sync-action" type="button" onclick="addExerciseEditorRow('')"><span>Добавить упражнение</span><span class="sync-action-icon">+</span></button>
     </div>
     <div class="profile-error" id="workout-group-error"></div>
@@ -4601,7 +4619,7 @@ body.rest-on .screen { padding-bottom: 76px; }
 
 <script>
 // ════════════════════════════════════════════════════════════════
-var ICONS = {"home": "<path d=\"M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z\"/>", "tasks": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"4.5\"/><path d=\"m8.5 12.3 2.4 2.4 4.6-5\"/>", "food": "<path d=\"M7 3.5v17M4.5 3.5v4.5a2.5 2.5 0 0 0 5 0V3.5M17 20.5v-17c-2 1-3.5 3.5-3.5 7 0 2.5 1.2 3.8 3.5 3.8\"/>", "workout": "<rect x=\"5\" y=\"6.5\" width=\"3.5\" height=\"11\" rx=\"1.2\"/><rect x=\"15.5\" y=\"6.5\" width=\"3.5\" height=\"11\" rx=\"1.2\"/><path d=\"M2.5 9.5v5M21.5 9.5v5M8.5 12h7\"/>", "more": "<circle cx=\"5.5\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/>", "plus": "<path d=\"M12 5.5v13M5.5 12h13\"/>", "check": "<path d=\"m5.5 12.5 4 4 9-9\"/>", "scale": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"4.5\"/><path d=\"M8.5 10.5a3.5 3.5 0 0 1 7 0M12 10.5l1.6-1.8\"/>", "chart": "<path d=\"M4 19.5h16M6 15.5l4-4.5 3 3 5-6.5\"/>", "pill": "<rect x=\"2.8\" y=\"8.6\" width=\"18.4\" height=\"6.8\" rx=\"3.4\" transform=\"rotate(-40 12 12)\"/><path d=\"m9.4 9.1 5.2 5.8\"/>", "report": "<path d=\"M6.5 3.5h7.5l4 4v13h-11.5z\"/><path d=\"M13.5 3.5v4.5h4.5M9.5 12.5h5M9.5 16h5\"/>", "spark": "<path d=\"M11 4.5l1.7 4.6 4.6 1.7-4.6 1.7L11 17.1l-1.7-4.6-4.6-1.7 4.6-1.7z\"/><path d=\"M18.5 15v4.5M16.3 17.3h4.4\"/>", "user": "<circle cx=\"12\" cy=\"8.5\" r=\"3.5\"/><path d=\"M5 20c1.3-3.4 4-5 7-5s5.7 1.6 7 5\"/>", "bell": "<path d=\"M6 16.5v-5a6 6 0 0 1 12 0v5l1.5 2h-15z\"/><path d=\"M10 20.5a2 2 0 0 0 4 0\"/>", "sync": "<path d=\"M19.5 10.5A7.5 7.5 0 0 0 6 7.2L4.5 8.7M4.5 4.5v4.2h4.2M4.5 13.5A7.5 7.5 0 0 0 18 16.8l1.5-1.5M19.5 19.5v-4.2h-4.2\"/>", "moon": "<path d=\"M19.5 14.2A7.8 7.8 0 1 1 9.8 4.5a6.2 6.2 0 0 0 9.7 9.7z\"/>", "chev-left": "<path d=\"m14.5 6-6 6 6 6\"/>", "chev-right": "<path d=\"m9.5 6 6 6-6 6\"/>"};
+var ICONS = {"home": "<path d=\"M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z\"/>", "tasks": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"4.5\"/><path d=\"m8.5 12.3 2.4 2.4 4.6-5\"/>", "food": "<path d=\"M7 3.5v17M4.5 3.5v4.5a2.5 2.5 0 0 0 5 0V3.5M17 20.5v-17c-2 1-3.5 3.5-3.5 7 0 2.5 1.2 3.8 3.5 3.8\"/>", "workout": "<rect x=\"5\" y=\"6.5\" width=\"3.5\" height=\"11\" rx=\"1.2\"/><rect x=\"15.5\" y=\"6.5\" width=\"3.5\" height=\"11\" rx=\"1.2\"/><path d=\"M2.5 9.5v5M21.5 9.5v5M8.5 12h7\"/>", "more": "<circle cx=\"5.5\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.5\" fill=\"currentColor\" stroke=\"none\"/>", "plus": "<path d=\"M12 5.5v13M5.5 12h13\"/>", "check": "<path d=\"m5.5 12.5 4 4 9-9\"/>", "scale": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"4.5\"/><path d=\"M8.5 10.5a3.5 3.5 0 0 1 7 0M12 10.5l1.6-1.8\"/>", "chart": "<path d=\"M4 19.5h16M6 15.5l4-4.5 3 3 5-6.5\"/>", "pill": "<rect x=\"2.8\" y=\"8.6\" width=\"18.4\" height=\"6.8\" rx=\"3.4\" transform=\"rotate(-40 12 12)\"/><path d=\"m9.4 9.1 5.2 5.8\"/>", "report": "<path d=\"M6.5 3.5h7.5l4 4v13h-11.5z\"/><path d=\"M13.5 3.5v4.5h4.5M9.5 12.5h5M9.5 16h5\"/>", "spark": "<path d=\"M11 4.5l1.7 4.6 4.6 1.7-4.6 1.7L11 17.1l-1.7-4.6-4.6-1.7 4.6-1.7z\"/><path d=\"M18.5 15v4.5M16.3 17.3h4.4\"/>", "user": "<circle cx=\"12\" cy=\"8.5\" r=\"3.5\"/><path d=\"M5 20c1.3-3.4 4-5 7-5s5.7 1.6 7 5\"/>", "bell": "<path d=\"M6 16.5v-5a6 6 0 0 1 12 0v5l1.5 2h-15z\"/><path d=\"M10 20.5a2 2 0 0 0 4 0\"/>", "sync": "<path d=\"M19.5 10.5A7.5 7.5 0 0 0 6 7.2L4.5 8.7M4.5 4.5v4.2h4.2M4.5 13.5A7.5 7.5 0 0 0 18 16.8l1.5-1.5M19.5 19.5v-4.2h-4.2\"/>", "moon": "<path d=\"M19.5 14.2A7.8 7.8 0 1 1 9.8 4.5a6.2 6.2 0 0 0 9.7 9.7z\"/>", "chev-left": "<path d=\"m14.5 6-6 6 6 6\"/>", "chev-right": "<path d=\"m9.5 6 6 6-6 6\"/>", "star": "<path d=\"m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 18.9l.9-5.4-3.9-3.8 5.4-.8z\"/>", "star-fill": "<path fill=\"currentColor\" d=\"m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 18.9l.9-5.4-3.9-3.8 5.4-.8z\"/>", "arrow-down": "<path d=\"M12 5v14M6 13l6 6 6-6\"/>", "arrow-up": "<path d=\"M12 19V5M6 11l6-6 6 6\"/>", "equal": "<path d=\"M6 9.5h12M6 14.5h12\"/>", "download": "<path d=\"M12 4v11M7 10.5l5 5 5-5M5 19.5h14\"/>", "upload": "<path d=\"M12 15.5v-11M7 9l5-5 5 5M5 19.5h14\"/>", "cloud-down": "<path d=\"M7 17.5a4.5 4.5 0 1 1 1-8.9 5.5 5.5 0 0 1 10.6 1.9A3.5 3.5 0 0 1 17.5 17.5\"/><path d=\"M12 11v9M9 17l3 3 3-3\"/>", "undo": "<path d=\"M9 7 5 11l4 4\"/><path d=\"M5 11h9a5 5 0 0 1 0 10h-2\"/>", "doc": "<path d=\"M6.5 3.5h7.5l4 4v13h-11.5z\"/><path d=\"M13.5 3.5v4.5h4.5M9.5 12.5h5M9.5 16h5\"/>", "x": "<path d=\"M6 6l12 12M18 6 6 18\"/>"};
 function iconSvg(name) {
   return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[name] || ICONS.plus) + '</svg>';
 }
@@ -5586,7 +5604,7 @@ function syncChartTheme() {
   if (!window.Chart) return;
   Chart.defaults.color = cssVar('--text-muted', '#8888a0');
   Chart.defaults.borderColor = chartGridColor();
-  Chart.defaults.font.family = "'Golos Text', sans-serif";
+  Chart.defaults.font.family = "'JetBrains Mono', ui-monospace, monospace";
 }
 syncChartTheme();
 
@@ -6065,7 +6083,7 @@ function updateSyncCenter() {
   if (status) status.textContent = labels[currentSyncMode] || labels.offline;
   if (icon) {
     icon.className = 'sync-state-icon ' + (currentSyncMode === 'online' ? '' : currentSyncMode);
-    icon.textContent = currentSyncMode === 'online' ? '✓' : (currentSyncMode === 'pending' ? '↻' : (currentSyncMode === 'auth' ? '!' : '−'));
+    icon.innerHTML = currentSyncMode === 'online' ? iconSvg('check') : (currentSyncMode === 'pending' ? iconSvg('sync') : (currentSyncMode === 'auth' ? '!' : '−'));
   }
   var localSaved = localStorage.getItem('planner_last_local_save_' + USER_ID);
   var serverSaved = localStorage.getItem('planner_last_server_sync_' + USER_ID);
@@ -6502,7 +6520,7 @@ function renderHome() {
       });
       if (done > 0) {
         html_ += '<div class="home-task-row">' +
-          '<div class="home-task-dot done">✓</div>' +
+          '<div class="home-task-dot done">' + iconSvg('check') + '</div>' +
           '<div class="home-task-name" style="color:var(--text-muted)">' + done + ' выполнено</div>' +
         '</div>';
       }
@@ -7659,7 +7677,7 @@ function renderExerciseLibrary() {
         '<div class="exercise-library-meta">' + escapeHtml(item.group) + ' · ' + escapeHtml(item.equipment) + ' · ' + escapeHtml(item.level) + '</div>' +
         '<div class="exercise-library-cue">' + escapeHtml(item.cue) + '</div>' +
       '</div>' +
-      '<button class="exercise-library-add' + (added ? ' added' : '') + '" onclick="addExerciseFromLibrary(decodeURIComponent(\'' + encodeToken(item.name) + '\'))">' + (added ? '✓' : '+') + '</button>' +
+      '<button class="exercise-library-add' + (added ? ' added' : '') + '" onclick="addExerciseFromLibrary(decodeURIComponent(\'' + encodeToken(item.name) + '\'))">' + iconSvg(added ? 'check' : 'plus') + '</button>' +
     '</div>';
   }).join('');
 }
@@ -8834,7 +8852,7 @@ function renderTasks() {
     }
     document.getElementById(container).innerHTML = arr.map(t=>`
       <div class="task-item" onclick="toggleTask(decodeURIComponent('${encodeToken(t.id)}'))">
-        <div class="task-cb ${t.done?'done':''}">${t.done?'✓':''}</div>
+        <div class="task-cb ${t.done?'done':''}">${t.done?iconSvg('check'):''}</div>
         <div class="task-body">
           <div class="task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
           <div class="task-meta">
@@ -8972,7 +8990,7 @@ function renderSupps() {
     const chips = s.times.map(t=>{
       const key = selectedSuppDate+'_'+s.name+'_'+t;
       const on = !!state.supps.checked[key];
-      return `<div class="time-chip${on?' on':''}" onclick="toggleSupp(decodeURIComponent('${encodeToken(key)}'),this)">${escapeHtml(t)}${on?' ✓':''}</div>`;
+      return `<div class="time-chip${on?' on':''}" onclick="toggleSupp(decodeURIComponent('${encodeToken(key)}'),this)">${escapeHtml(t)}</div>`;
     }).join('');
     const done = s.times.filter(t=>state.supps.checked[selectedSuppDate+'_'+s.name+'_'+t]).length;
     const allDone = done === s.times.length;
@@ -9014,7 +9032,7 @@ function selectSuppDate(d) { selectedSuppDate = d; renderSupps(); }
 
 function toggleSupp(key, el) {
   const isOn = el.classList.contains('on');
-  const label = el.textContent.replace(' ✓','').trim();
+  const label = el.textContent.trim();
   const [date, ...rest] = key.split('_');
   // supp name may contain underscores in theory, time_slot is always last token
   const timeSlot = rest[rest.length-1];
@@ -9023,7 +9041,7 @@ function toggleSupp(key, el) {
     delete state.supps.checked[key]; el.classList.remove('on'); el.textContent = label;
     apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: false});
   } else {
-    state.supps.checked[key] = true; el.classList.add('on'); el.textContent = label + ' ✓';
+    state.supps.checked[key] = true; el.classList.add('on'); el.textContent = label;
     apiCall('POST', '/api/supplement_checks', {date, supp_name: suppName, time_slot: timeSlot, checked: true});
   }
   saveState();
