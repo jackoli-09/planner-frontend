@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/about",
+      "destination": "/landing.html"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://planner-backend-three.vercel.app/api/:path*"
     }

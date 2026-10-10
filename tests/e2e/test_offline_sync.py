@@ -101,7 +101,8 @@ class Device:
 
     def __init__(self, browser, user_id: int, welcome: bool = False):
         self.api_down = False
-        self.ctx = browser.new_context(viewport={"width": 390, "height": 844}, service_workers="allow")
+        self.ctx = browser.new_context(viewport={"width": 390, "height": 844}, service_workers="allow",
+                                       device_scale_factor=float(os.environ.get("SHOT_DSF", "1")))
         self.ctx.route("https://telegram.org/js/telegram-web-app.js",
                        lambda r: r.fulfill(content_type="application/javascript", body=telegram_stub(user_id)))
         self.ctx.route(f"{RAILWAY}/**", self._proxy_api)

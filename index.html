@@ -7824,9 +7824,17 @@ function defaultChartMetricIds(options) {
   return defaults.slice(0, 3);
 }
 
+function shortExerciseName(name) {
+  var n = String(name || '')
+    .replace(/^Жим штанги /, 'Жим ').replace(/ со штангой$/, '').replace(/ штанги$/, '')
+    .replace(/^Тяга верхнего блока к груди$/, 'Верхний блок').replace(/^Тяга нижнего блока к поясу$/, 'Нижний блок')
+    .replace(/ на наклонной скамье/, ' накл.').replace(/ \(тренажёр\)$/, '');
+  return n.length > 18 ? n.slice(0, 17) + '…' : n;
+}
+
 function chartMetricOptions() {
   var exerciseOptions = workoutExerciseStats().slice(0, 16).map(function(item) {
-    return {id:'ex:' + item.name, type:'exercise', name:item.name, label:item.name, short:item.name.replace(/^Жим штанги /, 'Жим ').slice(0, 18)};
+    return {id:'ex:' + item.name, type:'exercise', name:item.name, label:item.name, short:shortExerciseName(item.name)};
   });
   return exerciseOptions.concat([
     {id:'volume', type:'volume', label:'Объём тренировки', short:'Объём'},
@@ -8831,7 +8839,7 @@ function renderTasks() {
           <div class="task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
           <div class="task-meta">
             <span class="prio ${prioClass[t.prio]}">${prioLabel[t.prio]}</span>
-            ${t.dl?`<span class="task-dl">${escapeHtml(t.dl)}</span>`:''}
+            ${t.dl?`<span class="task-dl">${t.dl===todayStr()?'сегодня':escapeHtml(shortDateRu(t.dl))}</span>`:''}
             ${t.start_time?`<span class="task-dl">${escapeHtml(t.start_time)} · ${t.duration_minutes} мин</span>`:''}
             ${t.repeat_rule!=='none'?`<span class="task-cat">${repeatLabel[t.repeat_rule]}</span>`:''}
             ${t.cat?`<span class="task-cat">${escapeHtml(t.cat)}</span>`:''}

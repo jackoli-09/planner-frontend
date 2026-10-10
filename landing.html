@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мой планировщик — задачи, питание и тренировки в Telegram</title>
+<meta name="description" content="Telegram Mini App: задачи, КБЖУ, тренировки, вес и добавки на одном табло. Работает без интернета и синхронизируется между устройствами.">
+<meta property="og:title" content="Мой планировщик">
+<meta property="og:description" content="Задачи, питание и тренировки — на одном табло. Офлайн и на всех устройствах.">
+<meta property="og:image" content="/promo/cover.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0F1012">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500;700;800&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0F1012; --card:#17191C; --ink:#F3F2EE; --sub:#C4C6CB; --mute:#8C9097; --line:#2A2D32;
+  --grid:rgba(255,255,255,.035); --sig:#FF6A1A; --sig-ink:#1A0B03; --r:6px;
+  --display:'Unbounded','Golos Text',sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace; --text:'Golos Text',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg:#EEEDE7; --card:#F8F7F3; --ink:#121314; --sub:#3E4044; --mute:#67696E; --line:#D3D0C6; --grid:rgba(18,19,20,.05); --sig:#D9540D; --sig-ink:#FFF8F2; }
+}
+* { box-sizing:border-box; margin:0; }
+html { scroll-behavior:smooth; }
+body { background:var(--bg); color:var(--ink); font:400 17px/1.5 var(--text);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px); background-size:32px 32px; }
+a { color:inherit; }
+.wrap { max-width:1120px; margin:0 auto; padding:0 20px; }
+header { display:flex; align-items:center; justify-content:space-between; height:72px; }
+.logo { display:flex; align-items:center; gap:10px; font:600 15px var(--display); text-decoration:none; }
+.logo i { display:block; width:22px; height:6px; background:var(--sig); }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:52px; padding:0 24px; border-radius:var(--r);
+  background:var(--sig); color:var(--sig-ink); font:600 16px var(--display); text-decoration:none; }
+.btn.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); font-family:var(--text); font-weight:600; }
+.btn.small { min-height:40px; padding:0 16px; font-size:13px; }
+.kicker { font:500 12px var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--sig); }
+.hero { display:grid; grid-template-columns:1.05fr .95fr; gap:40px; align-items:center; padding:56px 0 80px; }
+h1 { margin-top:18px; font:700 clamp(38px,5.4vw,64px)/1.04 var(--display); letter-spacing:-.03em; }
+.lead { margin-top:22px; font-size:19px; color:var(--sub); max-width:30em; }
+.cta { margin-top:30px; display:flex; flex-wrap:wrap; gap:10px; }
+.facts { margin-top:28px; display:grid; gap:8px; font:500 13px var(--mono); color:var(--mute); }
+.facts b { color:var(--sig); font-weight:500; margin-right:10px; }
+.phone { justify-self:center; width:min(330px,80vw); border-radius:44px; padding:12px; background:#050506; box-shadow:0 0 0 1px var(--line),0 40px 80px rgba(0,0,0,.3); }
+.phone img { display:block; width:100%; height:auto; border-radius:33px; }
+.board { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); background:var(--card); }
+.board div { padding:20px; border-right:1px solid var(--line); }
+.board div:last-child { border-right:0; }
+.board strong { display:block; font:800 34px/1 var(--mono); letter-spacing:-.04em; }
+.board span { display:block; margin-top:8px; font:500 11px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--mute); }
+section { padding:72px 0; }
+h2 { margin-top:14px; font:700 clamp(30px,4.2vw,48px)/1.08 var(--display); letter-spacing:-.02em; max-width:16em; }
+.feature { display:grid; grid-template-columns:120px 1fr 300px; gap:28px; align-items:center; padding:36px 0; border-top:1px solid var(--line); }
+.feature:last-child { border-bottom:1px solid var(--line); }
+.num { font:800 54px/1 var(--mono); color:var(--sig); letter-spacing:-.04em; }
+.feature h3 { font:600 24px/1.2 var(--display); letter-spacing:-.01em; }
+.feature p { margin-top:10px; color:var(--sub); max-width:34em; }
+.feature .shot { width:100%; height:auto; max-width:240px; justify-self:end; border-radius:22px; border:6px solid #050506; box-shadow:0 0 0 1px var(--line); }
+.steps { margin-top:32px; display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1px solid var(--line); background:var(--card); }
+.step { padding:24px; border-right:1px solid var(--line); }
+.step:last-child { border-right:0; }
+.step b { font:500 12px var(--mono); color:var(--sig); letter-spacing:.12em; }
+.step h3 { margin-top:12px; font:600 18px var(--display); }
+.step p { margin-top:8px; color:var(--sub); font-size:15px; }
+.faq { margin-top:28px; border-top:1px solid var(--line); }
+details { border-bottom:1px solid var(--line); }
+summary { cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:20px; padding:20px 0; font:600 17px var(--text); }
+summary::after { content:'+'; font:500 22px var(--mono); color:var(--sig); }
+details[open] summary::after { content:'−'; }
+details p { padding:0 0 20px; color:var(--sub); max-width:46em; }
+.final { text-align:left; padding:64px 0 88px; }
+footer { padding:28px 0 40px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; font:500 12px var(--mono); color:var(--mute); }
+.reveal { animation:rise .6s cubic-bezier(.2,.7,.2,1) both; }
+.reveal:nth-child(2){animation-delay:.06s}.reveal:nth-child(3){animation-delay:.12s}.reveal:nth-child(4){animation-delay:.18s}.reveal:nth-child(5){animation-delay:.24s}
+@keyframes rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) { .reveal { animation:none; } html { scroll-behavior:auto; } }
+@media (max-width: 860px) {
+  .hero { grid-template-columns:1fr; padding:28px 0 56px; }
+  .board { grid-template-columns:repeat(2,1fr); }
+  .board div:nth-child(2) { border-right:0; }
+  .board div:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+  .feature { grid-template-columns:1fr; gap:14px; }
+  .feature .shot { justify-self:start; max-width:220px; }
+  .steps { grid-template-columns:1fr; }
+  .step { border-right:0; border-bottom:1px solid var(--line); }
+  .step:last-child { border-bottom:0; }
+  header .btn { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="#top"><i></i>Мой планировщик</a>
+    <a class="btn small" href="https://t.me/plannervadimbot">Открыть в Telegram</a>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <div>
+        <div class="kicker reveal">Telegram Mini App</div>
+        <h1 class="reveal">Весь день —<br>на одном табло</h1>
+        <p class="lead reveal">Задачи, питание, тренировки, вес и добавки — в одном приложении внутри Telegram. Отмечаешь за секунды и сразу видишь, где ты сегодня.</p>
+        <div class="cta reveal">
+          <a class="btn" href="https://t.me/plannervadimbot">Начать в Telegram</a>
+          <a class="btn ghost" href="#features">Что умеет</a>
+        </div>
+        <div class="facts reveal">
+          <div><b>01</b>Без установки и регистрации — вход через Telegram</div>
+          <div><b>02</b>Работает без интернета, данные не теряются</div>
+          <div><b>03</b>Один аккаунт — телефон и компьютер синхронно</div>
+        </div>
+      </div>
+      <div class="phone reveal"><img src="/promo/app-dark-home.webp" alt="Главный экран: калории за день и план дня" width="585" height="1266"></div>
+    </div>
+
+    <div class="board" aria-label="Что внутри">
+      <div><strong>5</strong><span>разделов в одном</span></div>
+      <div><strong>1</strong><span>касание на подход</span></div>
+      <div><strong>0</strong><span>установок</span></div>
+      <div><strong>24/7</strong><span>и без интернета</span></div>
+    </div>
+
+    <section id="features">
+      <div class="kicker">Возможности</div>
+      <h2>Всё, что нужно на день, без пяти разных приложений</h2>
+      <div style="margin-top:36px">
+        <div class="feature">
+          <div class="num">01</div>
+          <div><h3>Табло дня</h3><p>Калории, задачи, тренировка и вес — одним взглядом. Незакрытое поднимается наверх, фокус дня подсказывает, с чего начать.</p></div>
+          <img class="shot" src="/promo/app-dark-home.webp" alt="Табло дня" width="585" height="1266">
+        </div>
+        <div class="feature">
+          <div class="num">02</div>
+          <div><h3>Тренировки в одно касание</h3><p>Вес и повторы — крупными степперами, подход записывается одной кнопкой. Подсказка прогрессии, таймер отдыха и рекорды отмечаются сами.</p></div>
+          <img class="shot" src="/promo/app-dark-workout.webp" alt="Запись подходов" width="585" height="1266">
+        </div>
+        <div class="feature">
+          <div class="num">03</div>
+          <div><h3>Питание и КБЖУ</h3><p>Поиск продуктов, свои блюда, «повторить вчера» и копирование дня. Норма калорий считается по росту, весу и активности.</p></div>
+          <img class="shot" src="/promo/app-light-food.webp" alt="Дневник питания" width="585" height="1266">
+        </div>
+        <div class="feature">
+          <div class="num">04</div>
+          <div><h3>Прогресс на графиках</h3><p>Расчётный 1RM, средний рабочий вес, вес тела и калории. Видно, где растёшь, а где пора менять программу.</p></div>
+          <img class="shot" src="/promo/app-dark-charts.webp" alt="Графики прогресса" width="585" height="1266">
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="kicker">Как начать</div>
+      <h2>Три шага — и табло работает</h2>
+      <div class="steps">
+        <div class="step"><b>ШАГ 01</b><h3>Открой бота</h3><p>Нажми «Начать в Telegram» и кнопку приложения в чате с ботом.</p></div>
+        <div class="step"><b>ШАГ 02</b><h3>Выбери разделы</h3><p>Отметь, что отслеживать: задачи, питание, тренировки, вес, добавки.</p></div>
+        <div class="step"><b>ШАГ 03</b><h3>Запиши первое</h3><p>Одно главное дело или первый приём пищи — табло подхватит остальное.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="kicker">Вопросы</div>
+      <h2>Коротко о главном</h2>
+      <div class="faq">
+        <details><summary>Нужно что-то устанавливать?</summary><p>Нет. Приложение открывается прямо в Telegram на телефоне и компьютере. Вход — через ваш аккаунт Telegram, без паролей.</p></details>
+        <details><summary>Что будет без интернета?</summary><p>Всё продолжает работать: записи сохраняются на устройстве и отправляются на сервер, как только появится связь.</p></details>
+        <details><summary>Данные видны на всех устройствах?</summary><p>Да. Откройте приложение с того же аккаунта Telegram на другом устройстве — задачи, еда и тренировки подтянутся автоматически.</p></details>
+        <details><summary>Можно удалить свои данные?</summary><p>Да, в разделе «Данные» есть удаление аккаунта и всех записей. Там же можно скачать резервную копию. Подробнее — в <a href="/privacy.html">политике конфиденциальности</a>.</p></details>
+      </div>
+    </section>
+
+    <div class="final">
+      <div class="kicker">Готово к работе</div>
+      <h2>Открой табло и запиши первое дело на сегодня</h2>
+      <div class="cta"><a class="btn" href="https://t.me/plannervadimbot">Начать в Telegram</a></div>
+    </div>
+  </main>
+
+  <footer>
+    <span>© Мой планировщик</span>
+    <span><a href="/privacy.html">Политика конфиденциальности</a></span>
+  </footer>
+</div>
+</body>
+</html>
