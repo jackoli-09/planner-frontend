@@ -3247,6 +3247,69 @@ body.rest-on .screen { padding-bottom: 76px; }
 .lg-log:active { transform: scale(.99); }
 .lg-more { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px 14px; }
 @media (prefers-reduced-motion: reduce) { .animate-in { animation: none !important; } }
+/* ─ Первый запуск: онбординг «Табло» ─ */
+.onb { position: fixed; inset: 0; z-index: 400; display: none; flex-direction: column; background: var(--bg);
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 24px 24px; padding: max(18px, env(safe-area-inset-top)) 20px max(18px, env(safe-area-inset-bottom)); overflow-y: auto; }
+.onb.open { display: flex; }
+.onb-top { display: flex; align-items: center; justify-content: space-between; min-height: 32px; }
+.onb-steps { display: flex; gap: 4px; }
+.onb-steps i { width: 22px; height: 4px; background: var(--border); }
+.onb-steps i.on { background: var(--signal); }
+.onb-skip { border: 0; background: none; color: var(--text-muted); font: 500 12px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; padding: 8px 0 8px 12px; cursor: pointer; }
+.onb-page { display: none; flex: 1; flex-direction: column; }
+.onb-page.active { display: flex; }
+.onb-kicker { margin-top: 26px; font: 500 11px var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--signal); }
+.onb-title { margin-top: 10px; font: 700 clamp(28px, 8.6vw, 36px)/1.06 var(--font-display); letter-spacing: -.02em; color: var(--text); }
+.onb-lead { margin-top: 12px; font: 400 15px/1.45 var(--font-text); color: var(--text-sub); max-width: 34ch; }
+.onb-board { margin-top: 24px; border: 1px solid var(--border); background: var(--card); }
+.onb-row { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 6px 12px; padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }
+.onb-row:last-child { border-bottom: 0; }
+.onb-row-label { font: 500 10.5px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); }
+.onb-row-val { font: 800 30px/1 var(--font-mono); letter-spacing: -.04em; color: var(--text); font-variant-numeric: tabular-nums; }
+.onb-row-val small { font: 500 13px var(--font-mono); color: var(--text-muted); letter-spacing: 0; }
+.onb-segs { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.onb-segs i { height: 6px; background: var(--border); transition: background .25s ease; }
+.onb-segs i.on { background: var(--signal); }
+.onb-facts { margin-top: 18px; display: grid; gap: 8px; }
+.onb-fact { display: flex; gap: 10px; align-items: center; font: 500 13.5px var(--font-text); color: var(--text-sub); }
+.onb-fact b { font: 600 11px var(--font-mono); color: var(--signal); min-width: 26px; }
+.onb-mods { margin-top: 22px; display: grid; gap: 8px; }
+.onb-mod { display: grid; grid-template-columns: 40px 1fr 26px; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 14px;
+  border: 1px solid var(--border); background: var(--card); border-radius: var(--r); color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.onb-mod .ic { width: 22px; height: 22px; color: var(--text-muted); justify-self: center; }
+.onb-mod-name { font: 600 15px var(--font-text); }
+.onb-mod-desc { margin-top: 2px; font: 400 12.5px/1.3 var(--font-text); color: var(--text-muted); }
+.onb-mod-box { width: 24px; height: 24px; border: 1.5px solid var(--border-light); border-radius: var(--r-sm); display: grid; place-items: center; color: var(--signal-ink); }
+.onb-mod-box .ic { width: 16px; height: 16px; color: inherit; display: none; }
+.onb-mod.on { border-color: var(--signal); background: var(--signal-soft); }
+.onb-mod.on > .ic { color: var(--signal); }
+.onb-mod.on .onb-mod-box { background: var(--signal); border-color: var(--signal); }
+.onb-mod.on .onb-mod-box .ic { display: block; }
+.onb-hint { margin-top: 10px; min-height: 18px; font: 500 12px var(--font-mono); color: var(--text-muted); }
+.onb-actions { margin-top: auto; padding-top: 22px; display: grid; gap: 8px; }
+.onb-cta { min-height: 56px; border: 0; border-radius: var(--r); background: var(--signal); color: var(--signal-ink); font: 600 16px var(--font-display); cursor: pointer; }
+.onb-cta:disabled { opacity: .4; cursor: default; }
+.onb-ghost { min-height: 48px; border: 1px solid var(--border); border-radius: var(--r); background: transparent; color: var(--text-sub); font: 600 14px var(--font-text); cursor: pointer; }
+.onb-final-row { display: grid; grid-template-columns: 24px 1fr auto; gap: 12px; align-items: center; min-height: 48px; padding: 0 14px; border-bottom: 1px solid var(--border); font: 600 14.5px var(--font-text); color: var(--text); }
+.onb-final-row:last-child { border-bottom: 0; }
+.onb-final-row .ic { width: 20px; height: 20px; color: var(--signal); }
+.onb-final-row b { font: 500 11px var(--font-mono); color: var(--text-muted); }
+.onb-done-mark { margin-top: 30px; width: 64px; height: 64px; display: grid; place-items: center; background: var(--signal); color: var(--signal-ink); border-radius: var(--r); }
+.onb-done-mark .ic { width: 34px; height: 34px; }
+.onb-page.active .onb-anim { animation: onbIn .42s cubic-bezier(.2,.7,.2,1) both; }
+.onb-page.active .onb-anim:nth-child(2) { animation-delay: .05s; } .onb-page.active .onb-anim:nth-child(3) { animation-delay: .1s; }
+.onb-page.active .onb-anim:nth-child(4) { animation-delay: .15s; } .onb-page.active .onb-anim:nth-child(5) { animation-delay: .2s; }
+@keyframes onbIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .onb-page.active .onb-anim { animation: none; } .onb-segs i { transition: none; } }
+/* Пустые состояния с действием */
+.empty-action { display: grid; justify-items: center; gap: 12px; padding: 26px 16px; text-align: center; border: 1px dashed var(--border-light); border-radius: var(--r); }
+.empty-action-title { font: 600 15px var(--font-text); color: var(--text); }
+.empty-action-text { font: 400 13px/1.4 var(--font-text); color: var(--text-muted); max-width: 30ch; }
+.empty-action-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.empty-chip { min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--card); color: var(--text-sub); font: 500 13px var(--font-text); cursor: pointer; }
+.empty-chip:active { border-color: var(--signal); color: var(--signal); }
+.empty-quiet { padding: 14px; text-align: center; font: 500 12px var(--font-mono); letter-spacing: .06em; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -3920,6 +3983,10 @@ body.rest-on .screen { padding-bottom: 76px; }
         <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1.3-3.4 4-5 7-5s5.7 1.6 7 5"/></svg></span>
         <span><span class="more-title">Профиль</span><span class="more-sub">Цель, параметры и калории</span></span>
       </button>
+      <button class="more-action" onclick="openModulesEditor()" style="grid-column:1 / -1">
+        <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16M6 15.5l4-4.5 3 3 5-6.5"/></svg></span>
+        <span><span class="more-title">Что на табло</span><span class="more-sub">Разделы плана дня на главной</span></span>
+      </button>
       <button class="more-action" onclick="openNotificationSettings()" style="grid-column:1 / -1">
         <span class="more-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.5v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg></span>
         <span><span class="more-title">Напоминания</span><span class="more-sub" id="notifications-mode-label">Настроить время</span></span>
@@ -3968,6 +4035,46 @@ body.rest-on .screen { padding-bottom: 76px; }
 </div>
 
 <!-- Profile Onboarding -->
+<div class="onb" id="onboarding" role="dialog" aria-modal="true" aria-label="Знакомство с планировщиком">
+  <div class="onb-top">
+    <div class="onb-steps" id="onb-steps"><i class="on"></i><i></i><i></i></div>
+    <button class="onb-skip" id="onb-skip" onclick="finishOnboarding(false)">Пропустить</button>
+  </div>
+  <section class="onb-page active" data-onb="1">
+    <div class="onb-kicker onb-anim">Мой планировщик</div>
+    <h1 class="onb-title onb-anim">Весь день —<br>на одном табло</h1>
+    <p class="onb-lead onb-anim">Задачи, питание и тренировки в одном месте. Отмечаешь за секунды — видишь, где ты сегодня.</p>
+    <div class="onb-board onb-anim" aria-hidden="true">
+      <div class="onb-row"><span class="onb-row-label">Задачи</span><span class="onb-row-val" data-onb-count="4">0<small> / 5</small></span><span class="onb-segs" data-onb-segs="8"></span></div>
+      <div class="onb-row"><span class="onb-row-label">Ккал</span><span class="onb-row-val" data-onb-count="1840">0<small> / 2300</small></span><span class="onb-segs" data-onb-segs="8"></span></div>
+      <div class="onb-row"><span class="onb-row-label">Подходы</span><span class="onb-row-val" data-onb-count="12">0<small> жим 80 кг</small></span><span class="onb-segs" data-onb-segs="6"></span></div>
+    </div>
+    <div class="onb-facts onb-anim">
+      <div class="onb-fact"><b>01</b>Работает без интернета — данные не теряются</div>
+      <div class="onb-fact"><b>02</b>Один аккаунт Telegram — на телефоне и компьютере</div>
+    </div>
+    <div class="onb-actions"><button class="onb-cta" onclick="onboardingStep(2)">Начать</button></div>
+  </section>
+  <section class="onb-page" data-onb="2">
+    <div class="onb-kicker onb-anim">Шаг 2 из 3</div>
+    <h1 class="onb-title onb-anim">Что будем<br>отслеживать?</h1>
+    <p class="onb-lead onb-anim">На главной останется только выбранное. Изменить можно в любой момент.</p>
+    <div class="onb-mods onb-anim" id="onb-mods"></div>
+    <div class="onb-hint" id="onb-hint"></div>
+    <div class="onb-actions"><button class="onb-cta" id="onb-mods-next" onclick="onboardingStep(3)">Дальше</button></div>
+  </section>
+  <section class="onb-page" data-onb="3">
+    <div class="onb-done-mark onb-anim"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4 4 9-9"/></svg></div>
+    <h1 class="onb-title onb-anim" id="onb-final-title">Табло готово</h1>
+    <p class="onb-lead onb-anim" id="onb-final-lead"></p>
+    <div class="onb-board onb-anim" id="onb-final-list"></div>
+    <div class="onb-actions">
+      <button class="onb-cta" id="onb-final-cta" onclick="finishOnboarding(true)">Рассчитать норму</button>
+      <button class="onb-ghost" id="onb-final-later" onclick="finishOnboarding(false)">Позже — открыть табло</button>
+    </div>
+  </section>
+</div>
+
 <div class="modal-overlay" id="modal-profile">
   <div class="modal-sheet profile-sheet">
     <div class="profile-progress">
@@ -4739,6 +4846,145 @@ function skipProfileOnboarding() {
   closeModal('modal-profile');
 }
 
+// ── Первый запуск: онбординг и модули главной ──
+var ONB_MODULES = [
+  {key:'tasks', icon:'tasks', name:'Задачи', desc:'Главные дела дня, повторы и дедлайны'},
+  {key:'food', icon:'food', name:'Питание и КБЖУ', desc:'Приёмы пищи, калории и белок'},
+  {key:'workout', icon:'workout', name:'Тренировки', desc:'Подходы в одно касание, рекорды'},
+  {key:'weight', icon:'scale', name:'Вес и замеры', desc:'Утренний вес и динамика'},
+  {key:'supps', icon:'pill', name:'Добавки', desc:'Витамины и лекарства по расписанию'}
+];
+var onbSelected = null;
+
+function homeModules() {
+  try {
+    var saved = JSON.parse(localStorage.getItem('planner_modules_' + USER_ID) || 'null');
+    if (Array.isArray(saved) && saved.length) return saved;
+  } catch (e) {}
+  return ONB_MODULES.map(function(m) { return m.key; });
+}
+
+function userHasAnyData() {
+  return !!((state.tasks || []).length || (state.foodLog || []).length || (state.workouts || []).length ||
+    (state.bodyWeight || []).length || userProfile.onboarding_completed);
+}
+
+function maybeShowWelcome() {
+  var key = 'planner_welcome_done_' + USER_ID;
+  if (localStorage.getItem(key)) return false;
+  if (userHasAnyData()) { localStorage.setItem(key, '1'); return false; }
+  onbSelected = ['tasks', 'food', 'workout', 'weight'];
+  renderOnboardingModules();
+  onboardingStep(1);
+  document.getElementById('onboarding').classList.add('open');
+  return true;
+}
+
+function renderOnboardingModules() {
+  var box = document.getElementById('onb-mods');
+  if (!box) return;
+  box.innerHTML = ONB_MODULES.map(function(m) {
+    var on = onbSelected.indexOf(m.key) >= 0;
+    return '<button type="button" class="onb-mod' + (on ? ' on' : '') + '" aria-pressed="' + on + '" onclick="toggleOnboardingModule(\'' + m.key + '\')">' +
+      iconSvg(m.icon) + '<span><div class="onb-mod-name">' + m.name + '</div><div class="onb-mod-desc">' + m.desc + '</div></span>' +
+      '<span class="onb-mod-box">' + iconSvg('check') + '</span></button>';
+  }).join('');
+  var next = document.getElementById('onb-mods-next');
+  if (next) next.disabled = !onbSelected.length;
+  var hint = document.getElementById('onb-hint');
+  if (hint) hint.textContent = onbSelected.length ? 'Выбрано: ' + onbSelected.length + ' из ' + ONB_MODULES.length : 'Выбери хотя бы одно';
+}
+
+function toggleOnboardingModule(key) {
+  var i = onbSelected.indexOf(key);
+  if (i >= 0) onbSelected.splice(i, 1); else onbSelected.push(key);
+  renderOnboardingModules();
+}
+
+function animateOnboardingBoard() {
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('#onboarding [data-onb-segs]').forEach(function(segs, row) {
+    var on = Number(segs.getAttribute('data-onb-segs'));
+    segs.innerHTML = '<i></i>'.repeat(10);
+    Array.prototype.forEach.call(segs.children, function(seg, i) {
+      if (i < on) setTimeout(function() { seg.classList.add('on'); }, reduce ? 0 : 380 + row * 140 + i * 55);
+    });
+  });
+  document.querySelectorAll('#onboarding [data-onb-count]').forEach(function(el, row) {
+    var target = Number(el.getAttribute('data-onb-count'));
+    var small = el.querySelector('small');
+    var start = performance.now(), dur = reduce ? 0 : 900;
+    (function tick(now) {
+      var p = dur ? Math.min(1, (now - start - row * 140) / dur) : 1;
+      if (p < 0) p = 0;
+      el.firstChild.nodeValue = String(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(tick);
+    })(start);
+    if (small) el.appendChild(small);
+  });
+}
+
+function onboardingStep(step) {
+  document.querySelectorAll('#onboarding .onb-page').forEach(function(p) {
+    p.classList.toggle('active', Number(p.getAttribute('data-onb')) === step);
+  });
+  document.querySelectorAll('#onb-steps i').forEach(function(dot, i) { dot.classList.toggle('on', i < step); });
+  document.getElementById('onb-skip').style.visibility = step === 3 ? 'hidden' : 'visible';
+  if (step === 1) animateOnboardingBoard();
+  if (step === 3) {
+    var needsGoal = onbSelected.indexOf('food') >= 0 || onbSelected.indexOf('weight') >= 0;
+    document.getElementById('onb-final-lead').textContent = needsGoal
+      ? 'Последний штрих: посчитаем дневную норму калорий по росту, весу и активности. Это 30 секунд.'
+      : 'Начни с одного главного дела на сегодня — табло подхватит остальное.';
+    document.getElementById('onb-final-cta').textContent = needsGoal ? 'Рассчитать норму' : 'Открыть табло';
+    document.getElementById('onb-final-later').style.display = needsGoal ? 'block' : 'none';
+    var list = document.getElementById('onb-final-list');
+    if (list) list.innerHTML = ONB_MODULES.filter(function(m) { return onbSelected.indexOf(m.key) >= 0; }).map(function(m, i) {
+      return '<div class="onb-final-row">' + iconSvg(m.icon) + '<span>' + m.name + '</span><b>' + String(i + 1).padStart(2, '0') + '</b></div>';
+    }).join('');
+  }
+  if (tg?.HapticFeedback) try { tg.HapticFeedback.selectionChanged(); } catch (e) {}
+}
+
+function finishOnboarding(primary) {
+  var mods = (onbSelected && onbSelected.length) ? onbSelected.slice() : homeModules();
+  localStorage.setItem('planner_modules_' + USER_ID, JSON.stringify(mods));
+  localStorage.setItem('planner_welcome_done_' + USER_ID, '1');
+  document.getElementById('onboarding').classList.remove('open');
+  renderHome();
+  var needsGoal = mods.indexOf('food') >= 0 || mods.indexOf('weight') >= 0;
+  if (primary && needsGoal) { openProfileEditor(); return; }
+  if (!needsGoal) localStorage.setItem('planner_profile_skipped_' + USER_ID, '1');
+  if (primary && mods.indexOf('tasks') >= 0) { go('tasks'); setTimeout(openAddTask, 160); }
+}
+
+function openModulesEditor() {
+  closeMoreMenu();
+  onbSelected = homeModules().slice();
+  renderOnboardingModules();
+  onboardingStep(2);
+  document.getElementById('onb-skip').style.visibility = 'hidden';
+  var next = document.getElementById('onb-mods-next');
+  next.textContent = 'Сохранить';
+  next.onclick = function() { saveModulesEditor(); };
+  document.getElementById('onboarding').classList.add('open');
+}
+
+function saveModulesEditor() {
+  localStorage.setItem('planner_modules_' + USER_ID, JSON.stringify(onbSelected.slice()));
+  document.getElementById('onboarding').classList.remove('open');
+  var next = document.getElementById('onb-mods-next');
+  next.textContent = 'Дальше';
+  next.onclick = function() { onboardingStep(3); };
+  renderHome();
+}
+
+function quickAddTask(text) {
+  openAddTask();
+  var field = document.getElementById('m-task-text');
+  if (field) { field.value = text; setTimeout(function() { field.focus(); }, 80); }
+}
+
 function readProfileForm() {
   return {
     name: document.getElementById('profile-name').value.trim(),
@@ -5075,9 +5321,6 @@ let state = {
   }
 };
 
-// Твоя реальная история тренировок (Окт 2025 — Апр 2026), 118 подходов из 31 сессии
-var HISTORY_SEED = [{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":12,"weight":35.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":45.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":12,"weight":15.0},{"date":"2025-10-16","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":17.5},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":65.0},{"date":"2025-10-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-10-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":60.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-10","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":3,"reps":5,"weight":40.0},{"date":"2025-12-10","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":12,"weight":25.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":5,"reps":6,"weight":60.0},{"date":"2025-12-11","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":12,"weight":40.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":4,"weight":72.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":4,"reps":12,"weight":20.0},{"date":"2025-12-16","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":35.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":3,"reps":12,"weight":7.5},{"date":"2025-12-16","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":3,"reps":10,"weight":10.0},{"date":"2025-12-16","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":3,"reps":10,"weight":18.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":17.5},{"date":"2025-12-18","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":3,"reps":15,"weight":17.5},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":23.0},{"date":"2025-12-18","muscle":"Спина + Бицепс","exercise":"Подъём гантелей на бицепс сидя","sets":4,"reps":10,"weight":10.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":60.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":50.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":3,"reps":15,"weight":40.0},{"date":"2025-12-23","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":10,"weight":20.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":5,"weight":70.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":8,"weight":22.5},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":22.0},{"date":"2025-12-25","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":22.5},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":60.0},{"date":"2026-01-06","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":25.0},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-01-06","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":7.5},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":4,"weight":80.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":70.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":40.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока одной рукой","sets":3,"reps":15,"weight":15.0},{"date":"2026-01-08","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":30.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":6,"weight":70.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-01-13","muscle":"Грудь + Трицепс","exercise":"Сведение в тренажёре (Бабочка)","sets":4,"reps":18,"weight":20.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":100.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":8,"weight":55.0},{"date":"2026-01-16","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":6,"weight":35.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":3,"weight":80.0},{"date":"2026-01-20","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":10,"weight":60.0},{"date":"2026-01-20","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":17.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":2,"weight":80.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":15.0},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":4,"reps":12,"weight":12.5},{"date":"2026-01-22","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":8,"weight":27.5},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":120.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":2,"reps":8,"weight":80.0},{"date":"2026-01-27","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":45.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-12","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":6,"weight":60.0},{"date":"2026-02-12","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":12,"weight":45.0},{"date":"2026-02-12","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":17.5},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-14","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":8,"weight":50.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-17","muscle":"Спина + Бицепс","exercise":"Подъём штанги на бицепс","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":22.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":8,"weight":7.5},{"date":"2026-02-20","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":110.0},{"date":"2026-02-21","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":5,"reps":12,"weight":45.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":8,"weight":20.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":10,"weight":10.0},{"date":"2026-02-21","muscle":"Плечи + Трапеции","exercise":"Разведение в тренажёре (задние дельты)","sets":3,"reps":15,"weight":25.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":105.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга в хаммере","sets":5,"reps":6,"weight":70.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Тяга верхнего блока к груди","sets":4,"reps":10,"weight":60.0},{"date":"2026-02-24","muscle":"Спина + Бицепс","exercise":"Сгибание на скамье Скотта","sets":4,"reps":8,"weight":25.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":6,"weight":60.0},{"date":"2026-02-26","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":5,"reps":6,"weight":20.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":3,"weight":104.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":8,"weight":120.0},{"date":"2026-02-28","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":4,"reps":15,"weight":45.0},{"date":"2026-02-28","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":2,"reps":10,"weight":40.0},{"date":"2026-03-03","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":7,"weight":20.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":120.0},{"date":"2026-03-05","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":65.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":5,"reps":2,"weight":100.0},{"date":"2026-03-17","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":6,"weight":120.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":10,"weight":15.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей перед собой","sets":4,"reps":10,"weight":10.0},{"date":"2026-03-17","muscle":"Плечи + Трапеции","exercise":"Подъём гантелей в стороны","sets":4,"reps":12,"weight":10.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":4,"reps":10,"weight":75.0},{"date":"2026-03-20","muscle":"Грудь + Трицепс","exercise":"Жим гантелей на наклонной скамье","sets":4,"reps":10,"weight":20.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":3,"weight":140.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга штанги в наклоне","sets":4,"reps":8,"weight":70.0},{"date":"2026-03-21","muscle":"Спина + Бицепс","exercise":"Тяга нижнего блока к поясу","sets":4,"reps":10,"weight":70.0},{"date":"2026-03-21","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":30.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Приседания со штангой","sets":4,"reps":8,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Жим ногами","sets":4,"reps":10,"weight":80.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Сгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Ноги + Ягодицы","exercise":"Разгибание ног (тренажёр)","sets":3,"reps":12,"weight":35.0},{"date":"2026-03-24","muscle":"Плечи + Трапеции","exercise":"Жим гантелей сидя (плечи)","sets":4,"reps":12,"weight":17.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги лёжа","sets":5,"reps":4,"weight":80.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Жим штанги на наклонной скамье","sets":4,"reps":10,"weight":50.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разводка гантелей лёжа","sets":3,"reps":15,"weight":12.5},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Французский жим","sets":4,"reps":6,"weight":20.0},{"date":"2026-03-27","muscle":"Грудь + Трицепс","exercise":"Разгибание на трицепс (блок)","sets":4,"reps":10,"weight":25.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Становая тяга","sets":5,"reps":5,"weight":120.0},{"date":"2026-04-02","muscle":"Спина + Бицепс","exercise":"Румынская тяга","sets":4,"reps":8,"weight":100.0}]
-;
 
 let currentMuscle = 'Грудь + Трицепс';
 let currentWorkoutDate = localDateISO();
@@ -5717,24 +5960,8 @@ async function loadState(cb) {
     var loaded = await loadStateFromServer();
     if (loaded) cb();
   }
-  maybeImportHistory().then(function(imported) {
-    if (imported) cb();
-  });
 }
 
-// Импорт твоей истории тренировок при первом запуске (один раз на user_id)
-async function maybeImportHistory() {
-  const flagKey = 'history_imported_' + USER_ID;
-  if (localStorage.getItem('planner_import_demo_history') !== '1') return false;
-  if (localStorage.getItem(flagKey)) return false;
-  if (state.workouts.length > 0) { localStorage.setItem(flagKey, '1'); return false; }
-
-  state.workouts = HISTORY_SEED.map(normalizeWorkout);
-  saveStateLocal();
-  await apiCall('POST', '/api/workouts/bulk', { workouts: HISTORY_SEED });
-  localStorage.setItem(flagKey, '1');
-  return true;
-}
 
 // ════════════════════════════════════════════════════════════════
 // EXPORT — ручной бэкап в JSON-файл (доп. защита от потери данных)
@@ -6305,6 +6532,10 @@ function renderHomeNudges(todayStr_, todayTasks, done, total) {
   nudges.push({icon:'scale', title:'Вес', meta: todayWeight ? todayWeight.weight + ' кг' : 'Один замер утром',
     status: todayWeight ? 'done' : 'todo', action: todayWeight ? "go('body')" : "go('body');setTimeout(function(){openAddBody('weight')},120)"});
 
+  var mods = homeModules();
+  var modOf = {tasks:'tasks', food:'food', workout:'workout', pill:'supps', scale:'weight'};
+  var filtered = nudges.filter(function(n) { return mods.indexOf(modOf[n.icon]) >= 0; });
+  if (filtered.length) nudges = filtered;
   renderBoardHero(todayFood, foodKcal);
   var doneCount = nudges.filter(function(n) { return n.status === 'done'; }).length;
   var score = document.getElementById('home-day-score');
@@ -8497,7 +8728,15 @@ function renderTasks() {
 
   function renderList(arr, container, emptyText) {
     if (!arr.length) {
-      document.getElementById(container).innerHTML = '<div class="empty-state">' + emptyText + '</div>';
+      var el = document.getElementById(container);
+      if (container === 'task-list-done') { el.innerHTML = '<div class="empty-quiet">Здесь появятся выполненные</div>'; return; }
+      if (state.tasks.length) { el.innerHTML = '<div class="empty-state">' + emptyText + '</div>'; return; }
+      var ideas = ['Тренировка в 19:00', 'Купить продукты', 'Позвонить клиенту'];
+      el.innerHTML = '<div class="empty-action"><div class="empty-action-title">Начни с одного главного дела</div>' +
+        '<div class="empty-action-text">Одна-три задачи на день работают лучше длинного списка. Попробуй:</div>' +
+        '<div class="empty-action-chips">' + ideas.map(function(t) {
+          return '<button type="button" class="empty-chip" onclick="quickAddTask(\'' + t + '\')">' + t + '</button>';
+        }).join('') + '</div></div>';
       return;
     }
     document.getElementById(container).innerHTML = arr.map(t=>`
@@ -8883,7 +9122,7 @@ loadState(() => {
   setSyncStatus(getOutbox().length ? 'pending' : (apiAvailable ? 'online' : 'offline'));
 }).then(function() {
   hideAppBootStatus(180);
-  setTimeout(maybeShowProfileOnboarding, 220);
+  if (!maybeShowWelcome()) setTimeout(maybeShowProfileOnboarding, 220);
 }).catch(function() {
   setAppBootStatus('Работаю офлайн. Данные сохранятся на устройстве.');
   hideAppBootStatus(1400);

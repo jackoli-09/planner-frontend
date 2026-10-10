@@ -99,7 +99,7 @@ def servers():
 class Device:
     """Отдельный браузерный контекст = отдельное устройство того же пользователя."""
 
-    def __init__(self, browser, user_id: int):
+    def __init__(self, browser, user_id: int, welcome: bool = False):
         self.api_down = False
         self.ctx = browser.new_context(viewport={"width": 390, "height": 844}, service_workers="allow")
         self.ctx.route("https://telegram.org/js/telegram-web-app.js",
@@ -119,6 +119,8 @@ class Device:
             self.ctx.route("https://fonts.googleapis.com/**", lambda r: r.fulfill(content_type="text/css", body=""))
         self.ctx.route("https://world.openfoodfacts.org/**", lambda r: r.abort())
         self.ctx.add_init_script(f"localStorage.setItem('planner_profile_skipped_{user_id}','1')")
+        if not welcome:
+            self.ctx.add_init_script(f"localStorage.setItem('planner_welcome_done_{user_id}','1')")
         self.page = self.ctx.new_page()
 
     def _proxy_api(self, route):
@@ -435,3 +437,54 @@ def test_only_first_beating_set_is_record(browser):
     d.page.click(".lg-card.active .lg-log")
     d.page.wait_for_function("document.querySelectorAll('.lg-card.active .lg-set').length === 2")
     assert d.page.locator(".lg-card.active .lg-set.pr").count() == 1
+
+
+def test_first_run_onboarding_sets_home_modules(browser):
+    uid = 4_400_000_000 + uuid.uuid4().int % 10**8
+    d = Device(browser, uid, welcome=True)
+    d.open()
+    d.page.wait_for_selector("#onboarding.open")
+    d.page.click("[data-onb='1'] .onb-cta")
+    # по умолчанию «Добавки» выключены; снимаем «Вес» — остаются задачи, питание, тренировки
+    d.page.click(".onb-mod:has-text('Вес и замеры')")
+    assert d.page.text_content("#onb-hint").startswith("Выбрано: 3")
+    d.page.click("#onb-mods-next")
+    assert d.page.locator(".onb-final-row").count() == 3
+    d.page.click("#onb-final-later")
+    d.page.wait_for_selector("#onboarding:not(.open)", state="attached")
+    titles = d.page.eval_on_selector_all("#home-nudge-list .home-nudge-title", "els => els.map(e => e.textContent)")
+    assert sorted(titles) == ["Задачи", "Питание", "Тренировка"]
+    # повторное открытие — без онбординга
+    d.page.reload(); d.page.wait_for_timeout(1500)
+    assert not d.page.is_visible("#onboarding.open")
+
+
+def test_onboarding_skipped_when_account_has_data(browser):
+    uid = 4_500_000_000 + uuid.uuid4().int % 10**8
+    a = Device(browser, uid)
+    a.open()
+    a.page.evaluate("state.tasks.push({id:'x1', text:'Есть данные', prio:'m', dl: todayStr(), done:false}); saveState()")
+    a.page.wait_for_timeout(1500)
+    b = Device(browser, uid, welcome=True)
+    b.open(); b.page.wait_for_timeout(2500)
+    assert not b.page.is_visible("#onboarding.open")
+
+
+def test_empty_tasks_offer_quick_start(browser):
+    d = Device(browser, 4_600_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("go('tasks')")
+    d.page.click(".empty-chip:has-text('Купить продукты')")
+    d.page.wait_for_selector("#modal-task.open")
+    assert d.page.input_value("#m-task-text") == "Купить продукты"
+
+
+def test_modules_editor_from_more_menu(browser):
+    d = Device(browser, 4_700_000_000 + uuid.uuid4().int % 10**8)
+    d.open()
+    d.page.evaluate("openModulesEditor()")
+    d.page.click(".onb-mod:has-text('Тренировки')")
+    d.page.click("#onb-mods-next")
+    assert not d.page.is_visible("#onboarding.open")
+    titles = d.page.eval_on_selector_all("#home-nudge-list .home-nudge-title", "els => els.map(e => e.textContent)")
+    assert "Тренировка" not in titles and "Задачи" in titles
